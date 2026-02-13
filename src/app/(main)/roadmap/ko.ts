@@ -1,4 +1,4 @@
-import type { Translations } from './index';
+import type { Translations } from './i18n';
 
 export const ko: Translations = {
     title: '일본어 학습 로드맵',

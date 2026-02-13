@@ -1,4 +1,4 @@
-import type { Translations } from './index';
+import type { Translations } from './i18n';
 
 export const fr: Translations = {
     title: 'Feuille de Route d\'Apprentissage du Japonais',

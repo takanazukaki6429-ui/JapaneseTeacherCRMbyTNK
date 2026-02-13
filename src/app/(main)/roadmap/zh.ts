@@ -1,4 +1,4 @@
-import type { Translations } from './index';
+import type { Translations } from './i18n';
 
 export const zh: Translations = {
     title: '日语学习路线图',

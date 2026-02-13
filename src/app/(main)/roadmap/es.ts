@@ -1,4 +1,4 @@
-import type { Translations } from './index';
+import type { Translations } from './i18n';
 
 export const es: Translations = {
     title: 'Hoja de Ruta para Aprender Japonés',
