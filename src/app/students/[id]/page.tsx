@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/server';
 import { Student } from '@/types/student';
 import { ArrowLeft, User, BookOpen, GraduationCap, Flag, Target, Calendar, StickyNote } from 'lucide-react';
 import { DeleteStudentButton } from './delete-button';
@@ -10,6 +10,7 @@ import { LessonList } from './lesson-list';
 export const revalidate = 0;
 
 async function getStudent(id: string) {
+    const supabase = await createClient();
     const { data, error } = await supabase
         .from('students')
         .select('*')

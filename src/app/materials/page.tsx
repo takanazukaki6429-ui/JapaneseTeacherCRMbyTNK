@@ -1,5 +1,5 @@
 
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/server';
 import { Material } from '@/types/material';
 import { formatDate } from '@/lib/utils';
 import Link from 'next/link';
@@ -8,6 +8,7 @@ import { Plus, Search, FileText, Zap, Book } from 'lucide-react';
 export const revalidate = 0;
 
 async function getMaterials() {
+    const supabase = await createClient();
     const { data, error } = await supabase
         .from('materials')
         .select('*')
@@ -79,8 +80,8 @@ export default async function MaterialsPage() {
                         >
                             <div className="flex items-start justify-between mb-4">
                                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${item.type === 'prompt' ? 'bg-purple-100 text-purple-600' :
-                                        item.type === 'content' ? 'bg-blue-100 text-blue-600' :
-                                            'bg-slate-100 text-slate-600'
+                                    item.type === 'content' ? 'bg-blue-100 text-blue-600' :
+                                        'bg-slate-100 text-slate-600'
                                     }`}>
                                     {item.type === 'prompt' ? <Zap size={20} /> : <FileText size={20} />}
                                 </div>

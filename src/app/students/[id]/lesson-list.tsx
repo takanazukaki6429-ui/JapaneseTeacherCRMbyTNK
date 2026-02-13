@@ -1,11 +1,12 @@
 
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/server';
 import { Lesson } from '@/types/lesson';
 import { formatDate } from '@/lib/utils'; // You might need to add this utility
 import Link from 'next/link';
 import { Plus, ChevronRight, Star, AlertCircle } from 'lucide-react';
 
 async function getLessons(studentId: string) {
+    const supabase = await createClient();
     const { data, error } = await supabase
         .from('lessons')
         .select('*')

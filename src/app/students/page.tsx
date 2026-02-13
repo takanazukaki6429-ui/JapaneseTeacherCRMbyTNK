@@ -1,11 +1,12 @@
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/server';
 import { Student } from '@/types/student';
 import { Plus, User, BookOpen, GraduationCap } from 'lucide-react';
 
 export const revalidate = 0; // Disable caching for now to see updates immediately
 
 async function getStudents() {
+    const supabase = await createClient();
     const { data, error } = await supabase
         .from('students')
         .select('*')

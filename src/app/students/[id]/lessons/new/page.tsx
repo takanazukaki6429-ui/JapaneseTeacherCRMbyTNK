@@ -2,12 +2,13 @@
 
 import React, { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client';
 import { ArrowLeft, Save, Loader2, Star } from 'lucide-react';
 import Link from 'next/link';
 
 export default function NewLessonPage() {
     const router = useRouter();
+    const supabase = createClient();
     const params = useParams(); // useParams returns string | string[]
     const studentId = typeof params.id === 'string' ? params.id : '';
 
@@ -30,6 +31,60 @@ export default function NewLessonPage() {
 
     const setRating = (rating: number) => {
         setFormData((prev) => ({ ...prev, understanding_level: rating }));
+    };
+
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    const handleGenerateFeedback = async () => {
+        if (!formData.topics && !formData.mistakes) {
+            alert('AI分析を行うには、少なくとも「文法・トピック」か「つまずき・弱点」を入力してください。');
+            return;
+        }
+
+        setIsGenerating(true);
+        try {
+            const prompt = `
+あなたはプロの日本語教師です。以下のレッスン記録をもとに、生徒への宿題、次回の目標、そして生徒へのフィードバックコメント（励ますようなトーンで）を提案してください。
+
+## レッスン情報
+- 学習トピック: ${formData.topics}
+- 語彙: ${formData.vocabulary}
+- つまずき・弱点: ${formData.mistakes}
+
+出力は以下のJSON形式でお願いします（Markdown記法は含めないでください）:
+{
+  "homework": "提案する宿題の内容",
+  "next_goal": "次回のレッスンの目標",
+  "feedback": "生徒へのフィードバックコメント"
+}
+`;
+
+            const res = await fetch('/api/ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt }),
+            });
+
+            if (!res.ok) throw new Error('AI generation failed');
+
+            const data = await res.json();
+            // Clean up code blocks if present
+            const cleanText = data.text.replace(/```json/g, '').replace(/```/g, '').trim();
+            const result = JSON.parse(cleanText);
+
+            setFormData(prev => ({
+                ...prev,
+                homework: result.homework || prev.homework,
+                next_goal: result.next_goal || prev.next_goal,
+                memo: (prev.memo ? prev.memo + '\n\n' : '') + `【AIフィードバック】\n${result.feedback}`,
+            }));
+
+        } catch (error) {
+            console.error('AI Error:', error);
+            alert('AI提案の生成に失敗しました。');
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -98,6 +153,28 @@ export default function NewLessonPage() {
                         />
                     </div>
                 </div>
+
+                <div className="pt-2 flex justify-end">
+                    <button
+                        type="button"
+                        onClick={handleGenerateFeedback}
+                        disabled={isGenerating || (!formData.topics && !formData.mistakes)}
+                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-sm font-bold rounded-full hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isGenerating ? (
+                            <>
+                                <Loader2 size={16} className="animate-spin" />
+                                AIが考え中...
+                            </>
+                        ) : (
+                            <>
+                                <Star size={16} className="fill-white" />
+                                AIで宿題・フィードバックを提案
+                            </>
+                        )}
+                    </button>
+                </div>
+
 
                 {/* Learning Content - AI Important */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-teal-200 ring-1 ring-teal-100 space-y-4">

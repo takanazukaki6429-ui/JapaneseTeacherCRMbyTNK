@@ -2,13 +2,14 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client';
 import { ArrowLeft, Save, Loader2, Zap, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { MaterialType } from '@/types/material';
 
 export default function NewMaterialPage() {
     const router = useRouter();
+    const supabase = createClient();
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         title: '',
@@ -77,8 +78,8 @@ export default function NewMaterialPage() {
                             type="button"
                             onClick={() => setType('prompt')}
                             className={`flex items-center justify-center gap-2 p-4 rounded-lg border-2 transition-all ${formData.type === 'prompt'
-                                    ? 'border-purple-500 bg-purple-50 text-purple-700'
-                                    : 'border-slate-200 hover:border-slate-300 text-slate-600'
+                                ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                : 'border-slate-200 hover:border-slate-300 text-slate-600'
                                 }`}
                         >
                             <Zap size={20} />
@@ -88,8 +89,8 @@ export default function NewMaterialPage() {
                             type="button"
                             onClick={() => setType('content')}
                             className={`flex items-center justify-center gap-2 p-4 rounded-lg border-2 transition-all ${formData.type === 'content'
-                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                    : 'border-slate-200 hover:border-slate-300 text-slate-600'
+                                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                : 'border-slate-200 hover:border-slate-300 text-slate-600'
                                 }`}
                         >
                             <FileText size={20} />

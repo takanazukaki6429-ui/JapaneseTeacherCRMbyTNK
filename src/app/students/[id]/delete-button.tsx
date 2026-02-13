@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client';
 import { Trash2 } from 'lucide-react';
 
 export function DeleteStudentButton({ id }: { id: string }) {
     const router = useRouter();
+    const supabase = createClient();
     const [loading, setLoading] = useState(false);
 
     const handleDelete = async () => {

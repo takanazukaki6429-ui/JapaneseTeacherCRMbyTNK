@@ -1,5 +1,5 @@
 
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/server';
 import { formatDate } from '@/lib/utils';
 import Link from 'next/link';
 import { Users, Calendar, BookOpen, ArrowRight, Clock, CheckCircle2 } from 'lucide-react';
@@ -7,6 +7,7 @@ import { Users, Calendar, BookOpen, ArrowRight, Clock, CheckCircle2 } from 'luci
 export const revalidate = 0;
 
 async function getDashboardData() {
+  const supabase = await createClient();
   const now = new Date().toISOString();
 
   // 1. Total Students

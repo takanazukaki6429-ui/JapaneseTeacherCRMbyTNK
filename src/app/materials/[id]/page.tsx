@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/server';
 import { Material } from '@/types/material';
 import { formatDate } from '@/lib/utils';
 import { ArrowLeft, Zap, FileText, Trash2, Edit } from 'lucide-react';
@@ -9,6 +9,7 @@ import { RedirectType, redirect } from 'next/navigation';
 export const revalidate = 0;
 
 async function getMaterial(id: string) {
+    const supabase = await createClient();
     const { data, error } = await supabase
         .from('materials')
         .select('*')
@@ -49,8 +50,8 @@ export default async function MaterialDetailPage({ params }: Props) {
                     </Link>
                     <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${material.type === 'prompt' ? 'bg-purple-100 text-purple-600' :
-                                material.type === 'content' ? 'bg-blue-100 text-blue-600' :
-                                    'bg-slate-100 text-slate-600'
+                            material.type === 'content' ? 'bg-blue-100 text-blue-600' :
+                                'bg-slate-100 text-slate-600'
                             }`}>
                             {material.type === 'prompt' ? <Zap size={18} /> : <FileText size={18} />}
                         </div>
