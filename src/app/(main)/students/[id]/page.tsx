@@ -2,10 +2,12 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Student } from '@/types/student';
-import { ArrowLeft, User, BookOpen, GraduationCap, Flag, Target, Calendar, StickyNote } from 'lucide-react';
+import { ArrowLeft, User, BookOpen, GraduationCap, Flag, Target, Calendar, StickyNote, Sparkles } from 'lucide-react';
 import { DeleteStudentButton } from './delete-button';
 
 import { LessonList } from './lesson-list';
+import { LessonScheduler } from '@/components/lessons/lesson-scheduler';
+import { AIProfileAnalyzer } from '@/components/students/ai-profile-analyzer';
 
 export const revalidate = 0;
 
@@ -58,7 +60,16 @@ export default async function StudentDetailPage({ params }: Props) {
                         </div>
                     </div>
                 </div>
-                <DeleteStudentButton id={student.id} />
+                <div className="flex items-center gap-2">
+                    <Link
+                        href={`/students/${student.id}/lessons/prepare`}
+                        className="hidden sm:inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-bold rounded-lg hover:shadow-md transition-all"
+                    >
+                        <Sparkles size={16} className="text-yellow-300" />
+                        レッスン準備 (AI)
+                    </Link>
+                    <DeleteStudentButton id={student.id} />
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -95,6 +106,9 @@ export default async function StudentDetailPage({ params }: Props) {
                         </div>
                     </div>
 
+                    {/* AI Analysis */}
+                    <AIProfileAnalyzer student={student} />
+
                     {/* Learning Info */}
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
                         <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -129,16 +143,25 @@ export default async function StudentDetailPage({ params }: Props) {
                 <div className="space-y-6">
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
                         <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                            <Calendar size={20} className="text-teal-600" />
-                            スケジュール
+                            <Target size={20} className="text-teal-600" />
+                            学習計画 (Roadmap)
                         </h2>
                         <p className="text-sm text-slate-500 mb-4">
-                            Googleカレンダー連携はまだ未実装です。
+                            現在の目標: <span className="font-bold text-slate-800">{student.goal_text || '未設定'}</span>
                         </p>
-                        <button className="w-full py-2 px-4 bg-slate-50 text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
-                            カレンダーに追加
-                        </button>
+                        <Link
+                            href={`/students/${student.id}/roadmap`}
+                            className="block w-full py-2 px-4 bg-teal-50 text-teal-700 text-center text-sm font-bold rounded-lg border border-teal-200 hover:bg-teal-100 transition-colors"
+                        >
+                            ロードマップを作成/編集
+                        </Link>
                     </div>
+
+                    {/* Lesson Scheduler */}
+                    <LessonScheduler
+                        studentId={student.id}
+                        studentName={student.name}
+                    />
 
                     {/* Lesson History */}
                     <LessonList studentId={student.id} />

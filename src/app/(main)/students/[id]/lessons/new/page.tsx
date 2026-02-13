@@ -1,20 +1,24 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ArrowLeft, Save, Loader2, Star } from 'lucide-react';
 import Link from 'next/link';
+import { LessonChatLogsViewer } from '@/components/lessons/lesson-chat-logs-viewer';
 
 export default function NewLessonPage() {
     const router = useRouter();
     const supabase = createClient();
     const params = useParams(); // useParams returns string | string[]
     const studentId = typeof params.id === 'string' ? params.id : '';
+    const searchParams = useSearchParams();
+    const scheduledLessonId = searchParams.get('scheduledLessonId');
 
     const [loading, setLoading] = useState(false);
+    const [fetchingScheduled, setFetchingScheduled] = useState(false);
     const [formData, setFormData] = useState({
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toISOString().slice(0, 16), // datetime-local format YYYY-MM-DDTHH:mm
         topics: '',
         vocabulary: '',
         mistakes: '',
@@ -23,6 +27,42 @@ export default function NewLessonPage() {
         next_goal: '',
         memo: '',
     });
+
+    useEffect(() => {
+        if (scheduledLessonId) {
+            fetchScheduledLesson(scheduledLessonId);
+        }
+    }, [scheduledLessonId]);
+
+    const fetchScheduledLesson = async (id: string) => {
+        setFetchingScheduled(true);
+        try {
+            const { data, error } = await supabase
+                .from('lessons')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (data) {
+                // Convert ISO date to datetime-local format (subset)
+                // Assuming stored date is ISO string e.g. 2023-10-10T10:00:00.000Z
+                // We want YYYY-MM-DDTHH:mm
+                const dateObj = new Date(data.date);
+                // Adjust for timezone offset for local input if needed, strictly speaking inputs work better with local time strings
+                // Simple hack for now:
+                const localIso = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+
+                setFormData(prev => ({
+                    ...prev,
+                    date: localIso,
+                }));
+            }
+        } catch (e) {
+            console.error('Error fetching scheduled lesson', e);
+        } finally {
+            setFetchingScheduled(false);
+        }
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -94,26 +134,41 @@ export default function NewLessonPage() {
         setLoading(true);
 
         try {
-            const { error } = await supabase.from('lessons').insert([
-                {
-                    student_id: studentId,
-                    date: new Date(formData.date).toISOString(),
-                    topics: formData.topics || null,
-                    vocabulary: formData.vocabulary || null,
-                    mistakes: formData.mistakes || null,
-                    understanding_level: formData.understanding_level,
-                    homework: formData.homework || null,
-                    next_goal: formData.next_goal || null,
-                    content: formData.memo || null, // Saving generic memo to 'content'
-                },
-            ]);
+            const payload = {
+                student_id: studentId,
+                date: new Date(formData.date).toISOString(),
+                topics: formData.topics || null,
+                vocabulary: formData.vocabulary || null,
+                mistakes: formData.mistakes || null,
+                understanding_level: formData.understanding_level,
+                homework: formData.homework || null,
+                next_goal: formData.next_goal || null,
+                content: formData.memo || null,
+                status: 'completed', // Mark as completed
+            };
+
+            let error;
+            if (scheduledLessonId) {
+                // Update existing
+                const result = await supabase
+                    .from('lessons')
+                    .update(payload)
+                    .eq('id', scheduledLessonId);
+                error = result.error;
+            } else {
+                // Insert new
+                const result = await supabase
+                    .from('lessons')
+                    .insert([payload]);
+                error = result.error;
+            }
 
             if (error) throw error;
 
             router.push(`/students/${studentId}`);
             router.refresh();
         } catch (error) {
-            console.error('Error adding lesson:', error);
+            console.error('Error saving lesson:', error);
             alert('レッスン記録の保存に失敗しました。');
         } finally {
             setLoading(false);
@@ -121,6 +176,14 @@ export default function NewLessonPage() {
     };
 
     if (!studentId) return <div>Invalid Student ID</div>;
+
+    if (fetchingScheduled) {
+        return (
+            <div className="flex h-screen items-center justify-center">
+                <Loader2 className="animate-spin text-teal-600" size={32} />
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-2xl mx-auto space-y-6">
@@ -300,7 +363,7 @@ export default function NewLessonPage() {
                     </div>
                 </div>
 
-                <div className="flex justify-end pt-4 pb-12">
+                <div className="flex justify-end pt-4 pb-0">
                     <button
                         type="submit"
                         disabled={loading}
@@ -319,6 +382,9 @@ export default function NewLessonPage() {
                         )}
                     </button>
                 </div>
+
+                {/* Chat Logs (if available) - placed at bottom for reference */}
+                <LessonChatLogsViewer lessonId={scheduledLessonId} />
             </form>
         </div>
     );

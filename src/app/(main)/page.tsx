@@ -1,14 +1,32 @@
-
 import { createClient } from '@/lib/supabase/server';
 import { formatDate } from '@/lib/utils';
 import Link from 'next/link';
-import { Users, Calendar, BookOpen, ArrowRight, Clock, CheckCircle2 } from 'lucide-react';
+import { Users, Calendar, ArrowRight, Clock, CheckCircle2 } from 'lucide-react';
 
 export const revalidate = 0;
 
 async function getDashboardData() {
   const supabase = await createClient();
   const now = new Date().toISOString();
+
+  // 0. Fetch User Settings
+  // Note: For now we just get the first record or default. 
+  // In real multi-user auth, we should filter by authenticated user.
+  // Since we are in server component, we can get user first.
+  const { data: { user } } = await supabase.auth.getUser();
+  let lessonPrice = 3000;
+
+  if (user) {
+    const { data: settings } = await supabase
+      .from('user_settings')
+      .select('default_lesson_price')
+      .eq('user_id', user.id)
+      .single();
+
+    if (settings?.default_lesson_price) {
+      lessonPrice = settings.default_lesson_price;
+    }
+  }
 
   // 1. Total Students
   const { count: studentCount } = await supabase
@@ -24,34 +42,43 @@ async function getDashboardData() {
     .select('*', { count: 'exact', head: true })
     .gte('date', startOfMonth.toISOString());
 
-  // 3. Upcoming Lessons (Future)
+  // 3. Upcoming Lessons (Scheduled)
   const { data: upcomingLessons } = await supabase
     .from('lessons')
-    // @ts-ignore - Supabase join query types are tricky without generated types
+    // @ts-ignore
     .select('*, students(name)')
-    .gte('date', now)
+    // Filter by scheduled status. 
+    // Note: If you want to see all future lessons regardless of status, use .gte('date', now) only.
+    // But for "Scheduled" specifically:
+    .eq('status', 'scheduled')
     .order('date', { ascending: true })
-    .limit(3);
+    .limit(5);
 
   // 4. Recent History (Past) mainly for Homework check
+  // We want lessons that are EITHER completed OR (scheduled but in the past/completed)
+  // For simplicity, let's just show all past lessons, or specifically completed ones if we trust status.
+  // Let's stick to time-based for history to be safe for now, or use 'completed' status if consistent.
+  // Given migration just ran, 'completed' is safe for old data.
   const { data: recentHistory } = await supabase
     .from('lessons')
     // @ts-ignore
     .select('*, students(name)')
     .lt('date', now)
+    .or('status.eq.completed,status.is.null') // Only show completed or legacy records
     .order('date', { ascending: false })
     .limit(3);
 
   return {
     studentCount: studentCount || 0,
     monthlyLessonCount: monthlyLessonCount || 0,
-    upcomingLessons: upcomingLessons || [],
-    recentHistory: recentHistory || [],
+    upcomingLessons: upcomingLessons || [], // Handle null
+    recentHistory: recentHistory || [], // Handle null
+    lessonPrice: lessonPrice,
   };
 }
 
 export default async function Home() {
-  const { studentCount, monthlyLessonCount, upcomingLessons, recentHistory } = await getDashboardData();
+  const { studentCount, monthlyLessonCount, upcomingLessons, recentHistory, lessonPrice } = await getDashboardData();
 
   return (
     <div className="space-y-8">
@@ -85,12 +112,11 @@ export default async function Home() {
         <div className="p-6 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-slate-500 mb-1 text-sm">今月の売上 (概算)</h3>
-            <p className="text-3xl font-bold text-slate-900">¥{(monthlyLessonCount * 3000).toLocaleString()}</p>
+            <p className="text-3xl font-bold text-slate-900">¥{(monthlyLessonCount * lessonPrice).toLocaleString()}</p>
           </div>
           <div className="w-12 h-12 bg-yellow-50 rounded-full flex items-center justify-center text-yellow-600">
             <span className="font-bold text-lg">¥</span>
           </div>
-          {/* Mock calculation: 3000 yen per lesson */}
         </div>
       </div>
 
@@ -101,9 +127,9 @@ export default async function Home() {
           <div className="flex items-center justify-between mb-6">
             <h3 className="font-bold text-slate-800 flex items-center gap-2">
               <Clock size={20} className="text-teal-600" />
-              これからの予定
+              これからの予定 (次のレッスン)
             </h3>
-            <Link href="/students" className="text-sm text-teal-600 hover:underline">カレンダー (未)</Link>
+            <Link href="/students" className="text-sm text-teal-600 hover:underline">生徒一覧へ</Link>
           </div>
 
           {upcomingLessons.length === 0 ? (
@@ -112,23 +138,36 @@ export default async function Home() {
             </div>
           ) : (
             <div className="space-y-4">
-              {upcomingLessons.map((lesson: any) => (
-                <div key={lesson.id} className="flex items-start gap-4 p-4 rounded-lg border border-slate-100 bg-slate-50/50">
-                  <div className="w-14 flex-shrink-0 text-center bg-white rounded-lg border border-slate-200 p-2">
-                    <span className="block text-xs text-slate-500 font-bold uppercase">{new Date(lesson.date).toLocaleDateString('en-US', { month: 'short' })}</span>
-                    <span className="block text-xl font-bold text-slate-800">{new Date(lesson.date).getDate()}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="font-bold text-slate-900 truncate">{lesson.students?.name}</h4>
-                      <span className="text-xs font-medium bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full">
-                        {new Date(lesson.date).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+              {upcomingLessons.map((lesson: any) => {
+                const lessonDate = new Date(lesson.date);
+                const isOverdue = lessonDate < new Date();
+
+                return (
+                  <div key={lesson.id} className={`flex items-start gap-4 p-4 rounded-lg border ${isOverdue ? 'border-red-100 bg-red-50/30' : 'border-slate-100 bg-slate-50/50'}`}>
+                    <div className={`w-14 flex-shrink-0 text-center bg-white rounded-lg border ${isOverdue ? 'border-red-200 text-red-600' : 'border-slate-200'} p-2`}>
+                      <span className="block text-xs text-slate-500 font-bold uppercase">{lessonDate.toLocaleDateString('en-US', { month: 'short' })}</span>
+                      <span className="block text-xl font-bold text-slate-800">{lessonDate.getDate()}</span>
                     </div>
-                    <p className="text-sm text-slate-500 line-clamp-1">{lesson.next_goal || '目標未設定'}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="font-bold text-slate-900 truncate">{lesson.students?.name}</h4>
+                        <Link
+                          href={`/students/${lesson.student_id}/lessons/prepare?scheduledLessonId=${lesson.id}`}
+                          className="text-xs font-bold bg-teal-600 text-white px-3 py-1.5 rounded-full hover:bg-teal-700 transition-colors shadow-sm"
+                        >
+                          準備 / 開始
+                        </Link>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className={`px-2 py-0.5 rounded-full font-medium ${isOverdue ? 'bg-red-100 text-red-700' : 'bg-teal-100 text-teal-700'}`}>
+                          {lessonDate.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        {isOverdue && <span className="text-red-500 font-bold">過ぎています</span>}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

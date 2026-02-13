@@ -13,6 +13,8 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isSignUp, setIsSignUp] = useState(false);
+    const [message, setMessage] = useState<string | null>(null);
     const router = useRouter();
     const supabase = createClient();
 
@@ -20,23 +22,50 @@ export default function LoginPage() {
         e.preventDefault();
         setLoading(true);
         setError(null);
+        setMessage(null);
 
         try {
-            const { error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
+            if (isSignUp) {
+                // Sign Up Flow
+                const { error } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        emailRedirectTo: `${location.origin}/auth/callback`,
+                    },
+                });
 
-            if (error) {
-                setError(error.message);
-                return;
+                if (error) throw error;
+
+                setMessage('確認メールを送信しました。メール内のリンクをクリックして登録を完了してください。');
+                setIsSignUp(false); // Switch back to login view or keep displaying message
+            } else {
+                // Login Flow
+                const { error } = await supabase.auth.signInWithPassword({
+                    email,
+                    password,
+                });
+
+                if (error) {
+                    throw error;
+                }
+
+                router.push('/');
+                router.refresh();
+            }
+        } catch (err: any) {
+            console.error(err);
+            let msg = err.message || '予期せぬエラーが発生しました。';
+
+            if (msg.includes('Invalid login credentials')) {
+                msg = 'メールアドレスまたはパスワードが間違っています。アカウントをお持ちでない場合は「新規登録」タブから作成してください。';
+            } else if (msg.includes('User already registered')) {
+                msg = 'このメールアドレスは既に登録されています。「ログイン」タブからログインしてください。';
+            } else if (msg.includes('Email not confirmed')) {
+                msg = 'メールアドレスの確認が完了していません。Supabaseから届いた確認メール内のリンクをクリックしてください。';
             }
 
-            router.push('/');
-            router.refresh();
-        } catch (err) {
-            setError('予期せぬエラーが発生しました。');
-            console.error(err);
+            setError(msg);
         } finally {
             setLoading(false);
         }
@@ -50,17 +79,56 @@ export default function LoginPage() {
                         <LogIn className="text-teal-500" size={32} />
                     </div>
                     <CardTitle className="text-2xl font-bold text-teal-800">
-                        Nihongo Teacher CRM
+                        {isSignUp ? 'アカウント作成' : 'Nihongo Teacher CRM'}
                     </CardTitle>
                     <p className="text-slate-500 text-sm">
-                        教師用アカウントでログインしてください
+                        {isSignUp ? 'メールアドレスとパスワードを入力してください' : '教師用アカウントでログインしてください'}
                     </p>
                 </CardHeader>
                 <CardContent>
+                    {/* Mode Toggles */}
+                    <div className="flex p-1 bg-slate-100 rounded-lg mb-6">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsSignUp(false);
+                                setError(null);
+                                setMessage(null);
+                            }}
+                            className={`flex-1 py-1.5 text-sm font-bold rounded-md transition-all ${!isSignUp
+                                ? 'bg-white text-teal-700 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            ログイン
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsSignUp(true);
+                                setError(null);
+                                setMessage(null);
+                            }}
+                            className={`flex-1 py-1.5 text-sm font-bold rounded-md transition-all ${isSignUp
+                                ? 'bg-white text-teal-700 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            新規登録
+                        </button>
+                    </div>
+
                     <form onSubmit={handleLogin} className="space-y-4">
                         {error && (
                             <div className="bg-rose-50 text-rose-600 text-sm p-3 rounded-lg border border-rose-100">
-                                {error}
+                                <p className="font-bold mb-1">エラーが発生しました</p>
+                                <p>{error}</p>
+                            </div>
+                        )}
+                        {message && (
+                            <div className="bg-green-50 text-green-600 text-sm p-3 rounded-lg border border-green-100">
+                                <p className="font-bold mb-1">送信完了</p>
+                                <p>{message}</p>
                             </div>
                         )}
                         <div className="space-y-2">
@@ -89,7 +157,11 @@ export default function LoginPage() {
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 transition-all"
                                 required
+                                minLength={6}
                             />
+                            {isSignUp && (
+                                <p className="text-xs text-slate-500">※6文字以上のパスワードを設定してください</p>
+                            )}
                         </div>
 
                         <Button
@@ -100,10 +172,10 @@ export default function LoginPage() {
                             {loading ? (
                                 <span className="flex items-center gap-2">
                                     <Loader2 className="animate-spin" size={18} />
-                                    ログイン中...
+                                    処理中...
                                 </span>
                             ) : (
-                                'ログイン'
+                                isSignUp ? 'アカウント作成' : 'ログイン'
                             )}
                         </Button>
                     </form>

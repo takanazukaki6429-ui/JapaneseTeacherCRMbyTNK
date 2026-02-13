@@ -12,4 +12,6 @@ export type Lesson = {
     next_goal: string | null;
     materials: string | null;   // 使用教材
     ai_log: any | null;         // JSONB type for AI logs
+    // Status for scheduling
+    status?: 'scheduled' | 'completed' | 'cancelled';
 };

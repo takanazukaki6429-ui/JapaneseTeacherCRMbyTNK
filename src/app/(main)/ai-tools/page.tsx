@@ -4,13 +4,49 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Send, Loader2, Copy, Check } from "lucide-react";
+import { Sparkles, Send, Loader2, Copy, Check, Save } from "lucide-react";
+import { createClient } from '@/lib/supabase/client';
+import { toast } from "sonner";
 
 export default function AIToolsPage() {
     const [prompt, setPrompt] = useState('');
     const [response, setResponse] = useState('');
     const [loading, setLoading] = useState(false);
     const [copied, setCopied] = useState(false);
+
+    // Save state
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveTitle, setSaveTitle] = useState('');
+    const [savingLoading, setSavingLoading] = useState(false);
+    const supabase = createClient();
+
+    const handleSave = async () => {
+        if (!saveTitle.trim() || !response) return;
+        setSavingLoading(true);
+
+        try {
+            const { error } = await supabase.from('materials').insert([
+                {
+                    title: saveTitle,
+                    content: response,
+                    type: 'content', // generated content
+                    is_public: false, // Default private for now
+                    tags: ['AI生成'],
+                }
+            ]);
+
+            if (error) throw error;
+
+            toast.success("教材として保存しました！");
+            setIsSaving(false);
+            setSaveTitle('');
+        } catch (error) {
+            console.error('Error saving material:', error);
+            toast.error("保存に失敗しました");
+        } finally {
+            setSavingLoading(false);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -136,20 +172,55 @@ export default function AIToolsPage() {
                                             <Sparkles className="w-4 h-4 text-teal-500" />
                                             AIからの回答
                                         </h3>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={handleCopy}
-                                            className="text-slate-500"
-                                        >
-                                            {copied ? (
-                                                <Check className="w-4 h-4 text-green-500 mr-1" />
-                                            ) : (
-                                                <Copy className="w-4 h-4 mr-1" />
-                                            )}
-                                            {copied ? 'コピー完了' : 'コピー'}
-                                        </Button>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setIsSaving(!isSaving)}
+                                                className="text-slate-600 border-slate-200 hover:bg-slate-50"
+                                            >
+                                                <Save className="w-4 h-4 mr-1" />
+                                                保存
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={handleCopy}
+                                                className="text-slate-500"
+                                            >
+                                                {copied ? (
+                                                    <Check className="w-4 h-4 text-green-500 mr-1" />
+                                                ) : (
+                                                    <Copy className="w-4 h-4 mr-1" />
+                                                )}
+                                                {copied ? 'コピー完了' : 'コピー'}
+                                            </Button>
+                                        </div>
                                     </div>
+
+                                    {isSaving && (
+                                        <div className="mb-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                                            <div className="flex gap-2 mb-2">
+                                                <input
+                                                    type="text"
+                                                    placeholder="タイトルを入力 (例: N3文法例文)"
+                                                    className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                    value={saveTitle}
+                                                    onChange={(e) => setSaveTitle(e.target.value)}
+                                                />
+                                                <Button
+                                                    size="sm"
+                                                    onClick={handleSave}
+                                                    disabled={savingLoading || !saveTitle.trim()}
+                                                    className="bg-teal-600 hover:bg-teal-700 text-white"
+                                                >
+                                                    {savingLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : '保存する'}
+                                                </Button>
+                                            </div>
+                                            <p className="text-xs text-slate-400">「教材・資産管理」ページに保存されます。</p>
+                                        </div>
+                                    )}
+
                                     <div className="bg-slate-50 p-4 rounded-lg text-slate-800 whitespace-pre-wrap leading-relaxed border border-slate-200">
                                         {response}
                                     </div>
