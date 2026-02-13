@@ -14,7 +14,7 @@ import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, PieChart, Pie, Cell } from 'recharts';
-import { type Locale, locales, getTranslations, detectLocale, type Translations } from '@/app/roadmap/i18n';
+import { type Locale, locales, getTranslations, detectLocale, type Translations } from '@/app/(main)/roadmap/i18n';
 
 // Simple toast replacement (can be upgraded to sonner later)
 const toast = {
