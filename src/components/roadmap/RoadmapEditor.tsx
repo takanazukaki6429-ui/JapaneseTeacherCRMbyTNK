@@ -142,7 +142,7 @@ export default function RoadmapEditor({
     const handleDownload = async () => {
         if (captureRef.current) {
             try {
-                const dataUrl = await domToPng(captureRef.current, { cacheBust: true });
+                const dataUrl = await domToPng(captureRef.current, { scale: 2, backgroundColor: '#ffffff' });
                 const link = document.createElement('a');
                 link.download = `roadmap_${new Date().toISOString()}.png`;
                 link.href = dataUrl;
