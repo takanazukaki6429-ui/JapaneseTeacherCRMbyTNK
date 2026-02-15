@@ -50,6 +50,38 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL('/login', request.url))
     }
 
+    if (user) {
+        // オンボーディングチェック
+        // APIルートや静的ファイルは除外
+        if (
+            !request.nextUrl.pathname.startsWith('/api') &&
+            !request.nextUrl.pathname.startsWith('/_next') &&
+            !request.nextUrl.pathname.includes('.')
+        ) {
+            const { data: settings } = await supabase
+                .from('user_settings')
+                .select('has_completed_onboarding')
+                .eq('user_id', user.id)
+                .single()
+
+            const isOnboardingPage = request.nextUrl.pathname === '/onboarding'
+
+            if (settings) {
+                if (!settings.has_completed_onboarding && !isOnboardingPage) {
+                    return NextResponse.redirect(new URL('/onboarding', request.url))
+                }
+                if (settings.has_completed_onboarding && isOnboardingPage) {
+                    return NextResponse.redirect(new URL('/', request.url))
+                }
+            } else {
+                // user_settingsがない場合は作成待ちかエラーだが、オンボーディングへ誘導するのが無難
+                if (!isOnboardingPage) {
+                    return NextResponse.redirect(new URL('/onboarding', request.url))
+                }
+            }
+        }
+    }
+
     return response
 }
 

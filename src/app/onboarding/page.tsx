@@ -28,6 +28,7 @@ export default function OnboardingPage() {
                 .from("user_settings")
                 .update({
                     display_name: name,
+                    has_completed_onboarding: true,
                     updated_at: new Date().toISOString(),
                 })
                 .eq("user_id", user.id);
