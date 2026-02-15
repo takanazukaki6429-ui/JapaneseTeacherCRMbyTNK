@@ -36,8 +36,9 @@ export default function OnboardingPage() {
             if (updateError) throw updateError;
 
             // Force refresh/redirect to dashboard
-            router.refresh(); // Refresh server components to pick up new name
-            router.push("/");
+            router.refresh();
+            // Client-side router sometimes keeps old state, encourage full reload to re-run middleware checks
+            window.location.href = "/";
 
         } catch (err: any) {
             console.error(err);
@@ -58,8 +59,7 @@ export default function OnboardingPage() {
                         ASTAへようこそ！
                     </CardTitle>
                     <CardDescription className="text-base">
-                        はじめに、あなたのお名前を教えてください。<br />
-                        生徒さんにはこの名前が表示されます。
+                        はじめに、あなたのお名前を教えてください。
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
