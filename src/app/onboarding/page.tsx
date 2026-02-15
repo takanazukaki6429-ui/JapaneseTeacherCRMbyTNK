@@ -26,12 +26,12 @@ export default function OnboardingPage() {
 
             const { error: updateError } = await supabase
                 .from("user_settings")
-                .update({
+                .upsert({
+                    user_id: user.id,
                     display_name: name,
                     has_completed_onboarding: true,
                     updated_at: new Date().toISOString(),
-                })
-                .eq("user_id", user.id);
+                });
 
             if (updateError) throw updateError;
 
