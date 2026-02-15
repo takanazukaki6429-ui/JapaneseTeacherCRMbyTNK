@@ -96,7 +96,7 @@ export default async function Home() {
             <h3 className="font-semibold text-slate-500 mb-1 text-sm">今月のレッスン数</h3>
             <p className="text-3xl font-bold text-slate-900">{monthlyLessonCount}</p>
           </div>
-          <div className="w-12 h-12 bg-teal-50 rounded-full flex items-center justify-center text-teal-600">
+          <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center text-amber-600">
             <Calendar size={24} />
           </div>
         </div>
@@ -126,10 +126,10 @@ export default async function Home() {
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
           <div className="flex items-center justify-between mb-6">
             <h3 className="font-bold text-slate-800 flex items-center gap-2">
-              <Clock size={20} className="text-teal-600" />
+              <Clock size={20} className="text-amber-600" />
               これからの予定 (次のレッスン)
             </h3>
-            <Link href="/students" className="text-sm text-teal-600 hover:underline">生徒一覧へ</Link>
+            <Link href="/students" className="text-sm text-amber-600 hover:underline">生徒一覧へ</Link>
           </div>
 
           {upcomingLessons.length === 0 ? (
@@ -153,13 +153,13 @@ export default async function Home() {
                         <h4 className="font-bold text-slate-900 truncate">{lesson.students?.name}</h4>
                         <Link
                           href={`/students/${lesson.student_id}/lessons/prepare?scheduledLessonId=${lesson.id}`}
-                          className="text-xs font-bold bg-teal-600 text-white px-3 py-1.5 rounded-full hover:bg-teal-700 transition-colors shadow-sm"
+                          className="text-xs font-bold bg-amber-500 text-white px-3 py-1.5 rounded-full hover:bg-amber-600 transition-colors shadow-sm"
                         >
                           準備 / 開始
                         </Link>
                       </div>
                       <div className="flex items-center gap-2 text-xs">
-                        <span className={`px-2 py-0.5 rounded-full font-medium ${isOverdue ? 'bg-red-100 text-red-700' : 'bg-teal-100 text-teal-700'}`}>
+                        <span className={`px-2 py-0.5 rounded-full font-medium ${isOverdue ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'}`}>
                           {lessonDate.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                         {isOverdue && <span className="text-red-500 font-bold">過ぎています</span>}

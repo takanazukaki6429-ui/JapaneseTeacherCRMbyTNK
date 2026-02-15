@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Loader2, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -72,17 +73,23 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#fdfaf6] p-4">
-            <Card className="w-full max-w-md shadow-lg border-teal-100">
+        <div className="min-h-screen flex items-center justify-center bg-background p-4">
+            <Card className="w-full max-w-md shadow-lg border-amber-100">
                 <CardHeader className="text-center space-y-2">
-                    <div className="mx-auto bg-teal-50 w-16 h-16 rounded-full flex items-center justify-center mb-4">
-                        <LogIn className="text-teal-500" size={32} />
+                    <div className="mx-auto w-24 h-24 relative mb-4">
+                        <Image
+                            src="/logo.png"
+                            alt="ASTA Logo"
+                            fill
+                            className="object-contain"
+                            priority
+                        />
                     </div>
-                    <CardTitle className="text-2xl font-bold text-teal-800">
-                        {isSignUp ? 'アカウント作成' : 'Nihongo Teacher CRM'}
+                    <CardTitle className="text-xl font-bold text-amber-800">
+                        {isSignUp ? 'アカウント作成' : '講師ログイン'}
                     </CardTitle>
                     <p className="text-slate-500 text-sm">
-                        {isSignUp ? 'メールアドレスとパスワードを入力してください' : '教師用アカウントでログインしてください'}
+                        {isSignUp ? 'メールアドレスとパスワードを入力してください' : '講師用アカウントでログインしてください'}
                     </p>
                 </CardHeader>
                 <CardContent>
@@ -96,7 +103,7 @@ export default function LoginPage() {
                                 setMessage(null);
                             }}
                             className={`flex-1 py-1.5 text-sm font-bold rounded-md transition-all ${!isSignUp
-                                ? 'bg-white text-teal-700 shadow-sm'
+                                ? 'bg-white text-amber-700 shadow-sm'
                                 : 'text-slate-500 hover:text-slate-700'
                                 }`}
                         >
@@ -110,7 +117,7 @@ export default function LoginPage() {
                                 setMessage(null);
                             }}
                             className={`flex-1 py-1.5 text-sm font-bold rounded-md transition-all ${isSignUp
-                                ? 'bg-white text-teal-700 shadow-sm'
+                                ? 'bg-white text-amber-700 shadow-sm'
                                 : 'text-slate-500 hover:text-slate-700'
                                 }`}
                         >
@@ -141,7 +148,7 @@ export default function LoginPage() {
                                 placeholder="teacher@example.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 transition-all"
+                                className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all"
                                 required
                             />
                         </div>
@@ -155,7 +162,7 @@ export default function LoginPage() {
                                 placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 transition-all"
+                                className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all"
                                 required
                                 minLength={6}
                             />
@@ -166,7 +173,7 @@ export default function LoginPage() {
 
                         <Button
                             type="submit"
-                            className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 rounded-full shadow-md transition-all hover:shadow-lg mt-6"
+                            className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 rounded-full shadow-md transition-all hover:shadow-lg mt-6"
                             disabled={loading}
                         >
                             {loading ? (

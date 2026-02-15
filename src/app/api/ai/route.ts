@@ -12,6 +12,15 @@ export async function POST(req: NextRequest) {
         const { type, prompt, context, ...otherParams } = body;
         const supabase = await createClient();
 
+        // [Security Fix] Authenticate user
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (!user || authError) {
+            return NextResponse.json(
+                { error: 'Unauthorized', details: 'Authentication required' },
+                { status: 401 }
+            );
+        }
+
         // Debug logging
         console.log('Environment Check:', {
             hasGeminiKey: !!process.env.GEMINI_API_KEY,
@@ -68,7 +77,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Fetch User Settings for Model Preference
-        const { data: { user } } = await supabase.auth.getUser();
+        // User is already authenticated from above
         let selectedModel = 'gemini-1.5-flash';
 
         if (user) {

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
@@ -50,15 +51,23 @@ export function Sidebar() {
 
             <aside
                 className={cn(
-                    "fixed inset-y-0 left-0 z-40 w-64 bg-white/80 backdrop-blur-md border-r border-slate-100 text-slate-600 transition-transform duration-300 ease-in-out md:translate-x-0 shadow-sm",
+                    "fixed inset-y-0 left-0 z-40 w-64 bg-background/80 backdrop-blur-md border-r border-amber-100 text-slate-600 transition-transform duration-300 ease-in-out md:translate-x-0 shadow-sm",
                     isMobileOpen ? "translate-x-0" : "-translate-x-full"
                 )}
             >
                 <div className="flex h-full flex-col">
-                    <div className="flex items-center justify-center h-20 border-b border-dashed border-slate-100">
-                        <h1 className="text-xl font-bold bg-gradient-to-r from-teal-400 to-rose-400 bg-clip-text text-transparent">
-                            Nihongo CRM
-                        </h1>
+                    <div className="flex items-center justify-center h-20 border-b border-dashed border-amber-100">
+                        <div className="flex items-center gap-2">
+                            <div className="relative w-40 h-10">
+                                <Image
+                                    src="/logo.png"
+                                    alt="ASTA Logo"
+                                    fill
+                                    className="object-contain"
+                                    priority
+                                />
+                            </div>
+                        </div>
                     </div>
 
                     <nav className="flex-1 px-4 py-8 space-y-2">
@@ -72,11 +81,11 @@ export function Sidebar() {
                                     className={cn(
                                         "flex items-center gap-3 px-4 py-3.5 text-sm font-bold rounded-2xl transition-all duration-200 group",
                                         isActive
-                                            ? "bg-teal-50 text-teal-600 shadow-sm ring-1 ring-teal-100"
-                                            : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                                            ? "bg-amber-50 text-amber-700 shadow-sm ring-1 ring-amber-200"
+                                            : "text-slate-500 hover:bg-amber-50/50 hover:text-amber-800"
                                     )}
                                 >
-                                    <Icon size={20} className={cn("transition-colors", isActive ? "text-teal-500" : "text-slate-400 group-hover:text-slate-600")} />
+                                    <Icon size={20} className={cn("transition-colors", isActive ? "text-amber-600" : "text-slate-400 group-hover:text-amber-600")} />
                                     {item.name}
                                 </Link>
                             );
