@@ -38,8 +38,24 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL('/login', request.url));
     }
 
+    // 4. Onboarding check (Redirect if no display_name)
+    if (user && !request.nextUrl.pathname.startsWith('/onboarding') && request.method === 'GET') {
+        const { data: settings } = await supabase
+            .from('user_settings')
+            .select('display_name')
+            .eq('user_id', user.id)
+            .single();
+
+        // If no settings found or no display_name, and not already on onboarding
+        if (!settings?.display_name) {
+            console.log("Redirecting to onboarding");
+            return NextResponse.redirect(new URL('/onboarding', request.url));
+        }
+    }
+
     // Redirect to dashboard if logged in and trying to access login
     if (user && request.nextUrl.pathname.startsWith('/login')) {
+        // Also check onboarding here? No, let the main check handle it.
         return NextResponse.redirect(new URL('/', request.url));
     }
 
