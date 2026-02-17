@@ -150,17 +150,18 @@ function getLessonDistribution(currentLevel: number, purposeIds: PurposeId[]): D
 function getDistributionReason(purposeIds: PurposeId[], currentLevel: number, t: Translations): string {
     if (purposeIds.length === 0) return t.distributionReasons.other[currentLevel < 40 ? 'beginner' : 'advanced'];
 
-    // Pick the first one as primary for now, or could combine them
-    // For simplicity and UI space, we'll just show the reason for the first selected purpose
-    // but maybe append a generic "Balanced for your multiple goals" message
-    const primary = purposeIds[0];
-    const reasons = t.distributionReasons[primary as keyof typeof t.distributionReasons] || t.distributionReasons.other;
-    const baseReason = reasons[currentLevel < 40 ? 'beginner' : 'advanced'];
+    const reasons = purposeIds.map(pid => {
+        const r = t.distributionReasons[pid as keyof typeof t.distributionReasons] || t.distributionReasons.other;
+        return r[currentLevel < 40 ? 'beginner' : 'advanced'];
+    });
 
+    // Deduplicate specific phrases if needed, but for now just join unique ones or simplified
+    // If multiple, show a combined message
     if (purposeIds.length > 1) {
-        return `${baseReason} (Optimized for multiple goals)`; // Simple append for now
+        const labels = purposeIds.map(pid => t.purposes[pid as keyof typeof t.purposes]?.label).join(' & ');
+        return `${labels}の両方を叶えるために最適化されたプランです。\n` + reasons[0]; // Simplified for UI space
     }
-    return baseReason;
+    return reasons[0];
 }
 
 function getPurposeMilestone(purposeIds: PurposeId[], monthLevel: number, t: Translations): string {
@@ -265,17 +266,27 @@ function generateMilestones(currentLevel: number, targetLevel: number, months: n
     return milestones;
 }
 
-function calculateTotalHours(currentLevel: number, targetLevel: number) {
-    let totalHours = 0;
+function calculateTotalHours(currentLevel: number, targetLevel: number, purposeIds: PurposeId[] = []) {
+    let baseHours = 0;
     for (const level of JLPT_LEVELS) {
         const overlapStart = Math.max(currentLevel, level.minLevel);
         const overlapEnd = Math.min(targetLevel, level.maxLevel);
         if (overlapStart < overlapEnd) {
             const portion = (overlapEnd - overlapStart) / (level.maxLevel - level.minLevel);
-            totalHours += level.hours * portion;
+            baseHours += level.hours * portion;
         }
     }
-    return Math.round(totalHours);
+
+    // Apply strict multiplier based on the most demanding purpose
+    let maxMultiplier = 1.0;
+    if (purposeIds.length > 0) {
+        purposeIds.forEach(pid => {
+            const m = PURPOSE_LESSON_MULTIPLIER[pid] || 1.0;
+            if (m > maxMultiplier) maxMultiplier = m;
+        });
+    }
+
+    return Math.round(baseHours * maxMultiplier);
 }
 
 function getLevelDescription(level: number, t: Translations) {
@@ -417,7 +428,7 @@ export default function RoadmapGenerator({
         }
     };
 
-    const totalHours = useMemo(() => calculateTotalHours(currentLevel, targetLevel), [currentLevel, targetLevel]);
+    const totalHours = useMemo(() => calculateTotalHours(currentLevel, targetLevel, selectedPurposes), [currentLevel, targetLevel, selectedPurposes]);
     const hoursPerWeek = useMemo(() => (totalHours / (periodMonths * 4)).toFixed(1), [totalHours, periodMonths]);
     const hoursPerDay = useMemo(() => (totalHours / (periodMonths * 30)).toFixed(1), [totalHours, periodMonths]);
     const lessonDistribution = useMemo(
