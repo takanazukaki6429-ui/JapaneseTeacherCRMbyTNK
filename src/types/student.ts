@@ -6,6 +6,7 @@ export type Student = {
     nationality: string | null;
     jlpt_level: string | null;
     goal_text: string | null;
+    purposes: string | null; // Comma separated IDs
     textbook: string | null;
     current_phase: string | null;
     memo: string | null;

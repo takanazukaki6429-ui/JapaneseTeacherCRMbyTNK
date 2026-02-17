@@ -67,6 +67,7 @@ Key Focus: ${data.milestones[0]?.focus.join(', ') || 'General'}
                 // Approximate mapping from 0-100 scale to JLPT like N5, N4 etc not strictly required but handled if needed in future
                 // For now, we update the text fields used in the profile
                 goal_text: goalText,
+                purposes: data.purposeId, // Save the comma separated IDs
                 current_phase: currentPhaseText,
                 // Append to memo
                 memo: (student.memo ? student.memo + '\n\n' : '') + roadmapSummary
@@ -99,7 +100,8 @@ Key Focus: ${data.milestones[0]?.focus.join(', ') || 'General'}
     if (!student) return <div>Student not found</div>;
 
     // Try to parse existing data if relevant, or default
-    // This is optional refinement
+    // We prioritize the new 'purposes' column, but fallback to nothing if not present (legacy data difficult to parse back to ID)
+    const initialPurpose = student.purposes || undefined;
 
     return (
         <div className="min-h-screen bg-slate-50">
@@ -125,6 +127,7 @@ Key Focus: ${data.milestones[0]?.focus.join(', ') || 'General'}
                 <RoadmapGenerator
                     studentName={student.name}
                     initialLevel={20} // Could be mapped from student data
+                    initialPurpose={initialPurpose}
                     onSave={handleSave}
                 />
             </div>

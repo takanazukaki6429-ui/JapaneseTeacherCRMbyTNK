@@ -57,7 +57,7 @@ type Distribution = { grammar: number; vocabulary: number; conversation: number;
 
 // ===== ロジック関数 =====
 
-function getLessonDistribution(currentLevel: number, purposeId: PurposeId): Distribution {
+function getLessonDistribution(currentLevel: number, purposeIds: PurposeId[]): Distribution {
     const purposeDistributions: Record<string, Distribution[]> = {
         anime: [
             { grammar: 25, vocabulary: 25, conversation: 10, reading: 15, listening: 25 },
@@ -114,26 +114,76 @@ function getLessonDistribution(currentLevel: number, purposeId: PurposeId): Dist
             { grammar: 15, vocabulary: 15, conversation: 30, reading: 20, listening: 20 },
         ],
     };
-    const distributions = purposeDistributions[purposeId] || purposeDistributions.other;
-    if (currentLevel < 20) return distributions[0];
-    if (currentLevel < 40) return distributions[1];
-    if (currentLevel < 60) return distributions[2];
-    return distributions[3];
+
+    // If no purpose selected, fallback to 'other'
+    const selectedIds = purposeIds.length > 0 ? purposeIds : ['other'];
+
+    // Initialize sums
+    const sums: Distribution = { grammar: 0, vocabulary: 0, conversation: 0, reading: 0, listening: 0 };
+
+    selectedIds.forEach(id => {
+        const dists = purposeDistributions[id as string] || purposeDistributions.other;
+        let d: Distribution;
+        if (currentLevel < 20) d = dists[0];
+        else if (currentLevel < 40) d = dists[1];
+        else if (currentLevel < 60) d = dists[2];
+        else d = dists[3];
+
+        sums.grammar += d.grammar;
+        sums.vocabulary += d.vocabulary;
+        sums.conversation += d.conversation;
+        sums.reading += d.reading;
+        sums.listening += d.listening;
+    });
+
+    // Calculate averages
+    const count = selectedIds.length;
+    return {
+        grammar: Math.round(sums.grammar / count),
+        vocabulary: Math.round(sums.vocabulary / count),
+        conversation: Math.round(sums.conversation / count),
+        reading: Math.round(sums.reading / count),
+        listening: Math.round(sums.listening / count)
+    };
 }
 
-function getDistributionReason(purposeId: PurposeId, currentLevel: number, t: Translations): string {
-    const reasons = t.distributionReasons[purposeId as keyof typeof t.distributionReasons];
-    if (!reasons) return t.distributionReasons.other[currentLevel < 40 ? 'beginner' : 'advanced'];
-    return reasons[currentLevel < 40 ? 'beginner' : 'advanced'];
-}
+function getDistributionReason(purposeIds: PurposeId[], currentLevel: number, t: Translations): string {
+    if (purposeIds.length === 0) return t.distributionReasons.other[currentLevel < 40 ? 'beginner' : 'advanced'];
 
-function getPurposeMilestone(purposeId: PurposeId, monthLevel: number, t: Translations): string {
-    const milestoneTexts = t.purposeMilestones[purposeId as keyof typeof t.purposeMilestones] || t.purposeMilestones.other;
-    const thresholds = [15, 25, 40, 55, 70, 85, 100];
-    for (let i = 0; i < thresholds.length; i++) {
-        if (monthLevel <= thresholds[i]) return milestoneTexts[i];
+    // Pick the first one as primary for now, or could combine them
+    // For simplicity and UI space, we'll just show the reason for the first selected purpose
+    // but maybe append a generic "Balanced for your multiple goals" message
+    const primary = purposeIds[0];
+    const reasons = t.distributionReasons[primary as keyof typeof t.distributionReasons] || t.distributionReasons.other;
+    const baseReason = reasons[currentLevel < 40 ? 'beginner' : 'advanced'];
+
+    if (purposeIds.length > 1) {
+        return `${baseReason} (Optimized for multiple goals)`; // Simple append for now
     }
-    return milestoneTexts[milestoneTexts.length - 1];
+    return baseReason;
+}
+
+function getPurposeMilestone(purposeIds: PurposeId[], monthLevel: number, t: Translations): string {
+    const selectedIds = purposeIds.length > 0 ? purposeIds : ['other'];
+    const milestones: string[] = [];
+
+    // Combine distinct milestone phrases from all purposes
+    const thresholds = [15, 25, 40, 55, 70, 85, 100];
+    let thresholdIdx = thresholds.length - 1;
+    for (let i = 0; i < thresholds.length; i++) {
+        if (monthLevel <= thresholds[i]) {
+            thresholdIdx = i;
+            break;
+        }
+    }
+
+    selectedIds.forEach(pid => {
+        const texts = t.purposeMilestones[pid as keyof typeof t.purposeMilestones] || t.purposeMilestones.other;
+        milestones.push(texts[thresholdIdx]);
+    });
+
+    // Deduplicate and join
+    return Array.from(new Set(milestones)).join(' / ');
 }
 
 // 目的別レッスン数の倍率
@@ -149,11 +199,18 @@ const PURPOSE_LESSON_MULTIPLIER: Record<string, number> = {
     other: 1.0,
 };
 
-function generateMilestones(currentLevel: number, targetLevel: number, months: number, purposeId: PurposeId, t: Translations) {
+function generateMilestones(currentLevel: number, targetLevel: number, months: number, purposeIds: PurposeId[], t: Translations) {
     const milestones = [];
     const levelPerMonth = (targetLevel - currentLevel) / months;
-    const purposeContent = t.purposeMonthlyContent[purposeId as keyof typeof t.purposeMonthlyContent] || t.purposeMonthlyContent.other;
-    const lessonMultiplier = PURPOSE_LESSON_MULTIPLIER[purposeId] || 1.0;
+
+    const selectedIds = purposeIds.length > 0 ? purposeIds : ['other'];
+
+    // Calculate max multiplier for safety (taking the most demanding purpose)
+    let maxMultiplier = 1.0;
+    selectedIds.forEach(pid => {
+        const m = PURPOSE_LESSON_MULTIPLIER[pid] || 1.0;
+        if (m > maxMultiplier) maxMultiplier = m;
+    });
 
     for (let i = 1; i <= months; i++) {
         const monthLevel = currentLevel + (levelPerMonth * i);
@@ -169,19 +226,40 @@ function generateMilestones(currentLevel: number, targetLevel: number, months: n
         else if (monthLevel < 85) contentIdx = 5;
         else contentIdx = 6;
 
+        // Collect and average/merge content from all purposes
+        let combinedFocus: string[] = [];
+        let combinedSkills: string[] = [];
+        let combinedTextbooks: string[] = [];
+        let combinedPrompts: string[] = [];
+        let uniqueReasons: string[] = [];
+
+        selectedIds.forEach(pid => {
+            const pContent = t.purposeMonthlyContent[pid as keyof typeof t.purposeMonthlyContent] || t.purposeMonthlyContent.other;
+            if (pContent.focus[contentIdx]) combinedFocus.push(...pContent.focus[contentIdx]);
+            if (pContent.skills[contentIdx]) combinedSkills.push(...pContent.skills[contentIdx]);
+            if (pContent.textbooks[contentIdx]) combinedTextbooks.push(...pContent.textbooks[contentIdx]);
+            if (pContent.aiPrompt[contentIdx]) combinedPrompts.push(pContent.aiPrompt[contentIdx]);
+            if (pContent.reasons[contentIdx]) uniqueReasons.push(pContent.reasons[contentIdx]);
+        });
+
+        // Deduplicate
+        combinedFocus = Array.from(new Set(combinedFocus)).slice(0, 5); // Limit count
+        combinedSkills = Array.from(new Set(combinedSkills)).slice(0, 5);
+        combinedTextbooks = Array.from(new Set(combinedTextbooks));
+
         milestones.push({
             month: i,
             level: Math.round(monthLevel),
             jlpt: jlptLevel.name,
             jlptColor: jlptLevel.color,
-            focus: purposeContent.focus[contentIdx],
-            skills: purposeContent.skills[contentIdx],
-            reason: purposeContent.reasons[contentIdx],
-            textbooks: purposeContent.textbooks[contentIdx],
-            aiPrompt: purposeContent.aiPrompt[contentIdx],
+            focus: combinedFocus,
+            skills: combinedSkills,
+            reason: uniqueReasons[0] || "", // Just take first reason to avoid clutter
+            textbooks: combinedTextbooks,
+            aiPrompt: combinedPrompts.join(" / "),
 
-            purposeMilestone: getPurposeMilestone(purposeId, monthLevel, t),
-            lessonsNeeded: Math.ceil(levelPerMonth * 2 * lessonMultiplier),
+            purposeMilestone: getPurposeMilestone(selectedIds, monthLevel, t),
+            lessonsNeeded: Math.ceil(levelPerMonth * 2 * maxMultiplier),
         });
     }
     return milestones;
@@ -214,12 +292,12 @@ function getLevelDescription(level: number, t: Translations) {
 type RoadmapGeneratorProps = {
     initialLevel?: number;
     initialTarget?: number;
-    initialPurpose?: string;
+    initialPurpose?: string | string[]; // Can be string (legacy) or array
     onSave?: (data: {
         currentLevel: number;
         targetLevel: number;
-        purposeId: string;
-        purposeLabel: string;
+        purposeId: string; // Comma separated IDs
+        purposeLabel: string; // Comma separated Labels
         periodMonths: number;
         milestones: any[];
     }) => Promise<void>;
@@ -240,8 +318,24 @@ export default function RoadmapGenerator({
     const [locale, setLocale] = useState<Locale>('ja');
     const [langMenuOpen, setLangMenuOpen] = useState(false);
 
+    // State for multiple purposes
     const [currentLevel, setCurrentLevel] = useState(initialLevel);
-    const [selectedPurpose, setSelectedPurpose] = useState<PurposeId | null>((initialPurpose as PurposeId) || null);
+
+    // Parse initial purpose
+    const parseInitialPurpose = (init: string | string[] | undefined): PurposeId[] => {
+        if (!init) return [];
+        if (Array.isArray(init)) return init as PurposeId[];
+        // Check if comma separated
+        if (init.includes(',')) return init.split(',') as PurposeId[];
+        // Legacy single string
+        return [init as PurposeId];
+    };
+
+    const [selectedPurposes, setSelectedPurposes] = useState<PurposeId[]>(parseInitialPurpose(initialPurpose));
+
+    // Legacy mapping (just take first one for consistent icon color if needed, or mix)
+    // We'll use the *last* selected one for the "Main" color focus or just specific logic
+
     const [targetLevel, setTargetLevel] = useState(initialTarget);
     const [periodMonths, setPeriodMonths] = useState(6);
 
@@ -249,9 +343,34 @@ export default function RoadmapGenerator({
     useEffect(() => { setLocale(detectLocale()); }, []);
 
     const t = getTranslations(locale);
-    const purposeIcon = selectedPurpose ? PURPOSE_ICONS[selectedPurpose] : null;
-    const purposeLabel = selectedPurpose ? t.purposes[selectedPurpose as keyof typeof t.purposes]?.label : null;
-    const purposeDesc = selectedPurpose ? t.purposes[selectedPurpose as keyof typeof t.purposes]?.description : null;
+
+    // Helper to get labels
+    const getPurposeLabel = (pids: PurposeId[]) => {
+        if (pids.length === 0) return "";
+        return pids.map(pid => t.purposes[pid as keyof typeof t.purposes]?.label || pid).join(' & ');
+    };
+
+    // Toggle handler
+    const togglePurpose = (pid: PurposeId) => {
+        setSelectedPurposes(prev => {
+            if (prev.includes(pid)) {
+                return prev.filter(p => p !== pid);
+            } else {
+                return [...prev, pid];
+            }
+        });
+    };
+
+    const purposeLabel = getPurposeLabel(selectedPurposes);
+    const purposeDesc = selectedPurposes.length > 0
+        ? (selectedPurposes.length === 1
+            ? t.purposes[selectedPurposes[0] as keyof typeof t.purposes]?.description
+            : t.distributionReasons.other.advanced) // Generic description for mixed
+        : null;
+
+    // Get primary color/icon from the first selected purpose for UI consistency
+    const primaryPurpose = selectedPurposes.length > 0 ? selectedPurposes[0] : null;
+    const purposeIcon = primaryPurpose ? PURPOSE_ICONS[primaryPurpose] : null;
 
     const handleShare = async () => {
         if (!contentRef.current) return;
@@ -281,13 +400,13 @@ export default function RoadmapGenerator({
     };
 
     const handleSaveProfile = async () => {
-        if (onSave && selectedPurpose) {
+        if (onSave && selectedPurposes.length > 0) {
             setIsSaving(true);
             try {
                 await onSave({
                     currentLevel,
                     targetLevel,
-                    purposeId: selectedPurpose,
+                    purposeId: selectedPurposes.join(','), // Save as comma separated
                     purposeLabel: purposeLabel || '',
                     periodMonths,
                     milestones
@@ -302,12 +421,12 @@ export default function RoadmapGenerator({
     const hoursPerWeek = useMemo(() => (totalHours / (periodMonths * 4)).toFixed(1), [totalHours, periodMonths]);
     const hoursPerDay = useMemo(() => (totalHours / (periodMonths * 30)).toFixed(1), [totalHours, periodMonths]);
     const lessonDistribution = useMemo(
-        () => getLessonDistribution(currentLevel, selectedPurpose || 'other'),
-        [currentLevel, selectedPurpose]
+        () => getLessonDistribution(currentLevel, selectedPurposes),
+        [currentLevel, selectedPurposes]
     );
     const milestones = useMemo(
-        () => generateMilestones(currentLevel, targetLevel, periodMonths, selectedPurpose || 'other', t),
-        [currentLevel, targetLevel, periodMonths, selectedPurpose, t]
+        () => generateMilestones(currentLevel, targetLevel, periodMonths, selectedPurposes, t),
+        [currentLevel, targetLevel, periodMonths, selectedPurposes, t]
     );
 
     const chartData = useMemo(() => {
@@ -333,7 +452,7 @@ export default function RoadmapGenerator({
     }, [lessonDistribution, t]);
 
     const totalGain = targetLevel - currentLevel;
-    const canGenerate = selectedPurpose !== null && totalGain > 0;
+    const canGenerate = selectedPurposes.length > 0 && totalGain > 0;
 
     const purposeKeys = Object.keys(PURPOSE_ICONS) as PurposeId[];
 
@@ -418,13 +537,13 @@ export default function RoadmapGenerator({
                             {purposeKeys.map((pid) => {
                                 const pIcon = PURPOSE_ICONS[pid];
                                 const Icon = pIcon.icon;
-                                const isSelected = selectedPurpose === pid;
+                                const isSelected = selectedPurposes.includes(pid);
                                 const pLabel = t.purposes[pid as keyof typeof t.purposes]?.label || pid;
                                 // Use consistent teal for selection, keep icon colors
                                 return (
                                     <button
                                         key={pid}
-                                        onClick={() => setSelectedPurpose(pid)}
+                                        onClick={() => togglePurpose(pid)}
                                         className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-200 text-center relative overflow-hidden group ${isSelected
                                             ? 'border-teal-500 bg-teal-50/50 shadow-sm'
                                             : 'border-slate-100 bg-white hover:border-slate-200 hover:bg-slate-50'
@@ -443,18 +562,36 @@ export default function RoadmapGenerator({
                                             {pLabel}
                                         </span>
                                         {isSelected && (
-                                            <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-teal-500" />
+                                            <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-teal-500">
+                                                <div className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></div>
+                                            </div>
                                         )}
                                     </button>
                                 );
                             })}
                         </div>
-                        {selectedPurpose && purposeIcon && (
+                        {selectedPurposes.length > 0 && (
                             <div
                                 className="flex items-start gap-3 p-3 rounded-lg text-sm bg-slate-50 border border-slate-100"
                             >
-                                <purposeIcon.icon className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: purposeIcon.color }} />
-                                <span className="text-slate-600 leading-relaxed">{purposeDesc}</span>
+                                <div className="flex -space-x-2 mr-1">
+                                    {selectedPurposes.slice(0, 3).map(pid => {
+                                        const i = PURPOSE_ICONS[pid];
+                                        return (
+                                            <div key={pid} className="w-6 h-6 rounded-full border-2 border-white bg-white flex items-center justify-center relative z-10">
+                                                <i.icon className="w-3.5 h-3.5" style={{ color: i.color }} />
+                                            </div>
+                                        )
+                                    })}
+                                    {selectedPurposes.length > 3 && (
+                                        <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] text-slate-500 font-bold relative z-10">
+                                            +{selectedPurposes.length - 3}
+                                        </div>
+                                    )}
+                                </div>
+                                <span className="text-slate-600 leading-relaxed flex-1">
+                                    {purposeDesc || t.whyThisBalance}
+                                </span>
                             </div>
                         )}
                     </div>
@@ -513,7 +650,7 @@ export default function RoadmapGenerator({
                     >
                         {t.createRoadmap}
                     </Button>
-                    {!canGenerate && selectedPurpose === null && (
+                    {!canGenerate && selectedPurposes.length === 0 && (
                         <p className="text-xs text-center text-rose-500 font-medium bg-rose-50 py-1 rounded">{t.selectPurpose}</p>
                     )}
                 </CardContent>
@@ -650,7 +787,8 @@ export default function RoadmapGenerator({
                             <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                                 <p className="text-sm text-[#2563eb]">
                                     💡 <strong>{t.whyThisBalance}</strong><br />
-                                    {getDistributionReason(selectedPurpose || 'other', currentLevel, t)}
+                                    💡 <strong>{t.whyThisBalance}</strong><br />
+                                    {getDistributionReason(selectedPurposes, currentLevel, t)}
                                 </p>
                             </div>
                         </CardContent>
