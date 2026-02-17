@@ -98,13 +98,15 @@ export async function POST(req: NextRequest) {
 
         // Define fallback models
         // If selectedModel fails (e.g. 404), try these in order
-        const modelsToTry = [selectedModel];
-        if (selectedModel === 'gemini-1.5-flash') {
-            modelsToTry.push('gemini-1.5-flash-001'); // Specific version
-        }
-        if (!modelsToTry.includes('gemini-pro')) {
-            modelsToTry.push('gemini-pro'); // Stable fallback
-        }
+        // 2026-02-18: Added exhaustive list including 1.5 Pro and 1.0 Pro
+        const modelsToTry = Array.from(new Set([
+            selectedModel,
+            'gemini-1.5-flash',
+            'gemini-1.5-flash-001',
+            'gemini-1.5-flash-002', // Newer version might be available
+            'gemini-1.5-pro',
+            'gemini-1.0-pro'
+        ]));
 
         let lastError;
         for (const modelName of modelsToTry) {
