@@ -84,6 +84,7 @@ export function Sidebar() {
                                             ? "bg-amber-50 text-amber-700 shadow-sm ring-1 ring-amber-200"
                                             : "text-slate-500 hover:bg-amber-50/50 hover:text-amber-800"
                                     )}
+                                    onClick={() => setIsMobileOpen(false)}
                                 >
                                     <Icon size={20} className={cn("transition-colors", isActive ? "text-amber-600" : "text-slate-400 group-hover:text-amber-600")} />
                                     {item.name}

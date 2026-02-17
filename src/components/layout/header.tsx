@@ -6,7 +6,7 @@ import { UserNav } from './user-nav';
 
 export function Header() {
     return (
-        <header className="sticky top-0 z-20 flex items-center justify-between px-6 py-4 bg-white/80 backdrop-blur-md border-b border-slate-200">
+        <header className="sticky top-0 z-20 flex items-center justify-between pl-16 pr-6 md:px-6 py-4 bg-white/80 backdrop-blur-md border-b border-slate-200">
             <div>
                 <h2 className="text-lg font-semibold text-slate-800">
                     ASTA Dashboard
