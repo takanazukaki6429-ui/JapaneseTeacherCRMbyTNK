@@ -77,7 +77,9 @@ export async function POST(req: NextRequest) {
 
         // Fetch User Settings for Model Preference
         // User is already authenticated from above
-        let selectedModel = 'gemini-1.5-flash';
+        // Fetch User Settings for Model Preference
+        // User is already authenticated from above
+        let selectedModel = 'gemini-1.5-flash-001';
 
         if (user) {
             const { data: settings } = await supabase
@@ -93,17 +95,41 @@ export async function POST(req: NextRequest) {
 
         // Initialize Gemini API here to ensure we use the current env var and handle missing keys gracefully
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: selectedModel }); // Use selected model
 
-        // Generate content
-        const result = await model.generateContent(finalPrompt);
-        const response = await result.response;
-        const text = response.text();
+        // Define fallback models
+        // If selectedModel fails (e.g. 404), try these in order
+        const modelsToTry = [selectedModel];
+        if (selectedModel === 'gemini-1.5-flash') {
+            modelsToTry.push('gemini-1.5-flash-001'); // Specific version
+        }
+        if (!modelsToTry.includes('gemini-pro')) {
+            modelsToTry.push('gemini-pro'); // Stable fallback
+        }
 
-        return NextResponse.json({
-            text,
-            model: selectedModel // Return used model for debugging/verification if needed
-        });
+        let lastError;
+        for (const modelName of modelsToTry) {
+            try {
+                console.log(`Attempting to generate with model: ${modelName}`);
+                const model = genAI.getGenerativeModel({ model: modelName });
+
+                const result = await model.generateContent(finalPrompt);
+                const response = await result.response;
+                const text = response.text();
+
+                return NextResponse.json({
+                    text,
+                    model: modelName
+                });
+            } catch (error: any) {
+                console.error(`Failed with model ${modelName}:`, error.message);
+                lastError = error;
+                // If it's not a 404 (Not Found) or 400 (Bad Request), strictly speaking we might want to stop, 
+                // but for now we try the next model if it's a model-related error.
+                // Continue to next model
+            }
+        }
+
+        throw lastError; // If all fail, throw the last error
 
     } catch (error: any) {
         console.error('AI API Error Details:', error);
