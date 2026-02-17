@@ -1,0 +1,22 @@
+{
+    "name": "ASTA - Nihongo Teacher CRM",
+    "short_name": "ASTA",
+    "descriptions": "Japanese Teacher CRM Application - 明日の星になる",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#FAFAFA",
+    "theme_color": "#FFC107",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "/logo.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/logo.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
