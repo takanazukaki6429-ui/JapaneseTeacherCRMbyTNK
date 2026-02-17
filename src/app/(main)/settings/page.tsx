@@ -13,7 +13,7 @@ export default function SettingsPage() {
     // User Settings State
     const [userId, setUserId] = useState<string | null>(null);
     const [lessonPrice, setLessonPrice] = useState<number>(3000);
-    const [aiModel, setAiModel] = useState<string>('gemini-1.5-flash');
+    const [aiModel, setAiModel] = useState<string>('gemini-2.0-flash');
 
     useEffect(() => {
         fetchSettings();
@@ -33,7 +33,7 @@ export default function SettingsPage() {
 
             if (data) {
                 setLessonPrice(data.default_lesson_price || 3000);
-                setAiModel(data.ai_model || 'gemini-1.5-flash');
+                setAiModel(data.ai_model || 'gemini-2.0-flash');
             } else if (!error || error.code === 'PGRST116') {
                 // No settings found, use defaults
                 console.log('No settings found, using defaults');
@@ -205,65 +205,25 @@ export default function SettingsPage() {
                                 </div>
                             </label>
 
-                            {/* Gemini 2.0 Flash Legacy/Preview - Disabled */}
-                            <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 cursor-not-allowed opacity-60">
-                                <input
-                                    type="radio"
-                                    name="ai_model"
-                                    value="gemini-2.0-flash-exp"
-                                    checked={aiModel === 'gemini-2.0-flash-exp'}
-                                    onChange={(e) => setAiModel(e.target.value)}
-                                    className="mt-1"
-                                    disabled
-                                />
-                                <div>
-                                    <p className="font-bold text-sm text-slate-800 flex items-center gap-2">
-                                        Gemini 2.0 Flash (Preview)
-                                        <span className="bg-slate-100 text-slate-600 text-[10px] px-1.5 py-0.5 rounded-full uppercase border border-slate-200">Experimental</span>
-                                    </p>
-                                    <p className="text-xs text-slate-500 mt-0.5">次世代機能のプレビュー版。</p>
-                                </div>
-                            </label>
-
-                            {/* Gemini 1.5 Pro (Pro Plan) - Disabled */}
-                            <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 cursor-not-allowed opacity-60">
-                                <input
-                                    type="radio"
-                                    name="ai_model"
-                                    value="gemini-1.5-pro"
-                                    checked={aiModel === 'gemini-1.5-pro'}
-                                    onChange={(e) => setAiModel(e.target.value)}
-                                    className="mt-1"
-                                    disabled
-                                />
-                                <div>
-                                    <p className="font-bold text-sm text-slate-800 flex items-center gap-2">
-                                        Gemini 1.5 Pro
-                                        <span className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[10px] px-1.5 py-0.5 rounded-full uppercase font-bold shadow-sm">Pro Plan</span>
-                                    </p>
-                                    <p className="text-xs text-slate-500 mt-0.5">複雑な推論が可能な高品質モデル。</p>
-                                </div>
-                            </label>
-
-                            {/* Gemini 1.5 Flash (Free Plan) */}
-                            <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${aiModel === 'gemini-1.5-flash'
+                            {/* Gemini 2.0 Flash (Free Plan) */}
+                            <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${aiModel === 'gemini-2.0-flash'
                                 ? 'border-purple-500 bg-purple-50 ring-1 ring-purple-500'
                                 : 'border-slate-200 hover:bg-slate-50'
                                 }`}>
                                 <input
                                     type="radio"
                                     name="ai_model"
-                                    value="gemini-1.5-flash"
-                                    checked={aiModel === 'gemini-1.5-flash'}
+                                    value="gemini-2.0-flash"
+                                    checked={aiModel === 'gemini-2.0-flash'}
                                     onChange={(e) => setAiModel(e.target.value)}
                                     className="mt-1"
                                 />
                                 <div>
                                     <p className="font-bold text-sm text-slate-800 flex items-center gap-2">
-                                        Gemini 1.5 Flash
-                                        <span className="bg-teal-500 text-white text-[10px] px-1.5 py-0.5 rounded-full uppercase font-bold shadow-sm">Free Data</span>
+                                        Gemini 2.0 Flash
+                                        <span className="bg-teal-500 text-white text-[10px] px-1.5 py-0.5 rounded-full uppercase font-bold shadow-sm">Free</span>
                                     </p>
-                                    <p className="text-xs text-slate-500 mt-0.5">軽量・高速な基本モデル。コストを抑えたい場合に。</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">高速・軽量な基本モデル。日常業務に最適。</p>
                                 </div>
                             </label>
                         </div>

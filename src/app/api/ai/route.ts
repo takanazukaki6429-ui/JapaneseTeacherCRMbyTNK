@@ -77,9 +77,7 @@ export async function POST(req: NextRequest) {
 
         // Fetch User Settings for Model Preference
         // User is already authenticated from above
-        // Fetch User Settings for Model Preference
-        // User is already authenticated from above
-        let selectedModel = 'gemini-1.5-flash-001';
+        let selectedModel = 'gemini-2.0-flash';
 
         if (user) {
             const { data: settings } = await supabase
@@ -96,16 +94,12 @@ export async function POST(req: NextRequest) {
         // Initialize Gemini API here to ensure we use the current env var and handle missing keys gracefully
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-        // Define fallback models
-        // If selectedModel fails (e.g. 404), try these in order
-        // 2026-02-18: Added exhaustive list including 1.5 Pro and 1.0 Pro
+        // Define fallback models (all 1.x models are deprecated as of 2026)
         const modelsToTry = Array.from(new Set([
             selectedModel,
-            'gemini-1.5-flash',
-            'gemini-1.5-flash-001',
-            'gemini-1.5-flash-002', // Newer version might be available
-            'gemini-1.5-pro',
-            'gemini-1.0-pro'
+            'gemini-2.0-flash',
+            'gemini-2.5-flash',
+            'gemini-2.5-pro'
         ]));
 
         let lastError;
