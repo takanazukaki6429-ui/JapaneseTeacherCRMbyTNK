@@ -9,7 +9,7 @@ async function getLessons(studentId: string) {
     const supabase = await createClient();
     const { data, error } = await supabase
         .from('lessons')
-        .select('*')
+        .select('id, date, content, understanding_level, topics, mistakes')
         .eq('student_id', studentId)
         .order('date', { ascending: false });
 

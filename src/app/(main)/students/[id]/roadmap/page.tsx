@@ -3,8 +3,17 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import RoadmapGenerator from '@/components/roadmap/RoadmapGenerator';
+import dynamic from 'next/dynamic';
 import { ArrowLeft, Loader2 } from 'lucide-react';
+
+const RoadmapGenerator = dynamic(() => import('@/components/roadmap/RoadmapGenerator'), {
+    loading: () => (
+        <div className="flex justify-center p-12">
+            <Loader2 className="animate-spin text-teal-600" />
+        </div>
+    ),
+    ssr: false // Client component heavy on libraries
+});
 import Link from 'next/link';
 
 export default function StudentRoadmapPage() {

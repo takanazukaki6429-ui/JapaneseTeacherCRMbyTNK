@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Student } from '@/types/student';
@@ -164,7 +165,9 @@ export default async function StudentDetailPage({ params }: Props) {
                     />
 
                     {/* Lesson History */}
-                    <LessonList studentId={student.id} />
+                    <Suspense fallback={<div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 h-64 flex items-center justify-center text-slate-400">Loading lessons...</div>}>
+                        <LessonList studentId={student.id} />
+                    </Suspense>
                 </div>
             </div>
         </div>
