@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/server';
 
 // Initialize Gemini API
 // Ensure GEMINI_API_KEY is set in .env.local
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function POST(req: NextRequest) {
     try {
@@ -92,6 +91,8 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        // Initialize Gemini API here to ensure we use the current env var and handle missing keys gracefully
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({ model: selectedModel }); // Use selected model
 
         // Generate content
