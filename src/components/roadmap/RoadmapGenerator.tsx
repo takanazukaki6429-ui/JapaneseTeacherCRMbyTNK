@@ -116,7 +116,7 @@ function getLessonDistribution(currentLevel: number, purposeIds: PurposeId[]): D
     };
 
     // If no purpose selected, fallback to 'other'
-    const selectedIds = purposeIds.length > 0 ? purposeIds : ['other'];
+    const selectedIds = purposeIds.length > 0 ? purposeIds : (['other'] as PurposeId[]);
 
     // Initialize sums
     const sums: Distribution = { grammar: 0, vocabulary: 0, conversation: 0, reading: 0, listening: 0 };
@@ -203,7 +203,7 @@ function generateMilestones(currentLevel: number, targetLevel: number, months: n
     const milestones = [];
     const levelPerMonth = (targetLevel - currentLevel) / months;
 
-    const selectedIds = purposeIds.length > 0 ? purposeIds : ['other'];
+    const selectedIds = purposeIds.length > 0 ? purposeIds : (['other'] as PurposeId[]);
 
     // Calculate max multiplier for safety (taking the most demanding purpose)
     let maxMultiplier = 1.0;
