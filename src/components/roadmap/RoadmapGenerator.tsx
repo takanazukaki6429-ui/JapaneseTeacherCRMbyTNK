@@ -553,8 +553,14 @@ export default function RoadmapGenerator({
                                 // Use consistent teal for selection, keep icon colors
                                 return (
                                     <button
+                                        type="button" // Explicitly prevent form submission
                                         key={pid}
-                                        onClick={() => togglePurpose(pid)}
+                                        onClick={(e) => {
+                                            e.preventDefault(); // Prevent default behavior
+                                            e.stopPropagation(); // Stop propagation
+                                            console.log('Toggling purpose:', pid); // Debug log
+                                            togglePurpose(pid);
+                                        }}
                                         className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-200 text-center relative overflow-hidden group ${isSelected
                                             ? 'border-teal-500 bg-teal-50/50 shadow-sm'
                                             : 'border-slate-100 bg-white hover:border-slate-200 hover:bg-slate-50'
