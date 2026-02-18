@@ -7,19 +7,23 @@ export const revalidate = 0;
 
 async function getAllLessons() {
     const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
     const { data, error } = await supabase
         .from('lessons')
         .select(`
             *,
-            students (
+            students!inner (
                 name,
-                id
+                id,
+                user_id
             )
         `)
+        .eq('students.user_id', user.id)
         .order('date', { ascending: false });
 
     if (error) {
-        console.error('Error fetching lessons:', error);
         return [];
     }
 

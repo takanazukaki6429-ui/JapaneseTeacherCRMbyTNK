@@ -39,17 +39,27 @@ export async function middleware(request: NextRequest) {
     }
 
     // 4. Onboarding check (Redirect if no display_name)
+    // Use cookie cache to avoid DB query on every request
     if (user && !request.nextUrl.pathname.startsWith('/onboarding') && request.method === 'GET') {
-        const { data: settings } = await supabase
-            .from('user_settings')
-            .select('display_name')
-            .eq('user_id', user.id)
-            .single();
+        const onboardingComplete = request.cookies.get('onboarding_complete')?.value;
 
-        // If no settings found or no display_name, and not already on onboarding
-        if (!settings?.display_name) {
-            console.log("Redirecting to onboarding");
-            return NextResponse.redirect(new URL('/onboarding', request.url));
+        if (!onboardingComplete) {
+            const { data: settings } = await supabase
+                .from('user_settings')
+                .select('display_name')
+                .eq('user_id', user.id)
+                .single();
+
+            if (!settings?.display_name) {
+                return NextResponse.redirect(new URL('/onboarding', request.url));
+            }
+
+            // Cache onboarding status for 24 hours
+            response.cookies.set('onboarding_complete', 'true', {
+                maxAge: 86400,
+                httpOnly: true,
+                sameSite: 'lax',
+            });
         }
     }
 

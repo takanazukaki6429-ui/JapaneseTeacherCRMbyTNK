@@ -36,12 +36,12 @@ export default function SettingsPage() {
                 setAiModel(data.ai_model || 'gemini-2.0-flash');
             } else if (!error || error.code === 'PGRST116') {
                 // No settings found, use defaults
-                console.log('No settings found, using defaults');
+                // No settings found, use defaults
             } else {
-                console.error('Error fetching settings:', error);
+                // Settings fetch error — defaults are used
             }
         } catch (error) {
-            console.error('Error in fetchSettings:', error);
+            // Unexpected error in fetchSettings
         } finally {
             setLoading(false);
         }
@@ -67,7 +67,7 @@ export default function SettingsPage() {
             alert('設定を保存しました');
 
         } catch (error) {
-            console.error('Error saving settings:', error);
+            // Save failed
             alert('保存に失敗しました');
         } finally {
             setSaving(false);

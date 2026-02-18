@@ -7,13 +7,16 @@ export const revalidate = 0; // Disable caching for now to see updates immediate
 
 async function getStudents() {
     const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
     const { data, error } = await supabase
         .from('students')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
     if (error) {
-        console.error('Error fetching students:', error);
         return [];
     }
 

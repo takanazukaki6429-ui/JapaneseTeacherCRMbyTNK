@@ -9,71 +9,71 @@ async function getDashboardData() {
   const supabase = await createClient();
   const now = new Date().toISOString();
 
-  // 0. Fetch User Settings
-  // Note: For now we just get the first record or default. 
-  // In real multi-user auth, we should filter by authenticated user.
-  // Since we are in server component, we can get user first.
   const { data: { user } } = await supabase.auth.getUser();
-  let lessonPrice = 3000;
-
-  if (user) {
-    const { data: settings } = await supabase
-      .from('user_settings')
-      .select('default_lesson_price')
-      .eq('user_id', user.id)
-      .single();
-
-    if (settings?.default_lesson_price) {
-      lessonPrice = settings.default_lesson_price;
-    }
+  if (!user) {
+    return {
+      studentCount: 0,
+      monthlyLessonCount: 0,
+      upcomingLessons: [],
+      recentHistory: [],
+      lessonPrice: 3000,
+    };
   }
 
-  // 1. Total Students
-  const { count: studentCount } = await supabase
-    .from('students')
-    .select('*', { count: 'exact', head: true });
-
-  // 2. Month Lessons Count
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
-  const { count: monthlyLessonCount } = await supabase
-    .from('lessons')
-    .select('*', { count: 'exact', head: true })
-    .gte('date', startOfMonth.toISOString());
 
-  // 3. Upcoming Lessons (Scheduled)
-  const { data: upcomingLessons } = await supabase
-    .from('lessons')
-    // @ts-ignore
-    .select('*, students(name)')
-    // Filter by scheduled status. 
-    // Note: If you want to see all future lessons regardless of status, use .gte('date', now) only.
-    // But for "Scheduled" specifically:
-    .eq('status', 'scheduled')
-    .order('date', { ascending: true })
-    .limit(5);
+  // Run all independent queries in parallel for faster page load
+  const [settingsResult, studentCountResult, monthlyResult, upcomingResult, historyResult] = await Promise.all([
+    // User settings (lesson price)
+    supabase
+      .from('user_settings')
+      .select('default_lesson_price')
+      .eq('user_id', user.id)
+      .single(),
 
-  // 4. Recent History (Past) mainly for Homework check
-  // We want lessons that are EITHER completed OR (scheduled but in the past/completed)
-  // For simplicity, let's just show all past lessons, or specifically completed ones if we trust status.
-  // Let's stick to time-based for history to be safe for now, or use 'completed' status if consistent.
-  // Given migration just ran, 'completed' is safe for old data.
-  const { data: recentHistory } = await supabase
-    .from('lessons')
-    // @ts-ignore
-    .select('*, students(name)')
-    .lt('date', now)
-    .or('status.eq.completed,status.is.null') // Only show completed or legacy records
-    .order('date', { ascending: false })
-    .limit(3);
+    // Total students (filtered by user)
+    supabase
+      .from('students')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id),
+
+    // Monthly lesson count (filtered by user's students)
+    supabase
+      .from('lessons')
+      .select('*, students!inner(user_id)', { count: 'exact', head: true })
+      .eq('students.user_id', user.id)
+      .gte('date', startOfMonth.toISOString()),
+
+    // Upcoming scheduled lessons
+    supabase
+      .from('lessons')
+      .select('*, students!inner(name, user_id)')
+      .eq('students.user_id', user.id)
+      .eq('status', 'scheduled')
+      .order('date', { ascending: true })
+      .limit(5),
+
+    // Recent history
+    supabase
+      .from('lessons')
+      .select('*, students!inner(name, user_id)')
+      .eq('students.user_id', user.id)
+      .lt('date', now)
+      .or('status.eq.completed,status.is.null')
+      .order('date', { ascending: false })
+      .limit(3),
+  ]);
+
+  const lessonPrice = settingsResult.data?.default_lesson_price || 3000;
 
   return {
-    studentCount: studentCount || 0,
-    monthlyLessonCount: monthlyLessonCount || 0,
-    upcomingLessons: upcomingLessons || [], // Handle null
-    recentHistory: recentHistory || [], // Handle null
-    lessonPrice: lessonPrice,
+    studentCount: studentCountResult.count || 0,
+    monthlyLessonCount: monthlyResult.count || 0,
+    upcomingLessons: upcomingResult.data || [],
+    recentHistory: historyResult.data || [],
+    lessonPrice,
   };
 }
 

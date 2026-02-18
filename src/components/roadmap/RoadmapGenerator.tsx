@@ -558,7 +558,6 @@ export default function RoadmapGenerator({
                                         onClick={(e) => {
                                             e.preventDefault(); // Prevent default behavior
                                             e.stopPropagation(); // Stop propagation
-                                            console.log('Toggling purpose:', pid); // Debug log
                                             togglePurpose(pid);
                                         }}
                                         className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-200 text-center relative overflow-hidden group ${isSelected

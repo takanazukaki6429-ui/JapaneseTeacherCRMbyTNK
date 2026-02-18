@@ -20,10 +20,6 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Debug logging
-        console.log('Environment Check:', {
-            hasGeminiKey: !!process.env.GEMINI_API_KEY,
-        });
 
         if (!process.env.GEMINI_API_KEY) {
             return NextResponse.json(
@@ -105,7 +101,7 @@ export async function POST(req: NextRequest) {
         let lastError;
         for (const modelName of modelsToTry) {
             try {
-                console.log(`Attempting to generate with model: ${modelName}`);
+
                 const model = genAI.getGenerativeModel({ model: modelName });
 
                 const result = await model.generateContent(finalPrompt);
@@ -117,7 +113,7 @@ export async function POST(req: NextRequest) {
                     model: modelName
                 });
             } catch (error: any) {
-                console.error(`Failed with model ${modelName}:`, error.message);
+
                 lastError = error;
                 // If it's not a 404 (Not Found) or 400 (Bad Request), strictly speaking we might want to stop, 
                 // but for now we try the next model if it's a model-related error.
