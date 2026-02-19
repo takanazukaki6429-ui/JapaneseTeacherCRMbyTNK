@@ -53,9 +53,13 @@ export default function LoginPage() {
                 router.push('/');
                 router.refresh();
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
-            let msg = err.message || '予期せぬエラーが発生しました。';
+            let msg = '予期せぬエラーが発生しました。';
+
+            if (err instanceof Error) {
+                msg = err.message;
+            }
 
             if (msg.includes('Invalid login credentials')) {
                 msg = 'メールアドレスまたはパスワードが間違っています。アカウントをお持ちでない場合は「新規登録」タブから作成してください。';

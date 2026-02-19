@@ -1,3 +1,5 @@
+import { Database } from './supabase';
+
 export type Lesson = {
     id: string;
     created_at: string;
@@ -11,7 +13,7 @@ export type Lesson = {
     homework: string | null;
     next_goal: string | null;
     materials: string | null;   // 使用教材
-    ai_log: any | null;         // JSONB type for AI logs
+    ai_log: Database['public']['Tables']['lessons']['Row']['ai_log'];         // JSONB type for AI logs
     // Status for scheduling
     status?: 'scheduled' | 'completed' | 'cancelled';
 };

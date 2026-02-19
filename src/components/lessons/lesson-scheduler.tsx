@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Calendar, Clock, Plus, ExternalLink, Loader2, Check } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-// import { toast } from 'sonner';
+import { toast } from 'sonner';
 
 type Props = {
     studentId: string;
@@ -30,7 +30,7 @@ export function LessonScheduler({ studentId, studentName, onScheduled }: Props) 
             // Combine date and time to ISO string
             const baseDate = new Date(`${date}T${time}:00`);
             const lessonsToCreate = [];
-            let currentDate = new Date(baseDate);
+            const currentDate = new Date(baseDate);
 
             const count = recurrence === 'none' ? 1 : occurrences;
 
@@ -69,12 +69,10 @@ export function LessonScheduler({ studentId, studentName, onScheduled }: Props) 
             }
 
             setGoogleLink(link);
-            if (onScheduled) onScheduled();
-            router.refresh();
-
+            toast.success('レッスンの予約が完了しました');
         } catch (error) {
             console.error('Error scheduling lesson:', error);
-            alert('予約に失敗しました。');
+            toast.error('予約に失敗しました。もう一度お試しください。');
         } finally {
             setLoading(false);
         }
@@ -144,7 +142,7 @@ export function LessonScheduler({ studentId, studentName, onScheduled }: Props) 
                     <div className="flex items-center gap-2">
                         <select
                             value={recurrence}
-                            onChange={(e) => setRecurrence(e.target.value as any)}
+                            onChange={(e) => setRecurrence(e.target.value as 'none' | 'weekly' | 'biweekly')}
                             className="flex-1 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
                         >
                             <option value="none">繰り返しなし</option>

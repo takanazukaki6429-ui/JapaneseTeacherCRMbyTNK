@@ -58,6 +58,14 @@ vi.mock('@/components/ui/card', () => ({
     CardFooter: ({ children }: any) => <div>{children}</div>,
 }))
 
+vi.mock('recharts', async () => {
+    const OriginalModule = await vi.importActual('recharts');
+    return {
+        ...OriginalModule,
+        ResponsiveContainer: ({ children }: any) => <div style={{ width: 500, height: 500 }}>{children}</div>,
+    };
+});
+
 describe('RoadmapGenerator Component', () => {
     it('renders correctly', () => {
         render(<RoadmapGenerator />)

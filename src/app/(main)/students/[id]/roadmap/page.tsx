@@ -15,6 +15,7 @@ const RoadmapGenerator = dynamic(() => import('@/components/roadmap/RoadmapGener
     ssr: false // Client component heavy on libraries
 });
 import Link from 'next/link';
+import { type Milestone } from '@/lib/roadmap/types';
 
 export default function StudentRoadmapPage() {
     const router = useRouter();
@@ -54,7 +55,7 @@ export default function StudentRoadmapPage() {
         purposeId: string;
         purposeLabel: string;
         periodMonths: number;
-        milestones: any[];
+        milestones: Milestone[];
     }) => {
         if (!studentId) return;
 

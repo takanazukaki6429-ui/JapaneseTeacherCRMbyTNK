@@ -29,10 +29,25 @@ create table public.lessons (
   ai_log jsonb
 );
 
+-- 3. AI Usage Log Table (AI利用ログ - Rate Limiting)
+create table public.ai_usage_log (
+  id uuid default gen_random_uuid() primary key,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  model text,
+  prompt_type text,
+  token_usage integer
+);
+
 -- Enable Row Level Security (RLS) - Recommended but optional for initial dev
 alter table public.students enable row level security;
 alter table public.lessons enable row level security;
+alter table public.ai_usage_log enable row level security;
 
 -- Policy (For now, allow all for development if needed, or set up Auth later)
 -- create policy "Allow public access for dev" on public.students for all using (true);
 -- create policy "Allow public access for dev" on public.lessons for all using (true);
+
+-- Allow users to insert their own logs and view them
+create policy "Users can insert their own AI logs" on public.ai_usage_log for insert with check (auth.uid() = user_id);
+create policy "Users can view their own AI logs" on public.ai_usage_log for select using (auth.uid() = user_id);

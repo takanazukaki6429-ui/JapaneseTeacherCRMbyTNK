@@ -16,287 +16,19 @@ import { Badge } from "@/components/ui/badge";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, PieChart, Pie, Cell } from 'recharts';
 import { type Locale, locales, getTranslations, detectLocale, type Translations } from '@/app/(main)/roadmap/i18n';
 
-// Simple toast replacement (can be upgraded to sonner later)
-const toast = {
-    success: (msg: string) => alert(msg),
-    error: (msg: string) => alert(msg),
-};
+// Shared Library Imports
+import { JLPT_LEVELS, PURPOSE_ICONS, LESSON_TYPE_ICONS } from '@/lib/roadmap/constants';
+import { type PurposeId, type Distribution, type Milestone } from '@/lib/roadmap/types';
+import { getLessonDistribution, calculateTotalHours } from '@/lib/roadmap/calculations';
+import { generateMilestones, getLevelDescription, getDistributionReason } from '@/lib/roadmap/generators';
 
-// ===== 定数定義 =====
+import { toast } from 'sonner';
 
-const JLPT_LEVELS = [
-    { name: 'N5', minLevel: 0, maxLevel: 20, hours: 150, color: '#22c55e' },
-    { name: 'N4', minLevel: 20, maxLevel: 40, hours: 300, color: '#84cc16' },
-    { name: 'N3', minLevel: 40, maxLevel: 60, hours: 450, color: '#eab308' },
-    { name: 'N2', minLevel: 60, maxLevel: 80, hours: 600, color: '#f97316' },
-    { name: 'N1', minLevel: 80, maxLevel: 100, hours: 900, color: '#ef4444' },
-];
-
-const LESSON_TYPE_ICONS = [
-    { id: 'grammar', icon: BookText, color: '#3b82f6' },
-    { id: 'vocabulary', icon: PenLine, color: '#8b5cf6' },
-    { id: 'conversation', icon: MessageCircle, color: '#10b981' },
-    { id: 'reading', icon: BookOpen, color: '#f59e0b' },
-    { id: 'listening', icon: Headphones, color: '#ec4899' },
-];
-
-const PURPOSE_ICONS = {
-    anime: { icon: Gamepad2, color: '#e11d48' },
-    friends: { icon: Heart, color: '#ec4899' },
-    travel: { icon: Plane, color: '#0ea5e9' },
-    culture: { icon: Landmark, color: '#f59e0b' },
-    live: { icon: Home, color: '#22c55e' },
-    work: { icon: Briefcase, color: '#6366f1' },
-    beauty: { icon: Sparkles, color: '#a855f7' },
-    challenge: { icon: Brain, color: '#f97316' },
-    other: { icon: MoreHorizontal, color: '#64748b' },
-} as const;
-
-type PurposeId = keyof typeof PURPOSE_ICONS;
-type Distribution = { grammar: number; vocabulary: number; conversation: number; reading: number; listening: number };
 
 // ===== ロジック関数 =====
 
-function getLessonDistribution(currentLevel: number, purposeIds: PurposeId[]): Distribution {
-    const purposeDistributions: Record<string, Distribution[]> = {
-        anime: [
-            { grammar: 25, vocabulary: 25, conversation: 10, reading: 15, listening: 25 },
-            { grammar: 20, vocabulary: 20, conversation: 15, reading: 15, listening: 30 },
-            { grammar: 15, vocabulary: 20, conversation: 15, reading: 20, listening: 30 },
-            { grammar: 10, vocabulary: 15, conversation: 20, reading: 25, listening: 30 },
-        ],
-        friends: [
-            { grammar: 25, vocabulary: 20, conversation: 30, reading: 10, listening: 15 },
-            { grammar: 20, vocabulary: 15, conversation: 35, reading: 10, listening: 20 },
-            { grammar: 15, vocabulary: 15, conversation: 40, reading: 10, listening: 20 },
-            { grammar: 10, vocabulary: 10, conversation: 45, reading: 10, listening: 25 },
-        ],
-        travel: [
-            { grammar: 20, vocabulary: 30, conversation: 30, reading: 10, listening: 10 },
-            { grammar: 15, vocabulary: 25, conversation: 35, reading: 10, listening: 15 },
-            { grammar: 15, vocabulary: 20, conversation: 35, reading: 15, listening: 15 },
-            { grammar: 10, vocabulary: 20, conversation: 35, reading: 15, listening: 20 },
-        ],
-        culture: [
-            { grammar: 25, vocabulary: 25, conversation: 15, reading: 25, listening: 10 },
-            { grammar: 20, vocabulary: 20, conversation: 15, reading: 30, listening: 15 },
-            { grammar: 20, vocabulary: 20, conversation: 15, reading: 30, listening: 15 },
-            { grammar: 15, vocabulary: 15, conversation: 20, reading: 30, listening: 20 },
-        ],
-        live: [
-            { grammar: 25, vocabulary: 25, conversation: 25, reading: 15, listening: 10 },
-            { grammar: 20, vocabulary: 25, conversation: 25, reading: 15, listening: 15 },
-            { grammar: 20, vocabulary: 20, conversation: 25, reading: 20, listening: 15 },
-            { grammar: 15, vocabulary: 20, conversation: 25, reading: 20, listening: 20 },
-        ],
-        work: [
-            { grammar: 30, vocabulary: 25, conversation: 20, reading: 15, listening: 10 },
-            { grammar: 25, vocabulary: 20, conversation: 25, reading: 15, listening: 15 },
-            { grammar: 20, vocabulary: 20, conversation: 25, reading: 20, listening: 15 },
-            { grammar: 20, vocabulary: 15, conversation: 25, reading: 20, listening: 20 },
-        ],
-        beauty: [
-            { grammar: 25, vocabulary: 30, conversation: 10, reading: 25, listening: 10 },
-            { grammar: 20, vocabulary: 30, conversation: 10, reading: 25, listening: 15 },
-            { grammar: 20, vocabulary: 25, conversation: 15, reading: 25, listening: 15 },
-            { grammar: 15, vocabulary: 25, conversation: 15, reading: 25, listening: 20 },
-        ],
-        challenge: [
-            { grammar: 25, vocabulary: 25, conversation: 20, reading: 15, listening: 15 },
-            { grammar: 25, vocabulary: 25, conversation: 20, reading: 15, listening: 15 },
-            { grammar: 20, vocabulary: 20, conversation: 20, reading: 20, listening: 20 },
-            { grammar: 20, vocabulary: 20, conversation: 20, reading: 20, listening: 20 },
-        ],
-        other: [
-            { grammar: 25, vocabulary: 25, conversation: 20, reading: 15, listening: 15 },
-            { grammar: 20, vocabulary: 20, conversation: 25, reading: 17, listening: 18 },
-            { grammar: 20, vocabulary: 20, conversation: 25, reading: 17, listening: 18 },
-            { grammar: 15, vocabulary: 15, conversation: 30, reading: 20, listening: 20 },
-        ],
-    };
+// ===== ロジック関数 (Extracted to src/lib/roadmap) =====
 
-    // If no purpose selected, fallback to 'other'
-    const selectedIds = purposeIds.length > 0 ? purposeIds : (['other'] as PurposeId[]);
-
-    // Initialize sums
-    const sums: Distribution = { grammar: 0, vocabulary: 0, conversation: 0, reading: 0, listening: 0 };
-
-    selectedIds.forEach(id => {
-        const dists = purposeDistributions[id as string] || purposeDistributions.other;
-        let d: Distribution;
-        if (currentLevel < 20) d = dists[0];
-        else if (currentLevel < 40) d = dists[1];
-        else if (currentLevel < 60) d = dists[2];
-        else d = dists[3];
-
-        sums.grammar += d.grammar;
-        sums.vocabulary += d.vocabulary;
-        sums.conversation += d.conversation;
-        sums.reading += d.reading;
-        sums.listening += d.listening;
-    });
-
-    // Calculate averages
-    const count = selectedIds.length;
-    return {
-        grammar: Math.round(sums.grammar / count),
-        vocabulary: Math.round(sums.vocabulary / count),
-        conversation: Math.round(sums.conversation / count),
-        reading: Math.round(sums.reading / count),
-        listening: Math.round(sums.listening / count)
-    };
-}
-
-function getDistributionReason(purposeIds: PurposeId[], currentLevel: number, t: Translations): string {
-    if (purposeIds.length === 0) return t.distributionReasons.other[currentLevel < 40 ? 'beginner' : 'advanced'];
-
-    const reasons = purposeIds.map(pid => {
-        const r = t.distributionReasons[pid as keyof typeof t.distributionReasons] || t.distributionReasons.other;
-        return r[currentLevel < 40 ? 'beginner' : 'advanced'];
-    });
-
-    // Deduplicate specific phrases if needed, but for now just join unique ones or simplified
-    // If multiple, show a combined message
-    if (purposeIds.length > 1) {
-        const labels = purposeIds.map(pid => t.purposes[pid as keyof typeof t.purposes]?.label).join(' & ');
-        return `${labels}の両方を叶えるために最適化されたプランです。\n` + reasons[0]; // Simplified for UI space
-    }
-    return reasons[0];
-}
-
-function getPurposeMilestone(purposeIds: PurposeId[], monthLevel: number, t: Translations): string {
-    const selectedIds = purposeIds.length > 0 ? purposeIds : ['other'];
-    const milestones: string[] = [];
-
-    // Combine distinct milestone phrases from all purposes
-    const thresholds = [15, 25, 40, 55, 70, 85, 100];
-    let thresholdIdx = thresholds.length - 1;
-    for (let i = 0; i < thresholds.length; i++) {
-        if (monthLevel <= thresholds[i]) {
-            thresholdIdx = i;
-            break;
-        }
-    }
-
-    selectedIds.forEach(pid => {
-        const texts = t.purposeMilestones[pid as keyof typeof t.purposeMilestones] || t.purposeMilestones.other;
-        milestones.push(texts[thresholdIdx]);
-    });
-
-    // Deduplicate and join
-    return Array.from(new Set(milestones)).join(' / ');
-}
-
-// 目的別レッスン数の倍率
-const PURPOSE_LESSON_MULTIPLIER: Record<string, number> = {
-    anime: 1.0,
-    friends: 1.1,
-    travel: 0.9,
-    culture: 0.9,
-    live: 1.1,
-    work: 1.2,
-    beauty: 0.8,
-    challenge: 1.0,
-    other: 1.0,
-};
-
-function generateMilestones(currentLevel: number, targetLevel: number, months: number, purposeIds: PurposeId[], t: Translations) {
-    const milestones = [];
-    const levelPerMonth = (targetLevel - currentLevel) / months;
-
-    const selectedIds = purposeIds.length > 0 ? purposeIds : (['other'] as PurposeId[]);
-
-    // Calculate max multiplier for safety (taking the most demanding purpose)
-    let maxMultiplier = 1.0;
-    selectedIds.forEach(pid => {
-        const m = PURPOSE_LESSON_MULTIPLIER[pid] || 1.0;
-        if (m > maxMultiplier) maxMultiplier = m;
-    });
-
-    for (let i = 1; i <= months; i++) {
-        const monthLevel = currentLevel + (levelPerMonth * i);
-        const jlptLevel = JLPT_LEVELS.find(l => monthLevel >= l.minLevel && monthLevel < l.maxLevel) || JLPT_LEVELS[4];
-
-        // Select content based on level range index (0-6)
-        let contentIdx = 0;
-        if (monthLevel < 15) contentIdx = 0;
-        else if (monthLevel < 25) contentIdx = 1;
-        else if (monthLevel < 40) contentIdx = 2;
-        else if (monthLevel < 55) contentIdx = 3;
-        else if (monthLevel < 70) contentIdx = 4;
-        else if (monthLevel < 85) contentIdx = 5;
-        else contentIdx = 6;
-
-        // Collect and average/merge content from all purposes
-        let combinedFocus: string[] = [];
-        let combinedSkills: string[] = [];
-        let combinedTextbooks: string[] = [];
-        let combinedPrompts: string[] = [];
-        let uniqueReasons: string[] = [];
-
-        selectedIds.forEach(pid => {
-            const pContent = t.purposeMonthlyContent[pid as keyof typeof t.purposeMonthlyContent] || t.purposeMonthlyContent.other;
-            if (pContent.focus[contentIdx]) combinedFocus.push(...pContent.focus[contentIdx]);
-            if (pContent.skills[contentIdx]) combinedSkills.push(...pContent.skills[contentIdx]);
-            if (pContent.textbooks[contentIdx]) combinedTextbooks.push(...pContent.textbooks[contentIdx]);
-            if (pContent.aiPrompt[contentIdx]) combinedPrompts.push(pContent.aiPrompt[contentIdx]);
-            if (pContent.reasons[contentIdx]) uniqueReasons.push(pContent.reasons[contentIdx]);
-        });
-
-        // Deduplicate
-        combinedFocus = Array.from(new Set(combinedFocus)).slice(0, 5); // Limit count
-        combinedSkills = Array.from(new Set(combinedSkills)).slice(0, 5);
-        combinedTextbooks = Array.from(new Set(combinedTextbooks));
-
-        milestones.push({
-            month: i,
-            level: Math.round(monthLevel),
-            jlpt: jlptLevel.name,
-            jlptColor: jlptLevel.color,
-            focus: combinedFocus,
-            skills: combinedSkills,
-            reason: uniqueReasons[0] || "", // Just take first reason to avoid clutter
-            textbooks: combinedTextbooks,
-            aiPrompt: combinedPrompts.join(" / "),
-
-            purposeMilestone: getPurposeMilestone(selectedIds, monthLevel, t),
-            lessonsNeeded: Math.ceil(levelPerMonth * 2 * maxMultiplier),
-        });
-    }
-    return milestones;
-}
-
-function calculateTotalHours(currentLevel: number, targetLevel: number, purposeIds: PurposeId[] = []) {
-    let baseHours = 0;
-    for (const level of JLPT_LEVELS) {
-        const overlapStart = Math.max(currentLevel, level.minLevel);
-        const overlapEnd = Math.min(targetLevel, level.maxLevel);
-        if (overlapStart < overlapEnd) {
-            const portion = (overlapEnd - overlapStart) / (level.maxLevel - level.minLevel);
-            baseHours += level.hours * portion;
-        }
-    }
-
-    // Apply strict multiplier based on the most demanding purpose
-    let maxMultiplier = 1.0;
-    if (purposeIds.length > 0) {
-        purposeIds.forEach(pid => {
-            const m = PURPOSE_LESSON_MULTIPLIER[pid] || 1.0;
-            if (m > maxMultiplier) maxMultiplier = m;
-        });
-    }
-
-    return Math.round(baseHours * maxMultiplier);
-}
-
-function getLevelDescription(level: number, t: Translations) {
-    if (level < 20) return t.levelDescriptions.n5;
-    if (level < 40) return t.levelDescriptions.n4;
-    if (level < 60) return t.levelDescriptions.n3;
-    if (level < 80) return t.levelDescriptions.n2;
-    if (level < 95) return t.levelDescriptions.n1;
-    return t.levelDescriptions.nativeLevel;
-}
 
 // ===== コンポーネント =====
 
@@ -310,7 +42,7 @@ type RoadmapGeneratorProps = {
         purposeId: string; // Comma separated IDs
         purposeLabel: string; // Comma separated Labels
         periodMonths: number;
-        milestones: any[];
+        milestones: Milestone[];
     }) => Promise<void>;
     studentName?: string;
 };
@@ -900,7 +632,7 @@ export default function RoadmapGenerator({
                                                 <p className="text-[10px] text-purple-500 bg-purple-100/50 px-1.5 py-0.5 rounded">Click to Copy</p>
                                             </div>
                                             <p className="text-sm text-purple-900 leading-relaxed italic">
-                                                "{milestone.aiPrompt}"
+                                                &quot;{milestone.aiPrompt}&quot;
                                             </p>
                                         </div>
                                     )}

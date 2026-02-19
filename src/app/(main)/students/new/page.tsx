@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
 export default function NewStudentPage() {
     const router = useRouter();
@@ -44,11 +45,12 @@ export default function NewStudentPage() {
 
             if (error) throw error;
 
+            toast.success('生徒を登録しました');
             router.push('/students');
             router.refresh();
         } catch (error) {
             console.error('Error adding student:', error);
-            alert('生徒の登録に失敗しました。');
+            toast.error('生徒の登録に失敗しました。もう一度お試しください。');
         } finally {
             setLoading(false);
         }

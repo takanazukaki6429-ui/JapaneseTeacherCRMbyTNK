@@ -4,12 +4,13 @@ import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { type User as SupabaseUser } from "@supabase/supabase-js";
 import { User, LogOut, Settings, ChevronDown } from "lucide-react";
 
 export function UserNav() {
     const router = useRouter();
     const supabase = createClient();
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<SupabaseUser | null>(null);
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -40,7 +41,7 @@ export function UserNav() {
         router.push("/login");
     };
 
-    const getInitials = (email: string) => {
+    const getInitials = (email: string | undefined) => {
         if (!email) return "U";
         return email.substring(0, 1).toUpperCase();
     };

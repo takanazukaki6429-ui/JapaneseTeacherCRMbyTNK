@@ -2,8 +2,13 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { formatDate } from '@/lib/utils';
 import { BookOpen, Calendar, Clock, User, ArrowLeft } from 'lucide-react';
+import { Database } from '@/types/supabase';
 
 export const revalidate = 0;
+
+type LessonWithStudent = Database['public']['Tables']['lessons']['Row'] & {
+    students: Pick<Database['public']['Tables']['students']['Row'], 'name' | 'id' | 'user_id'> | null
+};
 
 async function getAllLessons() {
     const supabase = await createClient();
@@ -27,14 +32,11 @@ async function getAllLessons() {
         return [];
     }
 
-    return data || [];
+    return (data as unknown as LessonWithStudent[]) || [];
 }
 
 export default async function LessonsPage() {
     const lessons = await getAllLessons();
-
-    // Group lessons by month?? Or just simple list.
-    // Let's do a simple list first strictly matching the request for "Same as student page" (handling empty state).
 
     return (
         <div className="space-y-6">
@@ -64,9 +66,9 @@ export default async function LessonsPage() {
                 </div>
             ) : (
                 <div className="grid gap-4">
-                    {lessons.map((lesson: any) => {
-                        const isScheduled = lesson.status === 'scheduled';
-                        const isCompleted = lesson.status === 'completed' || !lesson.status; // legacy null = completed
+                    {lessons.map((lesson) => {
+                        const lessonDate = new Date(lesson.date);
+                        const isScheduled = lessonDate > new Date();
 
                         return (
                             <div
@@ -75,9 +77,9 @@ export default async function LessonsPage() {
                             >
                                 {/* Date Badge */}
                                 <div className={`flex-shrink-0 w-full md:w-auto flex md:flex-col items-center justify-center gap-2 md:gap-0 p-3 rounded-lg border ${isScheduled ? 'bg-teal-50 border-teal-100 text-teal-700' : 'bg-slate-50 border-slate-200 text-slate-600'} min-w-[80px]`}>
-                                    <span className="text-xs font-bold uppercase">{new Date(lesson.date).toLocaleDateString('en-US', { month: 'short' })}</span>
-                                    <span className="text-xl font-bold">{new Date(lesson.date).getDate()}</span>
-                                    <span className="text-xs opacity-75">{new Date(lesson.date).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}</span>
+                                    <span className="text-xs font-bold uppercase">{lessonDate.toLocaleDateString('en-US', { month: 'short' })}</span>
+                                    <span className="text-xl font-bold">{lessonDate.getDate()}</span>
+                                    <span className="text-xs opacity-75">{lessonDate.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}</span>
                                 </div>
 
                                 {/* Content */}
@@ -98,7 +100,7 @@ export default async function LessonsPage() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                                         <div className="bg-slate-50 p-2 rounded border border-slate-100">
                                             <p className="text-xs font-bold text-slate-500 mb-1">トピック</p>
-                                            <p className="text-slate-700 truncate">{lesson.topics || '未入力'}</p>
+                                            <p className="text-slate-700 truncate">{lesson.content || '未入力'}</p>
                                         </div>
                                         <div className="bg-slate-50 p-2 rounded border border-slate-100">
                                             <p className="text-xs font-bold text-slate-500 mb-1">宿題</p>
