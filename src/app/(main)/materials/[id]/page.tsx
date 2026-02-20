@@ -3,8 +3,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Material } from '@/types/material';
 import { formatDate } from '@/lib/utils';
-import { ArrowLeft, Zap, FileText, Trash2, Edit } from 'lucide-react';
-import { RedirectType, redirect } from 'next/navigation';
+import { ArrowLeft, Zap, FileText, Edit } from 'lucide-react';
 
 export const revalidate = 0;
 

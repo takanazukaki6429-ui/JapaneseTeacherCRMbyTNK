@@ -1,9 +1,8 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { Lesson } from '@/types/lesson';
-import { formatDate } from '@/lib/utils'; // You might need to add this utility
 import Link from 'next/link';
-import { Plus, ChevronRight, Star, AlertCircle } from 'lucide-react';
+import { Plus, ChevronRight, Star } from 'lucide-react';
 
 async function getLessons(studentId: string) {
     const supabase = await createClient();

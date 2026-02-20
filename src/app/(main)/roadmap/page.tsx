@@ -4,9 +4,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { domToBlob } from 'modern-screenshot';
 import {
     Share2, Loader2, BookOpen, Clock, Target, TrendingUp, CheckCircle2,
-    BookText, MessageCircle, Headphones, PenLine, GraduationCap,
-    Gamepad2, Heart, Plane, Landmark, Home, Briefcase, Sparkles, Brain, MoreHorizontal,
-    ChevronDown, ArrowLeft
+    BookText, GraduationCap, Sparkles, ChevronDown
 } from 'lucide-react';
 // import { toast } from 'sonner'; // Using basic alert for now if sonner setup is complex, or standard toast
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,11 +13,11 @@ import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, PieChart, Pie, Cell } from 'recharts';
-import { type Locale, locales, getTranslations, detectLocale, type Translations } from './i18n';
+import { type Locale, locales, getTranslations, detectLocale } from './i18n';
 
 // Shared Library Imports
-import { JLPT_LEVELS, PURPOSE_ICONS, LESSON_TYPE_ICONS } from '@/lib/roadmap/constants';
-import { type PurposeId, type Distribution } from '@/lib/roadmap/types';
+import { PURPOSE_ICONS, LESSON_TYPE_ICONS } from '@/lib/roadmap/constants';
+import { type PurposeId } from '@/lib/roadmap/types';
 import { getLessonDistribution, calculateTotalHours } from '@/lib/roadmap/calculations';
 import { generateMilestones, getLevelDescription, getDistributionReason } from '@/lib/roadmap/generators';
 
@@ -31,6 +29,7 @@ const toast = {
 
 
 // ===== コンポーネント =====
+const lessonTypeKeys = ['grammar', 'vocabulary', 'conversation', 'reading', 'listening'] as const;
 
 export default function JapaneseRoadmapPage() {
     const contentRef = useRef<HTMLDivElement>(null);
@@ -123,7 +122,6 @@ export default function JapaneseRoadmapPage() {
         return points;
     }, [currentLevel, targetLevel, periodMonths, t]);
 
-    const lessonTypeKeys = ['grammar', 'vocabulary', 'conversation', 'reading', 'listening'] as const;
     const pieData = useMemo(() => {
         return LESSON_TYPE_ICONS.map((type, idx) => ({
             name: t.lessonTypes[lessonTypeKeys[idx]],
@@ -564,7 +562,7 @@ export default function JapaneseRoadmapPage() {
                                                 <p className="text-[10px] text-purple-500 bg-purple-100/50 px-1.5 py-0.5 rounded">Click to Copy</p>
                                             </div>
                                             <p className="text-sm text-purple-900 leading-relaxed italic">
-                                                "{milestone.aiPrompt}"
+                                                &quot;{milestone.aiPrompt}&quot;
                                             </p>
                                         </div>
                                     )}

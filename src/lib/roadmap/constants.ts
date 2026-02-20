@@ -3,7 +3,7 @@ import {
     BookText, PenLine, MessageCircle, BookOpen, Headphones,
     Gamepad2, Heart, Plane, Landmark, Home, Briefcase, Sparkles, Brain, MoreHorizontal
 } from 'lucide-react';
-import { PurposeId, JlptLevelData } from './types';
+import { JlptLevelData } from './types';
 
 export const JLPT_LEVELS: JlptLevelData[] = [
     { name: 'N5', minLevel: 0, maxLevel: 20, hours: 150, color: '#22c55e' },

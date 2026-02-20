@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { User, Sparkles, Database, Save, Loader2, Coins } from 'lucide-react';
-import { toast } from 'sonner';
 
 export default function SettingsPage() {
     const supabase = createClient();
@@ -14,10 +13,6 @@ export default function SettingsPage() {
     const [userId, setUserId] = useState<string | null>(null);
     const [lessonPrice, setLessonPrice] = useState<number>(3000);
     const [aiModel, setAiModel] = useState<string>('gemini-2.0-flash');
-
-    useEffect(() => {
-        fetchSettings();
-    }, []);
 
     const fetchSettings = async () => {
         try {
@@ -35,17 +30,19 @@ export default function SettingsPage() {
                 setLessonPrice(data.default_lesson_price || 3000);
                 setAiModel(data.ai_model || 'gemini-2.0-flash');
             } else if (!error || error.code === 'PGRST116') {
-                // No settings found, use defaults
-                // No settings found, use defaults
-            } else {
-                // Settings fetch error — defaults are used
+                // No settings found
             }
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
             // Unexpected error in fetchSettings
         } finally {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchSettings();
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleSave = async () => {
         if (!userId) return;
@@ -66,6 +63,7 @@ export default function SettingsPage() {
             // Simple alert for now as sonner might not be fully set up in layout
             alert('設定を保存しました');
 
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
             // Save failed
             alert('保存に失敗しました');

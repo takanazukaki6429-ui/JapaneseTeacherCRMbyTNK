@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Loader2, User, Check } from "lucide-react";
 
 export default function OnboardingPage() {
@@ -40,9 +40,10 @@ export default function OnboardingPage() {
             // Client-side router sometimes keeps old state, encourage full reload to re-run middleware checks
             window.location.href = "/";
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
-            setError(err.message || "プロフィールの保存に失敗しました");
+            const message = err instanceof Error ? err.message : "プロフィールの保存に失敗しました";
+            setError(message);
         } finally {
             setLoading(false);
         }

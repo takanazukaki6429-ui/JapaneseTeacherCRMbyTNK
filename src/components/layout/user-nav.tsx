@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { type User as SupabaseUser } from "@supabase/supabase-js";
-import { User, LogOut, Settings, ChevronDown } from "lucide-react";
+import { LogOut, Settings, ChevronDown } from "lucide-react";
 
 export function UserNav() {
     const router = useRouter();

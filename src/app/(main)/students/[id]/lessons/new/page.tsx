@@ -29,40 +29,40 @@ export default function NewLessonPage() {
     });
 
     useEffect(() => {
+        const fetchScheduledLesson = async (id: string) => {
+            setFetchingScheduled(true);
+            try {
+                const { data, error } = await supabase
+                    .from('lessons')
+                    .select('*')
+                    .eq('id', id)
+                    .single();
+
+                if (error) {
+                    console.error('Error fetching lesson:', error);
+                }
+
+                if (data) {
+                    // Convert ISO date to datetime-local format (subset)
+                    const dateObj = new Date(data.date);
+                    const localIso = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+
+                    setFormData(prev => ({
+                        ...prev,
+                        date: localIso,
+                    }));
+                }
+            } catch (e) {
+                console.error('Error fetching scheduled lesson', e);
+            } finally {
+                setFetchingScheduled(false);
+            }
+        };
+
         if (scheduledLessonId) {
             fetchScheduledLesson(scheduledLessonId);
         }
-    }, [scheduledLessonId]);
-
-    const fetchScheduledLesson = async (id: string) => {
-        setFetchingScheduled(true);
-        try {
-            const { data, error } = await supabase
-                .from('lessons')
-                .select('*')
-                .eq('id', id)
-                .single();
-
-            if (data) {
-                // Convert ISO date to datetime-local format (subset)
-                // Assuming stored date is ISO string e.g. 2023-10-10T10:00:00.000Z
-                // We want YYYY-MM-DDTHH:mm
-                const dateObj = new Date(data.date);
-                // Adjust for timezone offset for local input if needed, strictly speaking inputs work better with local time strings
-                // Simple hack for now:
-                const localIso = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-
-                setFormData(prev => ({
-                    ...prev,
-                    date: localIso,
-                }));
-            }
-        } catch (e) {
-            console.error('Error fetching scheduled lesson', e);
-        } finally {
-            setFetchingScheduled(false);
-        }
-    };
+    }, [scheduledLessonId, supabase]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;

@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Student } from '@/types/student';
-import { ArrowLeft, User, BookOpen, GraduationCap, Flag, Target, Calendar, StickyNote, Sparkles } from 'lucide-react';
+import { ArrowLeft, User, BookOpen, GraduationCap, Flag, Target, StickyNote, Sparkles } from 'lucide-react';
 import { DeleteStudentButton } from './delete-button';
 
 import { LessonList } from './lesson-list';

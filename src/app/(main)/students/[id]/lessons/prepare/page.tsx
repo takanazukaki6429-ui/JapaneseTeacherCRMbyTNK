@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { ArrowLeft, Sparkles, Loader2, BookOpen, Brain, ArrowRight, Save } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { Lesson } from '@/types/lesson';
 
 type KeyPoint = {
     question: string;
@@ -29,7 +30,7 @@ export default function LessonPreparePage() {
 
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
-    const [lastLesson, setLastLesson] = useState<any>(null);
+    const [lastLesson, setLastLesson] = useState<Lesson | null>(null);
     const [studentName, setStudentName] = useState('');
     const [prepContent, setPrepContent] = useState<PrepContent | null>(null);
 
@@ -78,39 +79,43 @@ ${prepContent.advice}
     };
 
     useEffect(() => {
+        const fetchData = async () => {
+            try {
+                // Fetch student name
+                const { data: student } = await supabase
+                    .from('students')
+                    .select('name')
+                    .eq('id', studentId)
+                    .single();
+
+                if (student) setStudentName(student.name);
+
+                // Fetch last lesson
+                const { data: lessons, error } = await supabase
+                    .from('lessons')
+                    .select('*')
+                    .eq('student_id', studentId)
+                    .order('date', { ascending: false })
+                    .limit(1);
+
+                if (error) {
+                    console.error("Error fetching last lesson:", error);
+                }
+
+                if (lessons && lessons.length > 0) {
+                    setLastLesson(lessons[0]);
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         if (studentId) {
             fetchData();
         }
-    }, [studentId]);
-
-    const fetchData = async () => {
-        try {
-            // Fetch student name
-            const { data: student } = await supabase
-                .from('students')
-                .select('name')
-                .eq('id', studentId)
-                .single();
-
-            if (student) setStudentName(student.name);
-
-            // Fetch last lesson
-            const { data: lessons, error } = await supabase
-                .from('lessons')
-                .select('*')
-                .eq('student_id', studentId)
-                .order('date', { ascending: false })
-                .limit(1);
-
-            if (lessons && lessons.length > 0) {
-                setLastLesson(lessons[0]);
-            }
-        } catch (error) {
-            console.error('Error fetching data:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    }, [studentId, supabase]);
 
     const handleGenerate = async () => {
         if (!lastLesson) return;

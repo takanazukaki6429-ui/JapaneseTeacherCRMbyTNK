@@ -2,33 +2,28 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { domToBlob } from 'modern-screenshot';
-import {
-    Share2, Loader2, BookOpen, Clock, Target, TrendingUp, CheckCircle2,
-    BookText, MessageCircle, Headphones, PenLine, GraduationCap,
-    Gamepad2, Heart, Plane, Landmark, Home, Briefcase, Sparkles, Brain, MoreHorizontal,
-    ChevronDown, Save
-} from 'lucide-react';
+import { Share2, Loader2, BookOpen, Clock, Target, TrendingUp, CheckCircle2, BookText, Sparkles, ChevronDown, Save, GraduationCap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, PieChart, Pie, Cell } from 'recharts';
-import { type Locale, locales, getTranslations, detectLocale, type Translations } from '@/app/(main)/roadmap/i18n';
+import { type Locale, locales, getTranslations, detectLocale } from '@/app/(main)/roadmap/i18n';
 
 // Shared Library Imports
-import { JLPT_LEVELS, PURPOSE_ICONS, LESSON_TYPE_ICONS } from '@/lib/roadmap/constants';
-import { type PurposeId, type Distribution, type Milestone } from '@/lib/roadmap/types';
+import { PURPOSE_ICONS, LESSON_TYPE_ICONS } from '@/lib/roadmap/constants';
+import { type PurposeId, type Milestone } from '@/lib/roadmap/types';
 import { getLessonDistribution, calculateTotalHours } from '@/lib/roadmap/calculations';
 import { generateMilestones, getLevelDescription, getDistributionReason } from '@/lib/roadmap/generators';
 
 import { toast } from 'sonner';
 
-
 // ===== ロジック関数 =====
 
 // ===== ロジック関数 (Extracted to src/lib/roadmap) =====
 
+const lessonTypeKeys = ['grammar', 'vocabulary', 'conversation', 'reading', 'listening'] as const;
 
 // ===== コンポーネント =====
 
@@ -185,7 +180,6 @@ export default function RoadmapGenerator({
         return points;
     }, [currentLevel, targetLevel, periodMonths, t]);
 
-    const lessonTypeKeys = ['grammar', 'vocabulary', 'conversation', 'reading', 'listening'] as const;
     const pieData = useMemo(() => {
         return LESSON_TYPE_ICONS.map((type, idx) => ({
             name: t.lessonTypes[lessonTypeKeys[idx]],

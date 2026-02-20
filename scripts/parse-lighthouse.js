@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const fs = require('fs');
 try {
     const report = JSON.parse(fs.readFileSync('lighthouse-report.json', 'utf8'));

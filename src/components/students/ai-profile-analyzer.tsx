@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Sparkles, BookOpen, Calendar, Lightbulb, Loader2, X, ChevronRight, Check } from 'lucide-react';
+import { Sparkles, BookOpen, Calendar, Lightbulb, X } from 'lucide-react';
 import { Student } from '@/types/student';
 
 interface AIProfileAnalyzerProps {

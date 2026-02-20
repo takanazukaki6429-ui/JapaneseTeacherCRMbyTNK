@@ -14,19 +14,19 @@ export async function GET(request: Request) {
       {
         cookies: {
           getAll() {
-            // @ts-ignore
+            // @ts-expect-error : Next.js cookie handling type mismatch with Supabase SSR
             return request.cookies.getAll();
           },
           setAll(cookiesToSet) {
-            // @ts-ignore
-            cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value));
+            // @ts-expect-error : Next.js cookie handling type mismatch with Supabase SSR
+            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           },
         },
       }
     );
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-       // リダイレクト先に origin を含めることで絶対パスにする
+      // リダイレクト先に origin を含めることで絶対パスにする
       return NextResponse.redirect(`${origin}${next}`);
     }
   }

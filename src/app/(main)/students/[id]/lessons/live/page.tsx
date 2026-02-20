@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { ArrowLeft, Send, MessageCircle, BookOpen, CheckCircle, Save, Loader2, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, Send, MessageCircle, BookOpen, CheckCircle, Save, Sparkles, X } from 'lucide-react';
 import Link from 'next/link';
 
 type KeyPoint = {

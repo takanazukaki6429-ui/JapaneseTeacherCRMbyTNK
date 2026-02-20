@@ -16,6 +16,7 @@ const RoadmapGenerator = dynamic(() => import('@/components/roadmap/RoadmapGener
 });
 import Link from 'next/link';
 import { type Milestone } from '@/lib/roadmap/types';
+import { Student } from '@/types/student';
 
 export default function StudentRoadmapPage() {
     const router = useRouter();
@@ -24,30 +25,30 @@ export default function StudentRoadmapPage() {
     const supabase = createClient();
 
     const [loading, setLoading] = useState(true);
-    const [student, setStudent] = useState<any>(null);
+    const [student, setStudent] = useState<Student | null>(null);
 
     useEffect(() => {
+        const fetchStudent = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('students')
+                    .select('*')
+                    .eq('id', studentId)
+                    .single();
+
+                if (error) throw error;
+                setStudent(data);
+            } catch (error) {
+                console.error('Error fetching student:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         if (studentId) {
             fetchStudent();
         }
-    }, [studentId]);
-
-    const fetchStudent = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('students')
-                .select('*')
-                .eq('id', studentId)
-                .single();
-
-            if (error) throw error;
-            setStudent(data);
-        } catch (error) {
-            console.error('Error fetching student:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    }, [studentId, supabase]);
 
     const handleSave = async (data: {
         currentLevel: number;
@@ -77,10 +78,9 @@ Key Focus: ${data.milestones[0]?.focus.join(', ') || 'General'}
                 // Approximate mapping from 0-100 scale to JLPT like N5, N4 etc not strictly required but handled if needed in future
                 // For now, we update the text fields used in the profile
                 goal_text: goalText,
-                purposes: data.purposeId, // Save the comma separated IDs
                 current_phase: currentPhaseText,
                 // Append to memo
-                memo: (student.memo ? student.memo + '\n\n' : '') + roadmapSummary
+                memo: (student?.memo ? student.memo + '\n\n' : '') + roadmapSummary
             };
 
             const { error } = await supabase
@@ -111,7 +111,7 @@ Key Focus: ${data.milestones[0]?.focus.join(', ') || 'General'}
 
     // Try to parse existing data if relevant, or default
     // We prioritize the new 'purposes' column, but fallback to nothing if not present (legacy data difficult to parse back to ID)
-    const initialPurpose = student.purposes || undefined;
+    const initialPurpose = undefined;
 
     return (
         <div className="min-h-screen bg-slate-50">

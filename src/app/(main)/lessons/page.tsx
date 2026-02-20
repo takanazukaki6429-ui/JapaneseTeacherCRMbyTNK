@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { formatDate } from '@/lib/utils';
-import { BookOpen, Calendar, Clock, User, ArrowLeft } from 'lucide-react';
+import { BookOpen, User, ArrowLeft } from 'lucide-react';
 import { Database } from '@/types/supabase';
 
 export const revalidate = 0;

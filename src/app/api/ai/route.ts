@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@/lib/supabase/server';
+import { z } from 'zod';
 
-// Initialize Gemini API
+const profileAnalysisSchema = z.object({
+    recommended_textbooks: z.array(z.object({
+        title: z.string(),
+        reason: z.string()
+    })),
+    teaching_strategy: z.string(),
+    week_schedule: z.string()
+});
 // Ensure GEMINI_API_KEY is set in .env.local
 export const dynamic = 'force-dynamic';
 
@@ -142,11 +150,37 @@ export async function POST(req: NextRequest) {
                     });
                 }
 
+                // AI Response Schema Validation (Enterprise Hardening)
+                if (type === 'profile_analysis') {
+                    try {
+                        let cleanText = text.trim();
+                        // Remove markdown formatting if LLM includes it despite instructions
+                        if (cleanText.startsWith('\`\`\`json')) {
+                            cleanText = cleanText.replace(/^\`\`\`json/, '').replace(/\`\`\`$/, '').trim();
+                        } else if (cleanText.startsWith('\`\`\`')) {
+                            cleanText = cleanText.replace(/^\`\`\`/, '').replace(/\`\`\`$/, '').trim();
+                        }
+
+                        const parsedData = JSON.parse(cleanText);
+                        // Validate with Zod
+                        const validatedData = profileAnalysisSchema.parse(parsedData);
+
+                        return NextResponse.json({
+                            text: JSON.stringify(validatedData),
+                            model: modelName
+                        });
+                    } catch (validationErr) {
+                        console.error('LLM Output Validation Failed:', validationErr);
+                        // Retry next model if validation fails, otherwise handled below
+                        throw new Error('LLM response did not match expected schema.');
+                    }
+                }
+
                 return NextResponse.json({
                     text,
                     model: modelName
                 });
-            } catch (error: any) {
+            } catch (error: unknown) {
 
                 lastError = error;
                 // If it's not a 404 (Not Found) or 400 (Bad Request), strictly speaking we might want to stop, 
@@ -157,7 +191,7 @@ export async function POST(req: NextRequest) {
 
         throw lastError; // If all fail, throw the last error
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('AI API Error Details:', error);
 
         return NextResponse.json(

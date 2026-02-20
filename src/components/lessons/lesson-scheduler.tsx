@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Calendar, Clock, Plus, ExternalLink, Loader2, Check } from 'lucide-react';
+import { Calendar, Plus, ExternalLink, Loader2, Check } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 type Props = {
@@ -13,7 +12,6 @@ type Props = {
 };
 
 export function LessonScheduler({ studentId, studentName, onScheduled }: Props) {
-    const router = useRouter();
     const supabase = createClient();
     const [date, setDate] = useState('');
     const [time, setTime] = useState('');
@@ -70,6 +68,7 @@ export function LessonScheduler({ studentId, studentName, onScheduled }: Props) 
 
             setGoogleLink(link);
             toast.success('レッスンの予約が完了しました');
+            onScheduled?.();
         } catch (error) {
             console.error('Error scheduling lesson:', error);
             toast.error('予約に失敗しました。もう一度お試しください。');

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { MessageCircle, Sparkles, User, Clock } from 'lucide-react';
+import { MessageCircle, Sparkles, User } from 'lucide-react';
 
 type ChatLog = {
     id: string;
@@ -52,8 +52,8 @@ export function LessonChatLogsViewer({ lessonId }: { lessonId: string | null }) 
                 {logs.map((log) => (
                     <div key={log.id} className={`flex flex-col ${log.role === 'user' ? 'items-end' : 'items-start'}`}>
                         <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm relative ${log.role === 'user'
-                                ? 'bg-teal-50 text-teal-900 rounded-tr-none border border-teal-100'
-                                : 'bg-slate-50 text-slate-800 rounded-tl-none border border-slate-200'
+                            ? 'bg-teal-50 text-teal-900 rounded-tr-none border border-teal-100'
+                            : 'bg-slate-50 text-slate-800 rounded-tl-none border border-slate-200'
                             }`}>
                             <div className="flex items-center gap-2 mb-1 opacity-70">
                                 {log.role === 'user' ? (
