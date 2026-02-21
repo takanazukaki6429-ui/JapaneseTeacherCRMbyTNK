@@ -13,7 +13,8 @@ create table public.students (
   goal_text text,
   textbook text,
   current_phase text,
-  memo text
+  memo text,
+  email text
 );
 
 -- 2. Lessons Table (レッスン記録)
@@ -62,3 +63,32 @@ create policy "Users can delete their own lessons" on public.lessons for delete 
 -- AI Usage Log Policies
 create policy "Users can insert their own AI logs" on public.ai_usage_log for insert with check (auth.uid() = user_id);
 create policy "Users can view their own AI logs" on public.ai_usage_log for select using (auth.uid() = user_id);
+
+
+-- 5. Invite Codes Table (招待コード - 1回使い切りシステム)
+CREATE TABLE public.invite_codes (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  code text UNIQUE NOT NULL, -- ランダムな文字列 (e.g., A8F3-K9P2)
+  created_by uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL, -- コンサルタント/管理者のID
+  used_at timestamp with time zone, -- 使用日時 (NULL = 未使用)
+  used_by uuid REFERENCES auth.users(id) ON DELETE SET NULL, -- このコードで登録したユーザーのID
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  expires_at timestamp with time zone -- 有効期限（任意設定）
+);
+
+-- Enable RLS for Invite Codes
+ALTER TABLE public.invite_codes ENABLE ROW LEVEL SECURITY;
+
+-- 招待コードのRLSポリシー
+-- 誰でも「自分のコードが有効かどうか」をチェック（SELECT）するためのポリシー（使用日時は常にチェック）
+CREATE POLICY "Anyone can view invite codes to check validity" ON public.invite_codes FOR SELECT USING (true);
+
+-- 管理者（コンサルタント）向けポリシー
+-- 現状は全員がコンサルタントになれるわけではないため、本来はroleフラグなどで制御するが、
+-- ひとまずは「自分が発行したコードは見れる・消せる」とする。
+CREATE POLICY "Users can create invite codes" ON public.invite_codes FOR INSERT WITH CHECK (auth.uid() = created_by);
+CREATE POLICY "Users can manage their own invite codes" ON public.invite_codes FOR ALL USING (auth.uid() = created_by);
+
+-- 使用時のUpdateポリシー
+-- 未使用のコードに限り、使用済みマークを付けられる
+CREATE POLICY "Users can mark code as used during signup" ON public.invite_codes FOR UPDATE USING (used_at IS NULL);

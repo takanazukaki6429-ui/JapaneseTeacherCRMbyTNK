@@ -36,6 +36,7 @@ export interface Database {
                     textbook?: string | null
                     current_phase?: string | null
                     memo?: string | null
+                    email?: string | null
                 }
                 Update: {
                     id?: string
@@ -49,6 +50,7 @@ export interface Database {
                     textbook?: string | null
                     current_phase?: string | null
                     memo?: string | null
+                    email?: string | null
                 }
             }
             lessons: {

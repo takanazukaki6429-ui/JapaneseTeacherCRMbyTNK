@@ -16,6 +16,7 @@ import {
     LogOut,
     Menu,
     Map as MapIcon,
+    KeyRound
 } from 'lucide-react';
 
 const navItems = [
@@ -25,6 +26,7 @@ const navItems = [
     { name: '教材・資産', href: '/materials', icon: Library },
     { name: 'ロードマップ', href: '/roadmap', icon: MapIcon },
     { name: 'AIツール', href: '/ai-tools', icon: Sparkles },
+    { name: '招待コード管理', href: '/admin/invite-codes', icon: KeyRound },
     { name: '設定', href: '/settings', icon: Settings },
 ];
 
@@ -33,6 +35,20 @@ export function Sidebar() {
     const pathname = usePathname();
     const supabase = createClient();
     const [isMobileOpen, setIsMobileOpen] = React.useState(false);
+    const [userEmail, setUserEmail] = React.useState<string | null>(null);
+
+    React.useEffect(() => {
+        const fetchUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                setUserEmail(user.email || null);
+            }
+        };
+        fetchUser();
+    }, [supabase]);
+
+    const ADMIN_EMAILS = ['pommetann@gmail.com', 'takanazukaki6429@gmail.com'];
+    const isAdmin = userEmail ? ADMIN_EMAILS.includes(userEmail) : false;
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
@@ -72,6 +88,9 @@ export function Sidebar() {
 
                     <nav className="flex-1 px-4 py-8 space-y-2">
                         {navItems.map((item) => {
+                            // Admin restricted route
+                            if (item.href === '/admin/invite-codes' && !isAdmin) return null;
+
                             const Icon = item.icon;
                             const isActive = pathname === item.href;
                             return (

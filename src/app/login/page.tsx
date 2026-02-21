@@ -6,11 +6,13 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [inviteCode, setInviteCode] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isSignUp, setIsSignUp] = useState(false);
@@ -26,19 +28,25 @@ export default function LoginPage() {
 
         try {
             if (isSignUp) {
-                // Sign Up Flow
-                const { error } = await supabase.auth.signUp({
-                    email,
-                    password,
-                    options: {
-                        emailRedirectTo: `${location.origin}/auth/callback`,
-                    },
+                // Sign Up Flow (Custom API with Invite Code)
+                if (!inviteCode) {
+                    throw new Error('招待コードを入力してください。');
+                }
+
+                const res = await fetch('/api/auth/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, inviteCode })
                 });
 
-                if (error) throw error;
+                const data = await res.json();
 
-                setMessage('確認メールを送信しました。メール内のリンクをクリックして登録を完了してください。');
-                setIsSignUp(false); // Switch back to login view or keep displaying message
+                if (!res.ok) {
+                    throw new Error(data.error || '登録に失敗しました。');
+                }
+
+                setMessage(data.message || '確認メールを送信しました。メール内のリンクをクリックして登録を完了してください。');
+                setIsSignUp(false); // Switch back to login view
             } else {
                 // Login Flow
                 const { error } = await supabase.auth.signInWithPassword({
@@ -145,34 +153,57 @@ export default function LoginPage() {
                             <label htmlFor="email" className="text-sm font-medium text-slate-700">
                                 メールアドレス
                             </label>
-                            <input
+                            <Input
                                 id="email"
                                 type="email"
                                 placeholder="teacher@example.com"
                                 value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all"
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                                 required
+                                className="h-12 border-slate-200 focus-visible:ring-amber-500"
                             />
                         </div>
                         <div className="space-y-2">
-                            <label htmlFor="password" className="text-sm font-medium text-slate-700">
-                                パスワード
-                            </label>
-                            <input
+                            <div className="flex items-center justify-between">
+                                <label htmlFor="password" className="text-sm font-medium text-slate-700">
+                                    パスワード
+                                </label>
+                            </div>
+                            <Input
                                 id="password"
                                 type="password"
                                 placeholder="••••••••"
                                 value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all"
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                                 required
                                 minLength={6}
+                                className="h-12 border-slate-200 focus-visible:ring-amber-500"
                             />
                             {isSignUp && (
                                 <p className="text-xs text-slate-500">※6文字以上のパスワードを設定してください</p>
                             )}
                         </div>
+
+                        {/* Invite Code Field (Only shown during Sign Up) */}
+                        {isSignUp && (
+                            <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                                <label htmlFor="inviteCode" className="text-sm font-bold text-amber-700">
+                                    招待コード <span className="text-rose-500">*</span>
+                                </label>
+                                <Input
+                                    id="inviteCode"
+                                    type="text"
+                                    placeholder="例: A8F3-K9P2"
+                                    value={inviteCode}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInviteCode(e.target.value)}
+                                    required={isSignUp}
+                                    className="h-12 border-amber-200 bg-amber-50 focus-visible:ring-amber-500 font-mono tracking-wider"
+                                />
+                                <p className="text-xs text-amber-600/80">
+                                    ※登録にはコンサルタントから発行された招待コードが必要です。
+                                </p>
+                            </div>
+                        )}
 
                         <Button
                             type="submit"
