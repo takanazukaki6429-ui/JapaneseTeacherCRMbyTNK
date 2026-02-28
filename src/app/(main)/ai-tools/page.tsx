@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, Send, Loader2, Copy, Check, Save } from "lucide-react";
 import { createClient } from '@/lib/supabase/client';
 import { toast } from "sonner";
+import { showAppError } from '@/lib/error-handler';
 
 export default function AIToolsPage() {
     const [prompt, setPrompt] = useState('');
@@ -42,7 +43,7 @@ export default function AIToolsPage() {
             setSaveTitle('');
         } catch (error) {
             console.error('Error saving material:', error);
-            toast.error("保存に失敗しました");
+            showAppError(error, "教材の保存に失敗しました");
         } finally {
             setSavingLoading(false);
         }

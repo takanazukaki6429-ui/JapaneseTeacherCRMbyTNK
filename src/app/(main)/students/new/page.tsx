@@ -3,9 +3,12 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { ArrowLeft, Save, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Camera, Upload, Trash2, X, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { showAppError } from '@/lib/error-handler';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 export default function NewStudentPage() {
     const router = useRouter();
@@ -50,7 +53,7 @@ export default function NewStudentPage() {
             router.refresh();
         } catch (error) {
             console.error('Error adding student:', error);
-            toast.error('生徒の登録に失敗しました。もう一度お試しください。');
+            showAppError(error, '生徒の登録に失敗しました。もう一度お試しください。');
         } finally {
             setLoading(false);
         }

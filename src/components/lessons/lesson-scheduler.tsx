@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Calendar, Plus, ExternalLink, Loader2, Check } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { showAppError } from '@/lib/error-handler';
 import { toast } from 'sonner';
 
 type Props = {
@@ -56,8 +57,8 @@ export function LessonScheduler({ studentId, studentName, onScheduled }: Props) 
             const startTime = baseDate.toISOString().replace(/-|:|\.\d\d\d/g, "");
             const endTime = new Date(baseDate.getTime() + 60 * 60 * 1000).toISOString().replace(/-|:|\.\d\d\d/g, "");
 
-            const title = encodeURIComponent(`日本語レッスン: ${studentName}`);
-            const details = encodeURIComponent(`NihongoTeacherCRMで予約されたレッスンです。\n生徒: ${studentName}`);
+            const title = encodeURIComponent(`日本語レッスン: ${studentName} `);
+            const details = encodeURIComponent(`NihongoTeacherCRMで予約されたレッスンです。\n生徒: ${studentName} `);
 
             let link = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startTime}/${endTime}&details=${details}`;
 
@@ -71,7 +72,7 @@ export function LessonScheduler({ studentId, studentName, onScheduled }: Props) 
             onScheduled?.();
         } catch (error) {
             console.error('Error scheduling lesson:', error);
-            toast.error('予約に失敗しました。もう一度お試しください。');
+            showAppError(error, '予約に失敗しました。もう一度お試しください。');
         } finally {
             setLoading(false);
         }

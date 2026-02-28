@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Loader2, KeyRound, Copy, Check, Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { showAppError } from '@/lib/error-handler';
 
 type InviteCode = {
     id: string;
@@ -36,7 +37,7 @@ export default function InviteCodesAdminPage() {
             setCodes(data || []);
         } catch (error) {
             console.error('Error fetching invite codes:', error);
-            toast.error('招待コードの取得に失敗しました');
+            showAppError(error, '招待コードの取得に失敗しました');
         } finally {
             setLoading(false);
         }
@@ -95,7 +96,7 @@ export default function InviteCodesAdminPage() {
 
         } catch (error) {
             console.error('Error generating code:', error);
-            toast.error('コードの発行に失敗しました');
+            showAppError(error, 'コードの発行に失敗しました');
         } finally {
             setGenerating(false);
         }

@@ -5,8 +5,11 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ArrowLeft, Sparkles, Loader2, BookOpen, Brain, ArrowRight, Save } from 'lucide-react';
-import Link from 'next/link';
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { toast } from 'sonner';
+import { showAppError } from '@/lib/error-handler';
+import Link from 'next/link';
 import { Lesson } from '@/types/lesson';
 
 type KeyPoint = {
@@ -72,7 +75,7 @@ ${prepContent.advice}
             setSaveTitle('');
         } catch (error) {
             console.error('Error saving material:', error);
-            toast.error("保存に失敗しました");
+            showAppError(error, "教材の保存に失敗しました");
         } finally {
             setSavingLoading(false);
         }

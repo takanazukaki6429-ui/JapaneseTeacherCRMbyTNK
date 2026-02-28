@@ -18,6 +18,7 @@ import { getLessonDistribution, calculateTotalHours } from '@/lib/roadmap/calcul
 import { generateMilestones, getLevelDescription, getDistributionReason } from '@/lib/roadmap/generators';
 
 import { toast } from 'sonner';
+import { showAppError } from '@/lib/error-handler';
 
 // ===== ロジック関数 =====
 
@@ -115,7 +116,7 @@ export default function RoadmapGenerator({
         setIsSharing(true);
         try {
             const blob = await domToBlob(contentRef.current, { scale: 2, backgroundColor: '#ffffff' });
-            if (!blob) { toast.error(t.imageError); setIsSharing(false); return; }
+            if (!blob) { showAppError(new Error(t.imageError), t.imageError); setIsSharing(false); return; }
             const file = new File([blob], "japanese_roadmap.png", { type: "image/png" });
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 try {
@@ -133,7 +134,7 @@ export default function RoadmapGenerator({
             }
         } catch (error) {
             console.error("Capture failed", error);
-            toast.error(t.errorOccurred);
+            showAppError(error, t.errorOccurred);
         } finally { setIsSharing(false); }
     };
 

@@ -8,13 +8,14 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { parseAppError, AppError } from '@/lib/error-handler';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [inviteCode, setInviteCode] = useState('');
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<AppError | null>(null);
     const [isSignUp, setIsSignUp] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const router = useRouter();
@@ -62,22 +63,9 @@ export default function LoginPage() {
                 router.refresh();
             }
         } catch (err: unknown) {
-            console.error(err);
-            let msg = '予期せぬエラーが発生しました。';
-
-            if (err instanceof Error) {
-                msg = err.message;
-            }
-
-            if (msg.includes('Invalid login credentials')) {
-                msg = 'メールアドレスまたはパスワードが間違っています。アカウントをお持ちでない場合は「新規登録」タブから作成してください。';
-            } else if (msg.includes('User already registered')) {
-                msg = 'このメールアドレスは既に登録されています。「ログイン」タブからログインしてください。';
-            } else if (msg.includes('Email not confirmed')) {
-                msg = 'メールアドレスの確認が完了していません。Supabaseから届いた確認メール内のリンクをクリックしてください。';
-            }
-
-            setError(msg);
+            console.error('Login/Signup Error:', err);
+            const parsedError = parseAppError(err);
+            setError(parsedError);
         } finally {
             setLoading(false);
         }
@@ -138,9 +126,13 @@ export default function LoginPage() {
 
                     <form onSubmit={handleLogin} className="space-y-4">
                         {error && (
-                            <div className="bg-rose-50 text-rose-600 text-sm p-3 rounded-lg border border-rose-100">
-                                <p className="font-bold mb-1">エラーが発生しました</p>
-                                <p>{error}</p>
+                            <div className="bg-rose-50 p-4 rounded-lg border border-rose-200 shadow-sm animate-in fade-in zoom-in duration-200">
+                                <h3 className="text-rose-800 font-bold text-sm mb-1">{error.title}</h3>
+                                <p className="text-rose-700 text-sm mb-2">{error.message}</p>
+                                <div className="bg-white/60 rounded p-2 text-xs text-rose-800/80">
+                                    <span className="font-semibold block mb-0.5">💡 対処方法:</span>
+                                    {error.action}
+                                </div>
                             </div>
                         )}
                         {message && (
