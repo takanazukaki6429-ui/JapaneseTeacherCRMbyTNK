@@ -99,7 +99,7 @@ export default async function LessonsPage() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                                         <div className="bg-slate-50 p-2 rounded border border-slate-100">
                                             <p className="text-xs font-bold text-slate-500 mb-1">トピック</p>
-                                            <p className="text-slate-700 truncate">{lesson.content || '未入力'}</p>
+                                            <p className="text-slate-700 truncate">{lesson.topics || lesson.content || '未入力'}</p>
                                         </div>
                                         <div className="bg-slate-50 p-2 rounded border border-slate-100">
                                             <p className="text-xs font-bold text-slate-500 mb-1">宿題</p>

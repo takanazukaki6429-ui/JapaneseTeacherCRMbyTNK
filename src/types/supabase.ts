@@ -57,9 +57,15 @@ export interface Database {
                 Row: {
                     id: string
                     created_at: string
+                    user_id: string | null
                     student_id: string
                     date: string
-                    content: string | null
+                    content: string | null          // メモ欄（旧フィールド）
+                    topics: string | null            // 授業トピック
+                    vocabulary: string | null        // 語彙
+                    mistakes: string | null          // 間違い・課題
+                    materials: string | null         // 使用教材
+                    status: string | null            // ステータス
                     understanding_level: number | null
                     homework: string | null
                     next_goal: string | null
@@ -68,9 +74,15 @@ export interface Database {
                 Insert: {
                     id?: string
                     created_at?: string
+                    user_id?: string | null
                     student_id: string
                     date: string
                     content?: string | null
+                    topics?: string | null
+                    vocabulary?: string | null
+                    mistakes?: string | null
+                    materials?: string | null
+                    status?: string | null
                     understanding_level?: number | null
                     homework?: string | null
                     next_goal?: string | null
@@ -79,9 +91,15 @@ export interface Database {
                 Update: {
                     id?: string
                     created_at?: string
+                    user_id?: string | null
                     student_id?: string
                     date?: string
                     content?: string | null
+                    topics?: string | null
+                    vocabulary?: string | null
+                    mistakes?: string | null
+                    materials?: string | null
+                    status?: string | null
                     understanding_level?: number | null
                     homework?: string | null
                     next_goal?: string | null
