@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { ArrowLeft, Save, Loader2, Star, Globe, Copy, Check, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { LessonChatLogsViewer } from '@/components/lessons/lesson-chat-logs-viewer';
+import { nationalityToLangCode, LANG_CODE_TO_NAME } from '@/lib/nationality';
 
 export default function NewLessonPage() {
     const router = useRouter();
@@ -126,11 +127,22 @@ export default function NewLessonPage() {
         { code: 'fr', label: '🇫🇷 フランス語' },
         { code: 'ja', label: '🇯🇵 日本語' },
     ] as const;
-    const LANGUAGE_NAMES: Record<string, string> = {
-        en: 'English', es: 'Español', pt: 'Português',
-        ko: '한국어', zh: '中文', fr: 'Français', ja: '日本語',
-    };
+    const LANGUAGE_NAMES = LANG_CODE_TO_NAME;
     const [selectedLang, setSelectedLang] = useState<string>('en');
+
+    useEffect(() => {
+        if (!studentId) return;
+        supabase
+            .from('students')
+            .select('nationality')
+            .eq('id', studentId)
+            .single()
+            .then(({ data }) => {
+                if (data?.nationality) {
+                    setSelectedLang(nationalityToLangCode(data.nationality));
+                }
+            });
+    }, [studentId, supabase]);
     const [multilingualFeedback, setMultilingualFeedback] = useState('');
     const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
     const [feedbackCopied, setFeedbackCopied] = useState(false);

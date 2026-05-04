@@ -6,7 +6,9 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
-import { Home, Users, Library, Settings, LogOut, Menu } from 'lucide-react';
+import { Home, Users, Library, Settings, LogOut, Menu, KeyRound } from 'lucide-react';
+
+const ADMIN_EMAILS = ['pommetann@gmail.com', 'takanazukaki6429@gmail.com'];
 
 const navItems = [
     { name: 'ホーム', href: '/', icon: Home },
@@ -21,6 +23,7 @@ export function Sidebar() {
     const supabase = createClient();
     const [isMobileOpen, setIsMobileOpen] = React.useState(false);
     const [userEmail, setUserEmail] = React.useState<string | null>(null);
+    const isAdmin = userEmail ? ADMIN_EMAILS.includes(userEmail) : false;
 
     React.useEffect(() => {
         const fetchUser = async () => {
@@ -94,6 +97,29 @@ export function Sidebar() {
                         );
                     })}
                 </nav>
+
+                {/* Admin */}
+                {isAdmin && (
+                    <div className="mt-4">
+                        <p className="text-[10px] font-bold tracking-[0.08em] uppercase text-[#4b454e] px-3 mb-2">管理</p>
+                        <Link
+                            href="/admin/invite-codes"
+                            onClick={() => setIsMobileOpen(false)}
+                            className={cn(
+                                "relative flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-medium transition-all duration-200",
+                                isActive('/admin/invite-codes')
+                                    ? "bg-[#ffdbd1] text-[#321209] font-semibold"
+                                    : "text-[#4b454e] hover:bg-[#f4f3f7] hover:text-[#1a1c1e]"
+                            )}
+                        >
+                            {isActive('/admin/invite-codes') && (
+                                <span className="absolute left-0 top-[20%] bottom-[20%] w-[3px] bg-[#805347] rounded-r-full" />
+                            )}
+                            <KeyRound size={18} className={cn(isActive('/admin/invite-codes') ? "text-[#805347]" : "text-[#4b454e]")} />
+                            招待コード
+                        </Link>
+                    </div>
+                )}
 
                 {/* Footer */}
                 <div className="p-3 border-t border-[#cdc3ce]/20 mt-auto">

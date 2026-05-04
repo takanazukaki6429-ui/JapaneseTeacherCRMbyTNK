@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Student } from '@/types/student';
 import { type Milestone } from '@/lib/roadmap/types';
+import { nationalityToLangName } from '@/lib/nationality';
 
 const RoadmapGenerator = dynamic(() => import('@/components/roadmap/RoadmapGenerator'), {
     loading: () => (
@@ -286,6 +287,7 @@ export default function InitialHearingPage() {
                     conversation_notes: conversationNotes,
                     student_name: student?.name,
                     nationality: student?.nationality,
+                    native_language: nationalityToLangName(student?.nationality),
                 }),
             });
             if (!res.ok) throw new Error('AI分析に失敗しました');
