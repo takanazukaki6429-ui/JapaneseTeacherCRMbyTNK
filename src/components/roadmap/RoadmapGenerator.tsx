@@ -32,6 +32,7 @@ type RoadmapGeneratorProps = {
     initialLevel?: number;
     initialTarget?: number;
     initialPurpose?: string | string[]; // Can be string (legacy) or array
+    initialPeriodMonths?: number;
     onSave?: (data: {
         currentLevel: number;
         targetLevel: number;
@@ -47,6 +48,7 @@ export default function RoadmapGenerator({
     initialLevel = 20,
     initialTarget = 70,
     initialPurpose,
+    initialPeriodMonths = 6,
     onSave,
     studentName
 }: RoadmapGeneratorProps) {
@@ -76,7 +78,7 @@ export default function RoadmapGenerator({
     // We'll use the *last* selected one for the "Main" color focus or just specific logic
 
     const [targetLevel, setTargetLevel] = useState(initialTarget);
-    const [periodMonths, setPeriodMonths] = useState(6);
+    const [periodMonths, setPeriodMonths] = useState(initialPeriodMonths);
 
     // Detect browser language on mount
     useEffect(() => { setLocale(detectLocale()); }, []);

@@ -9,4 +9,5 @@ export type Material = {
     content: string | null;
     tags: string[] | null;
     is_public: boolean;
+    student_id: string | null;
 };

@@ -3,102 +3,116 @@ import { createClient } from '@/lib/supabase/server';
 import { Material } from '@/types/material';
 import { formatDate } from '@/lib/utils';
 import Link from 'next/link';
-import { Plus, Search, FileText, Zap, Book } from 'lucide-react';
+import { Plus, Search, FileText, Zap, Globe } from 'lucide-react';
+import { MaterialsTabBar } from './tab-bar';
 
 export const revalidate = 0;
 
-async function getMaterials() {
+async function getMyMaterials() {
     const supabase = await createClient();
     const { data, error } = await supabase
         .from('materials')
         .select('*')
         .order('created_at', { ascending: false });
-
-    if (error) {
-        console.error('Error fetching materials:', error);
-        return [];
-    }
+    if (error) return [];
     return data as Material[];
 }
 
-export default async function MaterialsPage() {
-    const materials = await getMaterials();
+async function getPublicMaterials() {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('materials')
+        .select('*')
+        .eq('is_public', true)
+        .order('created_at', { ascending: false });
+    if (error) return [];
+    return data as Material[];
+}
+
+type Props = { searchParams: Promise<{ tab?: string }> };
+
+export default async function MaterialsPage({ searchParams }: Props) {
+    const { tab = 'mine' } = await searchParams;
+    const isCommunity = tab === 'community';
+    const materials = isCommunity ? await getPublicMaterials() : await getMyMaterials();
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-5">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold tracking-tight">教材・資産管理</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-[#1a1c1e]">教材</h1>
                 <Link
                     href="/materials/new"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 transition-colors shadow-sm"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] text-white text-sm font-bold rounded-full hover:scale-[1.02] transition-transform shadow-[0_4px_20px_rgba(111,83,133,0.25)]"
                 >
-                    <Plus size={18} />
+                    <Plus size={16} />
                     新規作成
                 </Link>
             </div>
 
-            {/* Filter / Search Placeholder */}
-            <div className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                    <input
-                        type="text"
-                        placeholder="タイトルやタグで検索..."
-                        className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    />
-                </div>
-                <div className="hidden sm:flex items-center gap-2">
-                    <button className="px-3 py-1.5 text-sm font-medium bg-teal-50 text-teal-700 rounded-lg border border-teal-200">すべて</button>
-                    <button className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg border border-transparent hover:border-slate-200">プロンプト</button>
-                    <button className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg border border-transparent hover:border-slate-200">生成コンテンツ</button>
-                </div>
+            <MaterialsTabBar currentTab={tab} />
+
+            {/* Search */}
+            <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)]">
+                <Search size={18} className="text-[#4b454e] flex-shrink-0" />
+                <input
+                    type="text"
+                    placeholder="タイトルやタグで検索..."
+                    className="flex-1 bg-transparent outline-none text-sm text-[#1a1c1e] placeholder:text-[#4b454e]"
+                />
             </div>
 
             {materials.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-12 bg-white rounded-xl border border-dashed border-slate-300 text-center">
-                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                        <Book className="text-slate-400" size={32} />
-                    </div>
-                    <h3 className="text-lg font-medium text-slate-900 mb-1">資産がありません</h3>
-                    <p className="text-sm text-slate-500 mb-4 max-w-xs">
-                        プロンプトや作成した教材を保存して、資産として蓄積しましょう。
+                <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border-2 border-dashed border-[#cdc3ce]/40 text-center">
+                    <div className="text-4xl mb-4">📚</div>
+                    <h3 className="text-base font-bold text-[#1a1c1e] mb-1">
+                        {isCommunity ? 'まだ公開教材がありません' : '教材がありません'}
+                    </h3>
+                    <p className="text-sm text-[#4b454e] mb-4 max-w-xs">
+                        {isCommunity
+                            ? '教材作成時に「全ユーザーに公開」をオンにすると、ここに表示されます。'
+                            : 'プロンプトや教材を保存して資産として蓄積しましょう。'}
                     </p>
-                    <Link
-                        href="/materials/new"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
-                    >
-                        新規作成する
-                    </Link>
+                    {!isCommunity && (
+                        <Link href="/materials/new" className="inline-flex items-center gap-2 px-4 py-2 bg-[#f2daff] text-[#6f5385] text-sm font-bold rounded-xl hover:bg-[#e8c8ff] transition-colors">
+                            新規作成する
+                        </Link>
+                    )}
                 </div>
             ) : (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {materials.map((item) => (
                         <Link
                             key={item.id}
                             href={`/materials/${item.id}`}
-                            className="group flex flex-col p-6 bg-white rounded-xl shadow-sm border border-slate-100 hover:shadow-md hover:border-teal-200 transition-all h-full"
+                            className="group flex flex-col p-5 bg-white rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] hover:shadow-[0_8px_40px_rgba(111,83,133,0.12)] hover:-translate-y-0.5 transition-all"
                         >
                             <div className="flex items-start justify-between mb-4">
-                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${item.type === 'prompt' ? 'bg-purple-100 text-purple-600' :
-                                    item.type === 'content' ? 'bg-blue-100 text-blue-600' :
-                                        'bg-slate-100 text-slate-600'
-                                    }`}>
-                                    {item.type === 'prompt' ? <Zap size={20} /> : <FileText size={20} />}
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                                    item.type === 'prompt' ? 'bg-[#f2daff] text-[#6f5385]' : 'bg-[#eddcf4] text-[#655a6f]'
+                                }`}>
+                                    {item.type === 'prompt' ? <Zap size={18} /> : <FileText size={18} />}
                                 </div>
-                                <span className="text-xs text-slate-400">{formatDate(item.created_at)}</span>
+                                <div className="flex items-center gap-1.5">
+                                    {item.is_public && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-[#f2daff] text-[#6f5385] rounded-full">
+                                            <Globe size={10} />公開中
+                                        </span>
+                                    )}
+                                    <span className="text-[11px] text-[#4b454e]">{formatDate(item.created_at)}</span>
+                                </div>
                             </div>
 
-                            <h3 className="font-bold text-slate-900 group-hover:text-teal-700 transition-colors mb-2 line-clamp-2">
+                            <h3 className="font-bold text-[#1a1c1e] group-hover:text-[#6f5385] transition-colors mb-2 line-clamp-2 text-sm">
                                 {item.title}
                             </h3>
 
-                            <p className="text-sm text-slate-500 line-clamp-3 mb-4 flex-1">
-                                {item.content || 'No content...'}
+                            <p className="text-xs text-[#4b454e] line-clamp-3 mb-4 flex-1 leading-relaxed">
+                                {item.content || '内容なし'}
                             </p>
 
-                            <div className="flex flex-wrap gap-2 mt-auto">
+                            <div className="flex flex-wrap gap-1.5 mt-auto">
                                 {item.tags?.map((tag, i) => (
-                                    <span key={i} className="px-2 py-1 text-xs font-medium bg-slate-100 text-slate-600 rounded">
+                                    <span key={i} className="px-2 py-0.5 text-[10px] font-medium bg-[#f4f3f7] text-[#4b454e] rounded-full">
                                         #{tag}
                                     </span>
                                 ))}

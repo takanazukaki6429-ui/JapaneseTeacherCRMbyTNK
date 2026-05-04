@@ -3,12 +3,10 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { ArrowLeft, Save, Loader2, Camera, Upload, Trash2, X, Plus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { showAppError } from '@/lib/error-handler';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 
 export default function NewStudentPage() {
     const router = useRouter();
@@ -17,14 +15,9 @@ export default function NewStudentPage() {
     const [formData, setFormData] = useState({
         name: '',
         nationality: '',
-        jlpt_level: '',
-        goal_text: '',
-        textbook: '',
-        current_phase: '',
-        memo: '',
     });
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
@@ -34,23 +27,19 @@ export default function NewStudentPage() {
         setLoading(true);
 
         try {
-            const { error } = await supabase.from('students').insert([
-                {
+            const { data, error } = await supabase
+                .from('students')
+                .insert([{
                     name: formData.name,
                     nationality: formData.nationality || null,
-                    jlpt_level: formData.jlpt_level || null,
-                    goal_text: formData.goal_text || null,
-                    textbook: formData.textbook || null,
-                    current_phase: formData.current_phase || null,
-                    memo: formData.memo || null,
-                },
-            ]);
+                }])
+                .select('id')
+                .single();
 
             if (error) throw error;
 
-            toast.success('生徒を登録しました');
-            router.push('/students');
-            router.refresh();
+            toast.success('生徒を登録しました。体験レッスンの内容を入力してください。');
+            router.push(`/students/${data.id}/initial-hearing`);
         } catch (error) {
             console.error('Error adding student:', error);
             showAppError(error, '生徒の登録に失敗しました。もう一度お試しください。');
@@ -60,150 +49,82 @@ export default function NewStudentPage() {
     };
 
     return (
-        <div className="max-w-2xl mx-auto space-y-6">
+        <div className="max-w-lg mx-auto space-y-6">
             <div className="flex items-center gap-4">
                 <Link
                     href="/students"
-                    className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
+                    className="p-2 text-[#4b454e] hover:text-[#1a1c1e] hover:bg-[#f4f3f7] rounded-full transition-colors"
                 >
                     <ArrowLeft size={20} />
                 </Link>
-                <h1 className="text-2xl font-bold tracking-tight">新規生徒登録</h1>
+                <div>
+                    <h1 className="text-xl font-bold tracking-tight text-[#1a1c1e]">新規生徒登録</h1>
+                    <p className="text-xs text-[#4b454e] mt-0.5">登録後、体験レッスンのメモ入力へ進みます</p>
+                </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 space-y-6">
-                <div className="space-y-4">
-                    <div>
-                        <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">
-                            氏名 <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            id="name"
-                            name="name"
-                            required
-                            value={formData.name}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                            placeholder="田中 太郎"
-                        />
-                    </div>
+            {/* ステップ表示 */}
+            <div className="flex items-center gap-2 text-xs text-[#4b454e]">
+                <div className="flex items-center gap-1.5 font-bold text-[#6f5385]">
+                    <span className="w-5 h-5 rounded-full bg-[#6f5385] text-white flex items-center justify-center text-[10px]">1</span>
+                    名前・国籍を登録
+                </div>
+                <div className="text-[#c9a8e0]">→</div>
+                <div className="flex items-center gap-1.5 text-[#4b454e]/50">
+                    <span className="w-5 h-5 rounded-full bg-[#f4f3f7] text-[#4b454e] flex items-center justify-center text-[10px]">2</span>
+                    体験レッスンのメモ入力
+                </div>
+                <div className="text-[#c9a8e0]">→</div>
+                <div className="flex items-center gap-1.5 text-[#4b454e]/50">
+                    <span className="w-5 h-5 rounded-full bg-[#f4f3f7] text-[#4b454e] flex items-center justify-center text-[10px]">3</span>
+                    AI判定 → ロードマップ生成
+                </div>
+            </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label htmlFor="nationality" className="block text-sm font-medium text-slate-700 mb-1">
-                                国籍
-                            </label>
-                            <input
-                                type="text"
-                                id="nationality"
-                                name="nationality"
-                                value={formData.nationality}
-                                onChange={handleChange}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                                placeholder="アメリカ"
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="jlpt_level" className="block text-sm font-medium text-slate-700 mb-1">
-                                JLPTレベル
-                            </label>
-                            <select
-                                id="jlpt_level"
-                                name="jlpt_level"
-                                value={formData.jlpt_level}
-                                onChange={handleChange}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                            >
-                                <option value="">未設定</option>
-                                <option value="N1">N1</option>
-                                <option value="N2">N2</option>
-                                <option value="N3">N3</option>
-                                <option value="N4">N4</option>
-                                <option value="N5">N5</option>
-                                <option value="None">なし</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label htmlFor="goal_text" className="block text-sm font-medium text-slate-700 mb-1">
-                            学習目的
-                        </label>
-                        <input
-                            type="text"
-                            id="goal_text"
-                            name="goal_text"
-                            value={formData.goal_text}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                            placeholder="ビジネス会話、日本旅行など"
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label htmlFor="textbook" className="block text-sm font-medium text-slate-700 mb-1">
-                                使用教材
-                            </label>
-                            <input
-                                type="text"
-                                id="textbook"
-                                name="textbook"
-                                value={formData.textbook}
-                                onChange={handleChange}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                                placeholder="みんなの日本語"
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="current_phase" className="block text-sm font-medium text-slate-700 mb-1">
-                                現在の進度
-                            </label>
-                            <input
-                                type="text"
-                                id="current_phase"
-                                name="current_phase"
-                                value={formData.current_phase}
-                                onChange={handleChange}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                                placeholder="第5課"
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label htmlFor="memo" className="block text-sm font-medium text-slate-700 mb-1">
-                            補足メモ
-                        </label>
-                        <textarea
-                            id="memo"
-                            name="memo"
-                            rows={4}
-                            value={formData.memo}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                            placeholder="性格、得意・苦手分野など"
-                        />
-                    </div>
+            <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] space-y-5">
+                <div>
+                    <label htmlFor="name" className="block text-xs font-bold text-[#4b454e] uppercase tracking-wider mb-1.5">
+                        氏名 <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        required
+                        value={formData.name}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-[#cdc3ce] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6f5385] focus:border-transparent text-sm"
+                        placeholder="田中 太郎"
+                        autoFocus
+                    />
                 </div>
 
-                <div className="flex justify-end pt-4">
+                <div>
+                    <label htmlFor="nationality" className="block text-xs font-bold text-[#4b454e] uppercase tracking-wider mb-1.5">
+                        国籍
+                    </label>
+                    <input
+                        type="text"
+                        id="nationality"
+                        name="nationality"
+                        value={formData.nationality}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-[#cdc3ce] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6f5385] focus:border-transparent text-sm"
+                        placeholder="アメリカ"
+                    />
+                    <p className="text-[11px] text-[#4b454e]/60 mt-1">レベル・学習目的・教材は次の画面でAIが自動判定します</p>
+                </div>
+
+                <div className="pt-2">
                     <button
                         type="submit"
-                        disabled={loading}
-                        className="inline-flex items-center gap-2 px-6 py-2 bg-teal-600 text-white font-medium rounded-lg hover:bg-teal-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={loading || !formData.name.trim()}
+                        className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6f5385] to-[#c9a8e0] text-white font-bold rounded-xl hover:opacity-90 transition-opacity shadow-[0_4px_15px_rgba(111,83,133,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {loading ? (
-                            <>
-                                <Loader2 className="animate-spin" size={18} />
-                                保存中...
-                            </>
+                            <><Loader2 className="animate-spin" size={18} />登録中...</>
                         ) : (
-                            <>
-                                <Save size={18} />
-                                保存する
-                            </>
+                            <>登録して体験レッスン入力へ <ArrowRight size={18} /></>
                         )}
                     </button>
                 </div>

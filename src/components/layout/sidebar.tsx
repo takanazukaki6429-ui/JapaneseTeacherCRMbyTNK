@@ -6,27 +6,12 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
-import {
-    LayoutDashboard,
-    Users,
-    BookOpen,
-    Library,
-    Sparkles,
-    Settings,
-    LogOut,
-    Menu,
-    Map as MapIcon,
-    KeyRound
-} from 'lucide-react';
+import { Home, Users, Library, Settings, LogOut, Menu } from 'lucide-react';
 
 const navItems = [
-    { name: 'ダッシュボード', href: '/', icon: LayoutDashboard },
-    { name: '生徒管理', href: '/students', icon: Users },
-    { name: 'レッスン記録', href: '/lessons', icon: BookOpen },
-    { name: '教材・資産', href: '/materials', icon: Library },
-    { name: 'ロードマップ', href: '/roadmap', icon: MapIcon },
-    { name: 'AIツール', href: '/ai-tools', icon: Sparkles },
-    { name: '招待コード管理', href: '/admin/invite-codes', icon: KeyRound },
+    { name: 'ホーム', href: '/', icon: Home },
+    { name: '生徒', href: '/students', icon: Users },
+    { name: '教材', href: '/materials', icon: Library },
     { name: '設定', href: '/settings', icon: Settings },
 ];
 
@@ -40,15 +25,10 @@ export function Sidebar() {
     React.useEffect(() => {
         const fetchUser = async () => {
             const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                setUserEmail(user.email || null);
-            }
+            if (user) setUserEmail(user.email || null);
         };
         fetchUser();
     }, [supabase]);
-
-    const ADMIN_EMAILS = ['pommetann@gmail.com', 'takanazukaki6429@gmail.com'];
-    const isAdmin = userEmail ? ADMIN_EMAILS.includes(userEmail) : false;
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
@@ -56,78 +36,89 @@ export function Sidebar() {
         router.refresh();
     };
 
+    const isActive = (href: string) =>
+        href === '/' ? pathname === '/' : pathname.startsWith(href);
+
     return (
         <>
             <button
-                className="md:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-md shadow-md"
+                className="md:hidden fixed top-4 left-4 z-50 p-2 bg-white/80 backdrop-blur-md rounded-xl shadow-md"
                 onClick={() => setIsMobileOpen(!isMobileOpen)}
             >
-                <Menu size={24} />
+                <Menu size={22} className="text-[#6f5385]" />
             </button>
 
             <aside
                 className={cn(
-                    "fixed inset-y-0 left-0 z-40 w-64 bg-background/80 backdrop-blur-md border-r border-amber-100 text-slate-600 transition-transform duration-300 ease-in-out md:translate-x-0 shadow-sm",
+                    "fixed inset-y-0 left-0 z-40 w-64 flex flex-col",
+                    "bg-white/70 backdrop-blur-[24px]",
+                    "border-r border-[#cdc3ce]/15",
+                    "transition-transform duration-300 ease-in-out md:translate-x-0",
                     isMobileOpen ? "translate-x-0" : "-translate-x-full"
                 )}
             >
-                <div className="flex h-full flex-col">
-                    <div className="flex items-center justify-center h-20 border-b border-dashed border-amber-100">
-                        <div className="flex items-center gap-2">
-                            <div className="relative w-40 h-10">
-                                <Image
-                                    src="/logo.png"
-                                    alt="ASTA Logo"
-                                    fill
-                                    className="object-contain"
-                                    priority
-                                />
-                            </div>
+                {/* Logo */}
+                <div className="px-6 pt-7 pb-6">
+                    <div className="flex items-center gap-2">
+                        <div className="relative w-28 h-8">
+                            <Image src="/logo.png" alt="ASTA" fill className="object-contain object-left" priority />
                         </div>
                     </div>
+                    <p className="text-[11px] text-[#4b454e] mt-1 font-medium tracking-wide">Japanese Teacher CRM</p>
+                </div>
 
-                    <nav className="flex-1 px-4 py-8 space-y-2">
-                        {navItems.map((item) => {
-                            // Admin restricted route
-                            if (item.href === '/admin/invite-codes' && !isAdmin) return null;
+                {/* Nav */}
+                <nav className="flex-1 px-3 space-y-0.5">
+                    <p className="text-[10px] font-bold tracking-[0.08em] uppercase text-[#4b454e] px-3 mb-2">メイン</p>
+                    {navItems.map((item) => {
+                        const Icon = item.icon;
+                        const active = isActive(item.href);
+                        return (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                onClick={() => setIsMobileOpen(false)}
+                                className={cn(
+                                    "relative flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-medium transition-all duration-200",
+                                    active
+                                        ? "bg-[#ffdbd1] text-[#321209] font-semibold"
+                                        : "text-[#4b454e] hover:bg-[#f4f3f7] hover:text-[#1a1c1e]"
+                                )}
+                            >
+                                {active && (
+                                    <span className="absolute left-0 top-[20%] bottom-[20%] w-[3px] bg-[#805347] rounded-r-full" />
+                                )}
+                                <Icon size={18} className={cn(active ? "text-[#805347]" : "text-[#4b454e]")} />
+                                {item.name}
+                            </Link>
+                        );
+                    })}
+                </nav>
 
-                            const Icon = item.icon;
-                            const isActive = pathname === item.href;
-                            return (
-                                <Link
-                                    key={item.href}
-                                    href={item.href}
-                                    className={cn(
-                                        "flex items-center gap-3 px-4 py-3.5 text-sm font-bold rounded-2xl transition-all duration-200 group",
-                                        isActive
-                                            ? "bg-amber-50 text-amber-700 shadow-sm ring-1 ring-amber-200"
-                                            : "text-slate-500 hover:bg-amber-50/50 hover:text-amber-800"
-                                    )}
-                                    onClick={() => setIsMobileOpen(false)}
-                                >
-                                    <Icon size={20} className={cn("transition-colors", isActive ? "text-amber-600" : "text-slate-400 group-hover:text-amber-600")} />
-                                    {item.name}
-                                </Link>
-                            );
-                        })}
-                    </nav>
-
-                    <div className="p-4 border-t border-slate-100">
-                        <button
-                            onClick={handleLogout}
-                            className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-slate-400 rounded-xl hover:bg-rose-50 hover:text-rose-500 w-full transition-colors group"
-                        >
-                            <LogOut size={20} className="group-hover:text-rose-400" />
-                            ログアウト
-                        </button>
+                {/* Footer */}
+                <div className="p-3 border-t border-[#cdc3ce]/20 mt-auto">
+                    <div className="flex items-center gap-3 px-3 py-2.5 rounded-2xl mb-1">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                            {userEmail ? userEmail.charAt(0).toUpperCase() : '?'}
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-xs font-semibold text-[#1a1c1e] truncate">{userEmail || '...'}</p>
+                            <p className="text-[10px] text-[#4b454e]">先生アカウント</p>
+                        </div>
                     </div>
+                    <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-3 px-3 py-2.5 w-full text-sm text-[#4b454e] rounded-2xl hover:bg-red-50 hover:text-red-500 transition-colors"
+                    >
+                        <LogOut size={16} />
+                        ログアウト
+                    </button>
                 </div>
             </aside>
 
-            {/* Overlay for mobile */}
             {isMobileOpen && (
                 <div
-                    className="fixed inset-0 z-30 bg-slate-900/20 backdrop-blur-sm md:hidden"
+                    className="fixed inset-0 z-30 bg-[#1a1c1e]/20 backdrop-blur-sm md:hidden"
                     onClick={() => setIsMobileOpen(false)}
                 />
             )}

@@ -2,213 +2,195 @@
 import { createClient } from '@/lib/supabase/server';
 import { formatDate } from '@/lib/utils';
 import Link from 'next/link';
-import { Users, Calendar, ArrowRight, Clock, CheckCircle2 } from 'lucide-react';
+import { Plus, Sparkles, BookOpen } from 'lucide-react';
 
 export const revalidate = 0;
 
 async function getDashboardData() {
   const supabase = await createClient();
-  const now = new Date().toISOString();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    return {
-      studentCount: 0,
-      monthlyLessonCount: 0,
-      upcomingLessons: [],
-      recentHistory: [],
-      lessonPrice: 3000,
-    };
+    return { studentCount: 0, monthlyLessonCount: 0, upcomingLessons: [], recentHistory: [], lessonPrice: 3000 };
   }
 
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
+  const now = new Date().toISOString();
 
-  // Run all independent queries in parallel for faster page load
-  const [settingsResult, studentCountResult, monthlyResult, upcomingResult, historyResult] = await Promise.all([
-    // User settings (lesson price)
-    supabase
-      .from('user_settings')
-      .select('default_lesson_price')
-      .eq('user_id', user.id)
-      .single(),
-
-    // Total students (filtered by user)
-    supabase
-      .from('students')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id),
-
-    // Monthly lesson count (filtered by user's students)
-    supabase
-      .from('lessons')
-      .select('*, students!inner(user_id)', { count: 'exact', head: true })
-      .eq('students.user_id', user.id)
-      .gte('date', startOfMonth.toISOString()),
-
-    // Upcoming scheduled lessons
-    supabase
-      .from('lessons')
-      .select('*, students!inner(name, user_id)')
-      .eq('students.user_id', user.id)
-      .eq('status', 'scheduled')
-      .order('date', { ascending: true })
-      .limit(5),
-
-    // Recent history
-    supabase
-      .from('lessons')
-      .select('*, students!inner(name, user_id)')
-      .eq('students.user_id', user.id)
-      .lt('date', now)
+  const [studentCountResult, monthlyResult, upcomingResult, historyResult, avgUnderstandingResult, homeworkResult] = await Promise.all([
+    supabase.from('students').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+    supabase.from('lessons').select('*, students!inner(user_id)', { count: 'exact', head: true })
+      .eq('students.user_id', user.id).gte('date', startOfMonth.toISOString()),
+    supabase.from('lessons').select('*, students!inner(name, user_id)')
+      .eq('students.user_id', user.id).eq('status', 'scheduled')
+      .order('date', { ascending: true }).limit(3),
+    supabase.from('lessons').select('*, students!inner(name, user_id)')
+      .eq('students.user_id', user.id).lt('date', now)
       .or('status.eq.completed,status.is.null')
-      .order('date', { ascending: false })
-      .limit(3),
+      .order('date', { ascending: false }).limit(3),
+    supabase.from('lessons').select('understanding_level, students!inner(user_id)')
+      .eq('students.user_id', user.id).gte('date', startOfMonth.toISOString())
+      .not('understanding_level', 'is', null),
+    supabase.from('lessons').select('homework, students!inner(user_id)', { count: 'exact', head: true })
+      .eq('students.user_id', user.id).gte('date', startOfMonth.toISOString())
+      .not('homework', 'is', null).neq('homework', ''),
   ]);
 
-  const lessonPrice = settingsResult.data?.default_lesson_price || 3000;
+  const understandingData = avgUnderstandingResult.data || [];
+  const avgUnderstanding = understandingData.length > 0
+    ? Math.round((understandingData.reduce((sum: number, l: any) => sum + (l.understanding_level || 0), 0) / understandingData.length) * 10) / 10
+    : null;
 
   return {
     studentCount: studentCountResult.count || 0,
     monthlyLessonCount: monthlyResult.count || 0,
     upcomingLessons: upcomingResult.data || [],
     recentHistory: historyResult.data || [],
-    lessonPrice,
+    avgUnderstanding,
+    homeworkCount: homeworkResult.count || 0,
   };
 }
 
 export default async function Home() {
-  const { studentCount, monthlyLessonCount, upcomingLessons, recentHistory, lessonPrice } = await getDashboardData();
+  const { studentCount, monthlyLessonCount, upcomingLessons, recentHistory, avgUnderstanding, homeworkCount } = await getDashboardData();
+  const nextLesson = upcomingLessons[0] as any;
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">ダッシュボード</h1>
-          <p className="text-slate-500 text-sm mt-1">今日のレッスンの準備はできていますか？</p>
-        </div>
+    <div className="space-y-6">
+      {/* Page header */}
+      <div>
+        <p className="text-xs font-medium text-[#4b454e] mb-0.5">おかえりなさい</p>
+        <h1 className="text-2xl font-bold tracking-tight text-[#1a1c1e]">今日のレッスン</h1>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-6 md:grid-cols-3">
-        <div className="p-6 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+      {/* Next lesson banner */}
+      {nextLesson ? (
+        <div className="bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] rounded-2xl p-6 flex items-center justify-between gap-4 shadow-[0_8px_48px_rgba(111,83,133,0.25)]">
           <div>
-            <h3 className="font-semibold text-slate-500 mb-1 text-sm">今月のレッスン数</h3>
-            <p className="text-3xl font-bold text-slate-900">{monthlyLessonCount}</p>
+            <p className="text-[13px] text-white/80 mb-0.5">
+              {new Date(nextLesson.date).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} 〜
+            </p>
+            <h2 className="text-xl font-bold text-white tracking-tight">{nextLesson.students?.name}</h2>
+            <p className="text-sm text-white/80 mt-0.5">次回予定レッスン</p>
           </div>
-          <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center text-amber-600">
-            <Calendar size={24} />
-          </div>
-        </div>
-        <div className="p-6 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
-          <div>
-            <h3 className="font-semibold text-slate-500 mb-1 text-sm">総生徒数</h3>
-            <p className="text-3xl font-bold text-slate-900">{studentCount}</p>
-          </div>
-          <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
-            <Users size={24} />
-          </div>
-        </div>
-        <div className="p-6 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
-          <div>
-            <h3 className="font-semibold text-slate-500 mb-1 text-sm">今月の売上 (概算)</h3>
-            <p className="text-3xl font-bold text-slate-900">¥{(monthlyLessonCount * lessonPrice).toLocaleString()}</p>
-          </div>
-          <div className="w-12 h-12 bg-yellow-50 rounded-full flex items-center justify-center text-yellow-600">
-            <span className="font-bold text-lg">¥</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-        {/* Upcoming Lessons */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-bold text-slate-800 flex items-center gap-2">
-              <Clock size={20} className="text-amber-600" />
-              これからの予定 (次のレッスン)
-            </h3>
-            <Link href="/students" className="text-sm text-amber-600 hover:underline">生徒一覧へ</Link>
-          </div>
-
-          {upcomingLessons.length === 0 ? (
-            <div className="text-center py-8 bg-slate-50 rounded-lg border border-dashed border-slate-200">
-              <p className="text-sm text-slate-500">予定されているレッスンはありません。</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {upcomingLessons.map((lesson: any) => {
-                const lessonDate = new Date(lesson.date);
-                const isOverdue = lessonDate < new Date();
-
-                return (
-                  <div key={lesson.id} className={`flex items-start gap-4 p-4 rounded-lg border ${isOverdue ? 'border-red-100 bg-red-50/30' : 'border-slate-100 bg-slate-50/50'}`}>
-                    <div className={`w-14 flex-shrink-0 text-center bg-white rounded-lg border ${isOverdue ? 'border-red-200 text-red-600' : 'border-slate-200'} p-2`}>
-                      <span className="block text-xs text-slate-500 font-bold uppercase">{lessonDate.toLocaleDateString('en-US', { month: 'short' })}</span>
-                      <span className="block text-xl font-bold text-slate-800">{lessonDate.getDate()}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <h4 className="font-bold text-slate-900 truncate">{lesson.students?.name}</h4>
-                        <Link
-                          href={`/students/${lesson.student_id}/lessons/prepare?scheduledLessonId=${lesson.id}`}
-                          className="text-xs font-bold bg-amber-500 text-white px-3 py-1.5 rounded-full hover:bg-amber-600 transition-colors shadow-sm"
-                        >
-                          準備 / 開始
-                        </Link>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className={`px-2 py-0.5 rounded-full font-medium ${isOverdue ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'}`}>
-                          {lessonDate.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        {isOverdue && <span className="text-red-500 font-bold">過ぎています</span>}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Recent Homework Check */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-bold text-slate-800 flex items-center gap-2">
-              <CheckCircle2 size={20} className="text-blue-600" />
-              前回の宿題確認
-            </h3>
-            <Link href="/students" className="text-sm text-blue-600 hover:underline flex items-center gap-1">
-              すべて見る <ArrowRight size={14} />
+          <div className="flex gap-2 flex-shrink-0">
+            <Link
+              href={`/students/${nextLesson.student_id}/lessons/prepare?scheduledLessonId=${nextLesson.id}`}
+              className="px-4 py-2.5 bg-white/20 text-white border border-white/30 rounded-xl text-sm font-semibold hover:bg-white/30 transition-colors"
+            >
+              準備する
+            </Link>
+            <Link
+              href={`/students/${nextLesson.student_id}/lessons/live`}
+              className="px-4 py-2.5 bg-white text-[#6f5385] rounded-xl text-sm font-bold hover:scale-[1.02] transition-transform"
+            >
+              ▶ 今すぐ開始
             </Link>
           </div>
+        </div>
+      ) : (
+        <div className="bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] rounded-2xl p-6 shadow-[0_8px_48px_rgba(111,83,133,0.25)]">
+          <p className="text-white/80 text-sm mb-3">予定されているレッスンはありません</p>
+          <Link
+            href="/students"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white text-[#6f5385] rounded-xl text-sm font-bold hover:scale-[1.02] transition-transform"
+          >
+            生徒一覧へ
+          </Link>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+        {/* 直近の動き (3/5) */}
+        <div className="lg:col-span-3 bg-white rounded-2xl p-6 shadow-[0_0_50px_rgba(111,83,133,0.06)]">
+          <p className="text-[10px] font-bold tracking-[0.06em] uppercase text-[#6f5385] bg-[#f2daff] px-2 py-0.5 rounded-full inline-block mb-3">直近の動き</p>
+          <h3 className="font-bold text-[#1a1c1e] mb-4">アクティビティ</h3>
 
           {recentHistory.length === 0 ? (
-            <div className="text-center py-8 bg-slate-50 rounded-lg border border-dashed border-slate-200">
-              <p className="text-sm text-slate-500">完了したレッスンはありません。</p>
+            <div className="text-center py-8 text-sm text-[#4b454e]">
+              完了したレッスンはありません
             </div>
           ) : (
-            <div className="space-y-4">
-              {recentHistory.map((lesson: any) => (
-                <div key={lesson.id} className="p-4 rounded-lg border border-slate-100 hover:border-blue-200 transition-colors">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-bold text-slate-900 text-sm">{lesson.students?.name}</h4>
-                    <span className="text-xs text-slate-400">{formatDate(lesson.date)}</span>
+            <div className="space-y-0">
+              {recentHistory.map((lesson: any, i: number) => (
+                <div key={lesson.id}>
+                  <div className="flex items-start gap-3 py-3">
+                    <div className="w-9 h-9 rounded-full bg-[#f2daff] flex items-center justify-center text-base flex-shrink-0 mt-0.5">
+                      📖
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[#1a1c1e]">
+                        レッスン記録 — {lesson.students?.name}
+                      </p>
+                      <p className="text-xs text-[#4b454e] mt-0.5">
+                        {lesson.topics || 'トピック未記録'} · {formatDate(lesson.date)}
+                      </p>
+                    </div>
+                    {lesson.homework && (
+                      <div className="text-xs bg-[#eddcf4] text-[#655a6f] px-2 py-1 rounded-lg font-medium flex-shrink-0">
+                        宿題あり
+                      </div>
+                    )}
                   </div>
-                  <div className="bg-blue-50 p-3 rounded-lg">
-                    <p className="text-xs font-bold text-blue-700 mb-1">宿題</p>
-                    <p className="text-sm text-slate-700 font-medium line-clamp-2">
-                      {lesson.homework || '宿題なし'}
-                    </p>
-                  </div>
+                  {i < recentHistory.length - 1 && (
+                    <div className="h-px bg-[#f4f3f7]" />
+                  )}
                 </div>
               ))}
             </div>
           )}
         </div>
 
+        {/* Stats + Quick Actions (2/5) */}
+        <div className="lg:col-span-2 space-y-5">
+          {/* Stats */}
+          <div className="bg-white rounded-2xl p-5 shadow-[0_0_50px_rgba(111,83,133,0.06)]">
+            <p className="text-[10px] font-bold tracking-[0.06em] uppercase text-[#6f5385] bg-[#f2daff] px-2 py-0.5 rounded-full inline-block mb-3">今月の実績</p>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { value: monthlyLessonCount, label: 'レッスン数' },
+                { value: studentCount, label: '生徒数' },
+                { value: avgUnderstanding != null ? `${avgUnderstanding}/5` : '—', label: '平均理解度' },
+                { value: homeworkCount, label: '宿題設定回数' },
+              ].map((s) => (
+                <div key={s.label} className="bg-[#f4f3f7] rounded-xl p-3 text-center">
+                  <p className="text-lg font-bold text-[#6f5385] leading-tight">{s.value}</p>
+                  <p className="text-[10px] text-[#4b454e] mt-0.5">{s.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick actions */}
+          <div className="bg-white rounded-2xl p-5 shadow-[0_0_50px_rgba(111,83,133,0.06)]">
+            <h3 className="font-bold text-[#1a1c1e] mb-3 text-sm">クイックアクション</h3>
+            <div className="grid grid-cols-3 gap-2">
+              <Link
+                href="/students/new"
+                className="flex flex-col items-center gap-1.5 p-3 bg-[#f4f3f7] rounded-xl text-center hover:bg-[#f2daff] hover:-translate-y-0.5 transition-all"
+              >
+                <Plus size={20} className="text-[#6f5385]" />
+                <span className="text-[11px] font-semibold text-[#1a1c1e]">生徒追加</span>
+              </Link>
+              <Link
+                href="/ai-tools"
+                className="flex flex-col items-center gap-1.5 p-3 bg-[#f4f3f7] rounded-xl text-center hover:bg-[#f2daff] hover:-translate-y-0.5 transition-all"
+              >
+                <Sparkles size={20} className="text-[#6f5385]" />
+                <span className="text-[11px] font-semibold text-[#1a1c1e]">AI提案</span>
+              </Link>
+              <Link
+                href="/lessons"
+                className="flex flex-col items-center gap-1.5 p-3 bg-[#f4f3f7] rounded-xl text-center hover:bg-[#f2daff] hover:-translate-y-0.5 transition-all"
+              >
+                <BookOpen size={20} className="text-[#6f5385]" />
+                <span className="text-[11px] font-semibold text-[#1a1c1e]">記録する</span>
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
