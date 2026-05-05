@@ -337,6 +337,7 @@ ${conversationNotes}`.trim();
                 goal_text: `${result.purpose_label}（AI判定）`,
                 current_phase: `目標Lv.${data.targetLevel} / ${data.periodMonths}ヶ月`,
                 memo: (student.memo ? student.memo + '\n\n' : '') + hearingSummary + '\n\n' + roadmapSummary,
+                initial_hearing_done: true,
             }).eq('id', studentId);
 
             setShowMaterialModal(true);

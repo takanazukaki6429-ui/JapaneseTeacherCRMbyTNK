@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Student } from '@/types/student';
-import { ArrowLeft, Target, StickyNote, Sparkles, MessageCircleQuestion, Map, Pencil } from 'lucide-react';
+import { ArrowLeft, Target, StickyNote, Sparkles, MessageCircleQuestion, Map, Pencil, CheckCircle } from 'lucide-react';
 import { DeleteStudentButton } from './delete-button';
 import { LessonList } from './lesson-list';
 import { LessonScheduler } from '@/components/lessons/lesson-scheduler';
@@ -174,13 +174,29 @@ export default async function StudentDetailPage({ params }: Props) {
                             AIサポート
                         </h2>
                         <div className="space-y-2">
-                            <Link
-                                href={`/students/${student.id}/initial-hearing`}
-                                className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-gradient-to-r from-[#6f5385] to-[#c9a8e0] text-white text-sm font-bold rounded-xl hover:scale-[1.01] transition-transform"
-                            >
-                                <MessageCircleQuestion size={15} />
-                                体験レッスン → ロードマップ
-                            </Link>
+                            {student.initial_hearing_done ? (
+                                <div className="space-y-1.5">
+                                    <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium px-1">
+                                        <CheckCircle size={13} />
+                                        初回ヒアリング済み
+                                    </div>
+                                    <Link
+                                        href={`/students/${student.id}/initial-hearing`}
+                                        className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-[#f0fdf4] text-emerald-700 text-sm font-bold rounded-xl border border-emerald-200 hover:bg-emerald-50 transition-colors"
+                                    >
+                                        <Map size={15} />
+                                        ロードマップを再確認
+                                    </Link>
+                                </div>
+                            ) : (
+                                <Link
+                                    href={`/students/${student.id}/initial-hearing`}
+                                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-gradient-to-r from-[#6f5385] to-[#c9a8e0] text-white text-sm font-bold rounded-xl hover:scale-[1.01] transition-transform"
+                                >
+                                    <MessageCircleQuestion size={15} />
+                                    体験レッスン → ロードマップ
+                                </Link>
+                            )}
                             <Link
                                 href={`/students/${student.id}/lessons/prepare`}
                                 className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-[#f2daff] text-[#6f5385] text-sm font-bold rounded-xl hover:bg-[#e8c8ff] transition-colors"
