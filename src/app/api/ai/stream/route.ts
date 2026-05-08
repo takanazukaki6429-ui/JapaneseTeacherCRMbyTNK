@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { type, transcript, studentContext } = body;
+        const { type, transcript, studentContext, prepContext } = body;
 
         if (!transcript || transcript.trim().length === 0) {
             return NextResponse.json({ error: 'transcript is required' }, { status: 400 });
@@ -40,32 +40,37 @@ export async function POST(req: NextRequest) {
         // プロンプト構築
         let prompt = '';
         if (type === 'live_assistant') {
+            const prepSection = prepContext
+                ? `\n【本日の授業計画（準備ページより）】\n${prepContext}\n`
+                : '';
+
             prompt = `あなたはベテラン日本語教師の判断力を持つリアルタイム授業アシスタントです。
 教師の発言から今この瞬間の授業状況を分析し、「課の進め方」と「翻訳補助」の2種類のサジェストを出力してください。
 
-${studentContext ? `【生徒情報・カリキュラム】\n${studentContext}\n` : ''}
-
-【直近の授業会話】
+${studentContext ? `【生徒情報・カリキュラム】\n${studentContext}\n` : ''}${prepSection}
+【直近の授業会話（最新）】
 ${transcript}
 
 ## 出力フォーマット（必ずこの形式で）
 
 [COURSE]
-・ 課の進め方サジェストを最大2点、各1〜2文で記載。
-　 例：「Unit5（漢字）はこの生徒のゴールには不要→スキップ推奨」
-　 例：「Unit3の助詞が定着していない→10分戻ることを推奨」
-　 例：「旅行ゴールにはUnit8の場面フレーズを今すぐ前倒しで」
-　 ※ 特に指摘がない場合は「現在のペースで進めてOK」と記載
+・課の進め方サジェストを最大2点、各1〜2文で記載。
+・各サジェストの冒頭に緊急度ラベルを付けること：[今すぐ] / [この課で] / [次回以降]
+　例：「[今すぐ] Unit5（漢字）はこの生徒のゴールには不要→Unit8へ飛ぶことを推奨」
+　例：「[この課で] Unit3の助詞が定着していない→10分追加練習してから次へ」
+　例：「[次回以降] 旅行フレーズUnit8を前倒し検討を」
+　※ 特に指摘がない場合は「現在のペースで進めてOK」と記載
 [/COURSE]
 
 [TRANSLATION]
-・ 翻訳補助サジェストを最大2点、各1〜3文で記載。
-　 例：「『高い』の補足 → EN: That's expensive. / ES: Eso es caro.」
-　 例：「『ください』のニュアンス → Please / Could you〜の違いを説明」
-　 ※ 翻訳が不要な場面なら「翻訳補助の出番なし」と記載
+・教師が説明に迷いそうな語・表現の翻訳補助を最大2点、各1〜2文で記載。
+・生徒の母国語（生徒情報参照）での言い方を優先して示すこと。
+　例：「『〜てもらえますか』→ Could you ~? (EN) / ¿Podría ~? (ES)（丁寧依頼）」
+　例：「『高い』→ expensive(価格) / tall(高さ) の違い—使い分けを強調」
+　※ 翻訳補助が不要な場面なら「翻訳補助の出番なし」と記載
 [/TRANSLATION]
 
-⚠️ 日本語で回答。箇条書き・簡潔に。「〜してください」等の敬語前置き不要。[COURSE]と[/COURSE]、[TRANSLATION]と[/TRANSLATION]のタグは必ず含めること。`;
+⚠️ 日本語で回答。箇条書き・簡潔に。前置き・敬語・説明不要。[COURSE][/COURSE]、[TRANSLATION][/TRANSLATION]のタグは必ず含めること。`;
         } else {
             prompt = transcript;
         }

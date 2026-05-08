@@ -81,6 +81,7 @@ export default function LiveLessonPage() {
     type LiveTranslation = { id: number; original: string; japanese: string; timestamp: Date };
     const [isTranslationMode, setIsTranslationMode] = useState(false);
     const [liveTranslations, setLiveTranslations] = useState<LiveTranslation[]>([]);
+    const [aiTranslationSuggestions, setAiTranslationSuggestions] = useState<AutoSuggestion[]>([]);
     const [isChromeDesktop, setIsChromeDesktop] = useState(false);
     const displayStreamRef = useRef<MediaStream | null>(null);
     const translationRecorderRef = useRef<MediaRecorder | null>(null);
@@ -220,14 +221,26 @@ export default function LiveLessonPage() {
 
         let accumulated = '';
 
+        // 本日の準備プランをコンテキストとして付与（R-1）
+        const prepSummary = prepContent
+            ? [
+                prepContent.intro_topic ? `導入トーク: ${prepContent.intro_topic.slice(0, 100)}` : '',
+                prepContent.advice ? `アドバイス: ${prepContent.advice.slice(0, 100)}` : '',
+                prepContent.review_quiz?.length
+                    ? `復習クイズ: ${prepContent.review_quiz.map(q => q.question).slice(0, 2).join(' / ')}`
+                    : '',
+              ].filter(Boolean).join('\n')
+            : '';
+
         try {
             const res = await fetch('/api/ai/stream', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     type: 'live_assistant',
-                    transcript: currentTranscript.slice(-600), // 直近600文字のみ送信
+                    transcript: currentTranscript.slice(-800), // 直近800文字
                     studentContext: studentContext || '',
+                    prepContext: prepSummary || undefined,
                 }),
             });
 
@@ -277,7 +290,14 @@ export default function LiveLessonPage() {
                     ]);
                     setActiveTab('course');
                 }
-                void translationText; // 翻訳タブはgetDisplayMediaで処理するため不使用
+
+                // R-2: AI翻訳補助サジェストを翻訳タブに表示
+                if (translationText && !translationText.includes('翻訳補助の出番なし')) {
+                    setAiTranslationSuggestions(prev => [
+                        { id, text: translationText, timestamp: now },
+                        ...prev.slice(0, 4),
+                    ]);
+                }
             }
         } catch (err) {
             console.error('Auto analysis error:', err);
@@ -287,7 +307,7 @@ export default function LiveLessonPage() {
             charsSinceLastTrigger.current = 0;
             exchangesSinceLastTrigger.current = 0;
         }
-    }, [isAnalyzing, studentContext]);
+    }, [isAnalyzing, studentContext, prepContent]);
 
     // ────────────────────────────────────────────
     // 案Y：音声認識 開始 / 停止
@@ -580,9 +600,9 @@ export default function LiveLessonPage() {
                             {tab === 'translation' && (
                                 <span className="flex items-center justify-center gap-0.5">
                                     🌐翻訳
-                                    {liveTranslations.length > 0 && (
+                                    {(liveTranslations.length + aiTranslationSuggestions.length) > 0 && (
                                         <span className="bg-[#655a6f] text-white text-[9px] rounded-full w-3.5 h-3.5 flex items-center justify-center ml-0.5">
-                                            {liveTranslations.length}
+                                            {liveTranslations.length + aiTranslationSuggestions.length}
                                         </span>
                                     )}
                                 </span>
@@ -662,9 +682,9 @@ export default function LiveLessonPage() {
                             }`}
                         >
                             🌐 翻訳
-                            {liveTranslations.length > 0 && (
+                            {(liveTranslations.length + aiTranslationSuggestions.length) > 0 && (
                                 <span className="bg-[#655a6f] text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center">
-                                    {liveTranslations.length}
+                                    {liveTranslations.length + aiTranslationSuggestions.length}
                                 </span>
                             )}
                         </button>
@@ -754,58 +774,74 @@ export default function LiveLessonPage() {
                         <div className={`px-4 py-2 shrink-0 border-b border-[#f4f3f7] flex items-center gap-2 text-xs font-medium ${isChromeDesktop ? 'bg-[#f2daff] text-[#6f5385]' : 'bg-[#fff0f0] text-[#ba1a1a]'}`}>
                             {isChromeDesktop
                                 ? '✓ Chrome Desktop — 翻訳機能が使用可能です'
-                                : '⚠️ この機能はChrome Desktop専用です。Safari・iOS・Androidには非対応。'}
+                                : '⚠️ 音声翻訳はChrome Desktop専用です。AI補助は全ブラウザで利用可能。'}
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                            {/* 未起動 */}
-                            {!isTranslationMode && liveTranslations.length === 0 && (
+                            {/* AI翻訳補助セクション（R-2：常時表示・全ブラウザ対応） */}
+                            {aiTranslationSuggestions.length > 0 && (
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-bold text-[#6f5385] uppercase tracking-wider flex items-center gap-1">
+                                        <Sparkles size={11} /> AI翻訳補助
+                                    </p>
+                                    {aiTranslationSuggestions.map((s) => (
+                                        <div key={s.id} className="bg-[#f2daff]/60 border border-[#c9a8e0]/40 rounded-2xl p-3">
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <span className="text-[10px] font-bold text-[#6f5385]">💡 補助 #{s.id}</span>
+                                                <span className="text-[10px] text-[#4b454e]">{s.timestamp.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                                            </div>
+                                            <p className="text-xs text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">{s.text}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* 音声翻訳セクション（Chrome Desktop 限定） */}
+                            {liveTranslations.length > 0 && (
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-bold text-[#655a6f] uppercase tracking-wider flex items-center gap-1">
+                                        <Zap size={11} /> 音声翻訳（リアルタイム）
+                                    </p>
+                                    {liveTranslations.map((t) => (
+                                        <div key={t.id} className="bg-white border border-[#c9a8e0]/30 rounded-2xl p-4 shadow-[0_0_20px_rgba(111,83,133,0.06)]">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-[10px] font-bold text-[#655a6f] uppercase tracking-wide">🌐 翻訳 #{t.id}</span>
+                                                <span className="text-[10px] text-[#4b454e]">{t.timestamp.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                                            </div>
+                                            <p className="text-sm font-bold text-[#1a1c1e] leading-relaxed">{t.japanese}</p>
+                                            {t.original && <p className="text-xs text-[#4b454e]/60 italic mt-1">{t.original}</p>}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* 空状態：何も表示がない場合 */}
+                            {aiTranslationSuggestions.length === 0 && liveTranslations.length === 0 && (
                                 <div className="h-full flex flex-col items-center justify-center py-12 gap-3">
-                                    {isChromeDesktop ? (
+                                    {!isTranslationMode ? (
                                         <>
                                             <div className="w-12 h-12 rounded-full bg-[#f2daff] flex items-center justify-center">
                                                 <Zap size={22} className="text-[#6f5385]" />
                                             </div>
-                                            <p className="text-sm font-bold text-[#1a1c1e]">翻訳モードを起動してください</p>
-                                            <p className="text-xs text-[#4b454e] text-center leading-relaxed">
-                                                ヘッダーの「翻訳ON」を押して<br/>Preplyのタブを選択してください
-                                            </p>
-                                            <p className="text-[10px] text-[#4b454e]/60">生徒の音声を日本語にリアルタイム翻訳します（約7秒ごと）</p>
+                                            <p className="text-sm font-bold text-[#1a1c1e]">翻訳補助タブ</p>
+                                            <div className="text-xs text-[#4b454e] text-center space-y-1 leading-relaxed">
+                                                <p>💡 <span className="font-bold">AI補助</span>: 録音中に自動で文法・語彙の翻訳ヒントを表示</p>
+                                                {isChromeDesktop && (
+                                                    <p>🎤 <span className="font-bold">音声翻訳</span>: ヘッダーの「翻訳ON」で生徒音声をリアルタイム翻訳</p>
+                                                )}
+                                            </div>
                                         </>
                                     ) : (
                                         <>
-                                            <div className="w-12 h-12 rounded-full bg-[#fff0f0] flex items-center justify-center">
-                                                <Zap size={22} className="text-[#ba1a1a]" />
+                                            <div className="w-12 h-12 rounded-full bg-[#c9a8e0]/30 flex items-center justify-center animate-pulse">
+                                                <Zap size={22} className="text-[#6f5385]" />
                                             </div>
-                                            <p className="text-sm font-bold text-[#ba1a1a]">Chrome Desktopが必要です</p>
-                                            <p className="text-xs text-[#4b454e] text-center">Safari・iOS・Androidでは<br/>この機能を使用できません</p>
+                                            <p className="text-sm font-bold text-[#1a1c1e]">翻訳モード起動中</p>
+                                            <p className="text-xs text-[#4b454e]">生徒が話すと約7秒後に翻訳が表示されます</p>
                                         </>
                                     )}
                                 </div>
                             )}
-
-                            {/* 翻訳中・待機中 */}
-                            {isTranslationMode && liveTranslations.length === 0 && (
-                                <div className="h-full flex flex-col items-center justify-center py-12 gap-3">
-                                    <div className="w-12 h-12 rounded-full bg-[#c9a8e0]/30 flex items-center justify-center animate-pulse">
-                                        <Zap size={22} className="text-[#6f5385]" />
-                                    </div>
-                                    <p className="text-sm font-bold text-[#1a1c1e]">翻訳モード起動中</p>
-                                    <p className="text-xs text-[#4b454e]">生徒が話すと約7秒後に翻訳が表示されます</p>
-                                </div>
-                            )}
-
-                            {/* 翻訳結果一覧 */}
-                            {liveTranslations.map((t) => (
-                                <div key={t.id} className="bg-white border border-[#c9a8e0]/30 rounded-2xl p-4 shadow-[0_0_20px_rgba(111,83,133,0.06)]">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-[10px] font-bold text-[#655a6f] uppercase tracking-wide">🌐 翻訳 #{t.id}</span>
-                                        <span className="text-[10px] text-[#4b454e]">{t.timestamp.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-                                    </div>
-                                    <p className="text-sm font-bold text-[#1a1c1e] leading-relaxed">{t.japanese}</p>
-                                    {t.original && <p className="text-xs text-[#4b454e]/60 italic mt-1">{t.original}</p>}
-                                </div>
-                            ))}
                         </div>
                     </div>
 
