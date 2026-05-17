@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { ArrowLeft, Save, Loader2, Star, Globe, Copy, Check, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { LessonChatLogsViewer } from '@/components/lessons/lesson-chat-logs-viewer';
-import { nationalityToLangCode, LANG_CODE_TO_NAME } from '@/lib/nationality';
+import { nationalityToLangCode } from '@/lib/nationality';
 
 export default function NewLessonPage() {
     const router = useRouter();
@@ -127,7 +127,6 @@ export default function NewLessonPage() {
         { code: 'fr', label: '🇫🇷 フランス語' },
         { code: 'ja', label: '🇯🇵 日本語' },
     ] as const;
-    const LANGUAGE_NAMES = LANG_CODE_TO_NAME;
     const [selectedLang, setSelectedLang] = useState<string>('en');
 
     useEffect(() => {
@@ -163,7 +162,6 @@ export default function NewLessonPage() {
                     next_goal: formData.next_goal,
                     understanding_level: formData.understanding_level,
                     language: selectedLang,
-                    language_name: LANGUAGE_NAMES[selectedLang],
                 }),
             });
             if (!res.ok) throw new Error('Feedback generation failed');

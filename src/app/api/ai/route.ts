@@ -133,11 +133,24 @@ ${conversation_notes}
 }
 `;
         } else if (type === 'multilingual_feedback') {
-            const { topics, vocabulary, mistakes, homework, next_goal, understanding_level, language_name } = otherParams;
-            if (!language_name) {
-                return NextResponse.json({ error: 'language_name is required' }, { status: 400 });
+            const LANG_CODE_MAP: Record<string, string> = {
+                en: 'English', es: 'Español', pt: 'Português',
+                ko: '한국어', zh: '中文', fr: 'Français', ja: '日本語',
+            };
+            const { topics, vocabulary, mistakes, homework, next_goal, understanding_level, language, language_name } = otherParams;
+            // language code → derive name server-side; fall back to language_name for backward compat
+            const resolvedLangName = (language && LANG_CODE_MAP[language as string]) || language_name;
+            if (!resolvedLangName) {
+                return NextResponse.json({ error: 'language (code) or language_name is required' }, { status: 400 });
             }
-            finalPrompt = `あなたはプロの日本語教師です。以下のレッスン記録をもとに、生徒に送る${language_name}のフィードバックメッセージを作成してください。
+            const level = Number(understanding_level) || 3;
+            const toneGuidance = level <= 2
+                ? 'とても優しく励ます。難しかった部分を「よくチャレンジした」とポジティブに言い換え、自信を持たせることを最優先にする。'
+                : level >= 4
+                ? '進歩を具体的に称える。「着実に上達している」という自信を持たせ、次のステップへの期待感を高めるトーンにする。'
+                : '温かく励ましながら、改善点を自然な形で含める。バランスの取れた建設的なトーンにする。';
+
+            finalPrompt = `あなたはプロの日本語教師です。以下のレッスン記録をもとに、生徒に送る${resolvedLangName}のフィードバックメッセージを作成してください。
 
 ## 授業記録
 - 学習トピック: ${topics || '未記録'}
@@ -145,11 +158,11 @@ ${conversation_notes}
 - つまずき・弱点: ${mistakes || 'なし'}
 - 宿題: ${homework || 'なし'}
 - 次回目標: ${next_goal || '未設定'}
-- 理解度: ${understanding_level || 3}/5
+- 理解度: ${level}/5
 
 ## フィードバックの条件
-- 生徒の母国語（${language_name}）で書く
-- 励ましのトーンで、具体的に褒める
+- 生徒の母国語（${resolvedLangName}）で書く
+- トーン調整（理解度${level}/5に応じて）: ${toneGuidance}
 - 3〜5文程度のコンパクトなメッセージ
 - 宿題と次回目標を自然に含める
 - 絵文字を1〜2個使ってOK
