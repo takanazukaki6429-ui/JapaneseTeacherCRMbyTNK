@@ -34,7 +34,12 @@ export async function middleware(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     // Route protection
-    if (!user && !request.nextUrl.pathname.startsWith('/login') && !request.nextUrl.pathname.startsWith('/auth')) {
+    const isPublicRoute =
+        request.nextUrl.pathname.startsWith('/login') ||
+        request.nextUrl.pathname.startsWith('/auth') ||
+        request.nextUrl.pathname.startsWith('/student-view'); // 生徒ビュー（認証不要）
+
+    if (!user && !isPublicRoute) {
         return NextResponse.redirect(new URL('/login', request.url));
     }
 

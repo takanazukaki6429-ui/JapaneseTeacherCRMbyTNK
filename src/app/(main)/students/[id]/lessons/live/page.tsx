@@ -76,6 +76,7 @@ export default function LiveLessonPage() {
     const [courseSuggestions, setCourseSuggestions] = useState<AutoSuggestion[]>([]);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [streamingText, setStreamingText] = useState('');
+    const [micError, setMicError] = useState<string | null>(null);
 
     // ── 翻訳モード state ──
     type LiveTranslation = { id: number; original: string; japanese: string; timestamp: Date };
@@ -86,6 +87,12 @@ export default function LiveLessonPage() {
     const displayStreamRef = useRef<MediaStream | null>(null);
     const translationRecorderRef = useRef<MediaRecorder | null>(null);
     const translationCounterRef = useRef(0);
+
+    // ── 生徒向け翻訳（先生 → 生徒方向）──
+    const [studentNativeLanguage, setStudentNativeLanguage] = useState('English');
+    const studentNativeLangRef = useRef('English');
+    const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
+    const translateDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // ── トリガーカウンタ ──
     const charsSinceLastTrigger = useRef(0);
@@ -112,6 +119,17 @@ export default function LiveLessonPage() {
         setIsChromeDesktop(isChrome && !isMobile);
     }, []);
 
+    // BroadcastChannel（生徒ビューとの同デバイス通信）
+    useEffect(() => {
+        if (typeof window === 'undefined' || !studentId) return;
+        const ch = new BroadcastChannel(`asta-live-${studentId}`);
+        broadcastChannelRef.current = ch;
+        return () => { ch.close(); broadcastChannelRef.current = null; };
+    }, [studentId]);
+
+    // studentNativeLanguage を ref に同期（stale closure 防止）
+    useEffect(() => { studentNativeLangRef.current = studentNativeLanguage; }, [studentNativeLanguage]);
+
     // ── Phase 1B：生徒コンテキスト取得 ──
     useEffect(() => {
         if (!studentId) return;
@@ -122,7 +140,7 @@ export default function LiveLessonPage() {
                 // 生徒情報
                 const { data: student } = await supabase
                     .from('students')
-                    .select('name, jlpt_level, goal_text, textbook, current_phase, memo')
+                    .select('name, jlpt_level, goal_text, textbook, current_phase, memo, nationality')
                     .eq('id', studentId)
                     .single();
 
@@ -135,6 +153,20 @@ export default function LiveLessonPage() {
                     .limit(3);
 
                 if (!student) return;
+
+                // 国籍 → 言語の自動設定
+                const nationalityToLang: Record<string, string> = {
+                    'アメリカ': 'English', 'イギリス': 'English', 'カナダ': 'English', 'オーストラリア': 'English',
+                    'フィリピン': 'English', 'インド': 'English', 'シンガポール': 'English',
+                    'スペイン': 'Spanish', 'メキシコ': 'Spanish', 'コロンビア': 'Spanish',
+                    'ブラジル': 'Portuguese', 'ポルトガル': 'Portuguese',
+                    '韓国': 'Korean', '中国': 'Chinese', '台湾': 'Chinese',
+                    'フランス': 'French', 'ドイツ': 'German', 'イタリア': 'Italian',
+                    'タイ': 'Thai', 'ベトナム': 'Vietnamese', 'インドネシア': 'Indonesian',
+                };
+                if (student.nationality && nationalityToLang[student.nationality]) {
+                    setStudentNativeLanguage(nationalityToLang[student.nationality]);
+                }
 
                 const lines: string[] = [
                     `生徒ゴール: ${student.goal_text || '未設定'}`,
@@ -207,6 +239,38 @@ export default function LiveLessonPage() {
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, activeTab]);
+
+    // ────────────────────────────────────────────
+    // 生徒向け翻訳（先生の日本語 → 生徒の母国語）
+    // ────────────────────────────────────────────
+    const translateForStudent = useCallback((japaneseText: string) => {
+        if (!japaneseText.trim()) return;
+        // デバウンス（直近400ms以内に新しいチャンクが来たらリセット）
+        if (translateDebounceRef.current) clearTimeout(translateDebounceRef.current);
+        translateDebounceRef.current = setTimeout(async () => {
+            try {
+                const res = await fetch('/api/ai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: `Translate the following Japanese text to ${studentNativeLangRef.current}. Output ONLY the translation, nothing else.\n\n${japaneseText}`,
+                    }),
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                const translated = (data.text ?? '').trim();
+                if (translated) {
+                    // A案: BroadcastChannel で生徒ビューに送信（同デバイス）
+                    broadcastChannelRef.current?.postMessage({
+                        type: 'translation',
+                        text: translated,
+                        original: japaneseText,
+                        timestamp: Date.now(),
+                    });
+                }
+            } catch { /* silent - 翻訳はベストエフォート */ }
+        }, 400);
+    }, []); // refs のみ参照するため依存なし
 
     // ────────────────────────────────────────────
     // 案Y：自動分析トリガー
@@ -318,6 +382,7 @@ export default function LiveLessonPage() {
             alert('このブラウザは音声認識に対応していません。Chrome を使用してください。');
             return;
         }
+        setMicError(null);
 
         const recognition = new SpeechRecognition();
         recognition.continuous = true;
@@ -344,6 +409,9 @@ export default function LiveLessonPage() {
                 transcriptRef.current = updated;
                 setTranscript(updated);
 
+                // 生徒向けリアルタイム翻訳（A案: BroadcastChannel）
+                translateForStudent(newFinal);
+
                 // トリガーカウント更新
                 charsSinceLastTrigger.current += newFinal.length;
                 exchangesSinceLastTrigger.current += 1;
@@ -359,22 +427,37 @@ export default function LiveLessonPage() {
         };
 
         recognition.onerror = (e: SpeechRecognitionErrorEvent) => {
-            if (e.error !== 'no-speech') {
+            if (e.error === 'not-allowed') {
+                // マイク権限が拒否された → onend の自動再起動を止めて終了
+                recognitionRef.current = null;
+                setIsListening(false);
+                setMicError('マイクの使用が許可されていません。ブラウザのアドレスバー左のマイクアイコンから権限を許可してください。');
+            } else if (e.error !== 'no-speech') {
                 console.error('SpeechRecognition error:', e.error);
             }
         };
 
         recognition.onend = () => {
             // continuous=trueでも途切れることがある → 自動再起動
-            if (recognitionRef.current) {
-                try { recognition.start(); } catch { /* already started */ }
+            // ただし recognitionRef.current === recognition の場合のみ（not-allowed で null 化された場合は除く）
+            if (recognitionRef.current === recognition) {
+                try {
+                    recognition.start();
+                } catch (err) {
+                    // NotAllowedError は権限拒否 → 再起動せず終了
+                    if (err instanceof DOMException && err.name === 'NotAllowedError') {
+                        recognitionRef.current = null;
+                        setIsListening(false);
+                        setMicError('マイクの使用が許可されていません。ブラウザのアドレスバー左のマイクアイコンから権限を許可してください。');
+                    }
+                }
             }
         };
 
         recognitionRef.current = recognition;
         recognition.start();
         setIsListening(true);
-    }, [triggerAnalysis]);
+    }, [triggerAnalysis, translateForStudent]);
 
     const stopListening = useCallback(() => {
         if (recognitionRef.current) {
@@ -491,6 +574,8 @@ export default function LiveLessonPage() {
 
             stream.getAudioTracks()[0].onended = () => stopTranslationMode();
         } catch (err) {
+            // ユーザーがキャンセル or 権限拒否 → コンソールエラーを出さない
+            if (err instanceof DOMException && err.name === 'NotAllowedError') return;
             console.error('getDisplayMedia error:', err);
         }
     }, [isChromeDesktop]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -564,6 +649,34 @@ export default function LiveLessonPage() {
                             {isTranslationMode ? '翻訳中' : '翻訳ON'}
                         </button>
                     )}
+
+                    {/* 言語セレクタ */}
+                    <select
+                        value={studentNativeLanguage}
+                        onChange={e => setStudentNativeLanguage(e.target.value)}
+                        className="text-xs bg-white/20 hover:bg-white/30 text-white border-0 rounded-full px-2 py-1.5 font-bold cursor-pointer outline-none"
+                        title="生徒の母国語"
+                    >
+                        <option value="English">🇺🇸 EN</option>
+                        <option value="Spanish">🇪🇸 ES</option>
+                        <option value="Portuguese">🇧🇷 PT</option>
+                        <option value="Korean">🇰🇷 KO</option>
+                        <option value="Chinese">🇨🇳 ZH</option>
+                        <option value="French">🇫🇷 FR</option>
+                        <option value="German">🇩🇪 DE</option>
+                        <option value="Thai">🇹🇭 TH</option>
+                        <option value="Vietnamese">🇻🇳 VI</option>
+                        <option value="Indonesian">🇮🇩 ID</option>
+                    </select>
+
+                    {/* 生徒ビュー（A案: 画面共有用） */}
+                    <button
+                        onClick={() => window.open(`/student-view/${studentId}`, '_blank', 'width=1024,height=640,noopener')}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white font-bold rounded-full text-xs transition-all"
+                        title="生徒に見せる翻訳ビューを開く"
+                    >
+                        👁 生徒ビュー
+                    </button>
 
                     <button
                         onClick={finishLesson}
@@ -720,6 +833,21 @@ export default function LiveLessonPage() {
 
                     {/* 🎯 課の進め方パネル */}
                     <div className={`flex-1 flex flex-col overflow-hidden ${activeTab === 'course' || activeTab === 'prep' ? 'flex' : 'hidden'}`}>
+                        {micError && (
+                            <div className="mx-4 mt-3 p-3 bg-red-50 border border-red-200 rounded-2xl shrink-0 flex items-start gap-2">
+                                <span className="text-red-500 shrink-0 mt-0.5">⚠️</span>
+                                <div>
+                                    <p className="text-xs font-bold text-red-700 mb-0.5">マイクアクセスエラー</p>
+                                    <p className="text-xs text-red-600">{micError}</p>
+                                    <button
+                                        onClick={startListening}
+                                        className="mt-1.5 text-xs text-red-700 underline font-bold"
+                                    >
+                                        再試行
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                         {isListening && (
                             <div className="px-4 pt-2 pb-1 bg-[#faf9fd] border-b border-[#f4f3f7] shrink-0">
                                 <p className="text-[11px] text-[#4b454e] leading-relaxed line-clamp-2">
