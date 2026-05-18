@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
-import { Home, Users, Library, Settings, LogOut, Menu, KeyRound } from 'lucide-react';
+import { Home, Users, Library, Settings, LogOut, Menu, KeyRound, CreditCard } from 'lucide-react';
 
 const ADMIN_EMAILS = ['pommetann@gmail.com', 'takanazukaki6429@gmail.com'];
 
@@ -15,6 +15,7 @@ const navItems = [
     { name: '生徒', href: '/students', icon: Users },
     { name: '教材', href: '/materials', icon: Library },
     { name: '設定', href: '/settings', icon: Settings },
+    { name: 'プラン', href: '/settings/billing', icon: CreditCard },
 ];
 
 export function Sidebar() {
