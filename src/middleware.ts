@@ -70,41 +70,38 @@ export async function middleware(request: NextRequest) {
     }
 
     // 5. Subscription check
-    // /pricing, /settings/billing, API routes, public routes はスキップ
-    const isSubscriptionExempt =
-        isPublicRoute ||
-        request.nextUrl.pathname.startsWith('/onboarding') ||
-        request.nextUrl.pathname.startsWith('/pricing') ||
-        request.nextUrl.pathname.startsWith('/settings/billing') ||
-        request.nextUrl.pathname.startsWith('/api/') ||
-        request.nextUrl.pathname.startsWith('/login');
-
-    if (user && !isSubscriptionExempt && request.method === 'GET') {
-        const subscriptionActive = request.cookies.get('subscription_active')?.value;
-
-        if (!subscriptionActive) {
-            const { data: settings } = await supabase
-                .from('user_settings')
-                .select('is_free, subscription_status')
-                .eq('user_id', user.id)
-                .single();
-
-            const isFree = settings?.is_free ?? false;
-            const status = settings?.subscription_status ?? 'inactive';
-            const isActive = isFree || status === 'active' || status === 'trialing';
-
-            if (!isActive) {
-                return NextResponse.redirect(new URL('/pricing', request.url));
-            }
-
-            // Cache subscription status for 1 hour
-            response.cookies.set('subscription_active', 'true', {
-                maxAge: 3600,
-                httpOnly: true,
-                sameSite: 'lax',
-            });
-        }
-    }
+    // TODO: 有償化タイミングでコメントアウトを解除する
+    // （解除前にStripeアカウント設定・環境変数・DBマイグレーション適用が必要 → stripe-setup.md 参照）
+    //
+    // const isSubscriptionExempt =
+    //     isPublicRoute ||
+    //     request.nextUrl.pathname.startsWith('/onboarding') ||
+    //     request.nextUrl.pathname.startsWith('/pricing') ||
+    //     request.nextUrl.pathname.startsWith('/settings/billing') ||
+    //     request.nextUrl.pathname.startsWith('/api/') ||
+    //     request.nextUrl.pathname.startsWith('/login');
+    //
+    // if (user && !isSubscriptionExempt && request.method === 'GET') {
+    //     const subscriptionActive = request.cookies.get('subscription_active')?.value;
+    //     if (!subscriptionActive) {
+    //         const { data: settings } = await supabase
+    //             .from('user_settings')
+    //             .select('is_free, subscription_status')
+    //             .eq('user_id', user.id)
+    //             .single();
+    //         const isFree = settings?.is_free ?? false;
+    //         const status = settings?.subscription_status ?? 'inactive';
+    //         const isActive = isFree || status === 'active' || status === 'trialing';
+    //         if (!isActive) {
+    //             return NextResponse.redirect(new URL('/pricing', request.url));
+    //         }
+    //         response.cookies.set('subscription_active', 'true', {
+    //             maxAge: 3600,
+    //             httpOnly: true,
+    //             sameSite: 'lax',
+    //         });
+    //     }
+    // }
 
     // Redirect to dashboard if logged in and trying to access login
     if (user && request.nextUrl.pathname.startsWith('/login')) {
