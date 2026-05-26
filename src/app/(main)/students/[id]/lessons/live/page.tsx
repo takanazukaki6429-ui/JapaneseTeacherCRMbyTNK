@@ -5,7 +5,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
     ArrowLeft, Send, MessageCircle, BookOpen, CheckCircle,
-    Save, Sparkles, X, Mic, MicOff, Loader2, Zap
+    Save, Sparkles, X, Mic, MicOff, Loader2, Zap, PictureInPicture2
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -35,10 +35,17 @@ interface SpeechRecognitionInstance extends EventTarget {
     onerror: ((e: SpeechRecognitionErrorEvent) => void) | null;
     onend: (() => void) | null;
 }
+// Document Picture-in-Picture API（Chrome 116+）
+interface DocumentPictureInPictureAPI extends EventTarget {
+    requestWindow(options?: { width?: number; height?: number }): Promise<Window>;
+    readonly window: Window | null;
+}
+
 declare global {
     interface Window {
         SpeechRecognition?: new () => SpeechRecognitionInstance;
         webkitSpeechRecognition?: new () => SpeechRecognitionInstance;
+        documentPictureInPicture?: DocumentPictureInPictureAPI;
     }
 }
 
@@ -88,6 +95,11 @@ export default function LiveLessonPage() {
     const translationRecorderRef = useRef<MediaRecorder | null>(null);
     const translationCounterRef = useRef(0);
 
+    // ── 字幕PiP state（Document Picture-in-Picture）──
+    const [isPipOpen, setIsPipOpen] = useState(false);
+    const [isPipSupported, setIsPipSupported] = useState(false);
+    const pipWindowRef = useRef<Window | null>(null);
+
     // ── 生徒向け翻訳（先生 → 生徒方向）──
     const [studentNativeLanguage, setStudentNativeLanguage] = useState('English');
     const studentNativeLangRef = useRef('English');
@@ -117,6 +129,8 @@ export default function LiveLessonPage() {
         const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
         const isMobile = /Mobi|Android/i.test(navigator.userAgent);
         setIsChromeDesktop(isChrome && !isMobile);
+        // Document PiP サポート判定（Chrome 116+）
+        setIsPipSupported('documentPictureInPicture' in window);
     }, []);
 
     // BroadcastChannel（生徒ビューとの同デバイス通信）
@@ -588,6 +602,100 @@ export default function LiveLessonPage() {
         setIsTranslationMode(false);
     }, []);
 
+    // ── Document PiP（字幕フローティングウィンドウ）──
+    const openSubtitlePip = useCallback(async () => {
+        if (!window.documentPictureInPicture) return;
+        try {
+            const pip = await window.documentPictureInPicture.requestWindow({ width: 640, height: 160 });
+            pipWindowRef.current = pip;
+
+            // ベーススタイル
+            const style = pip.document.createElement('style');
+            style.textContent = `
+                * { box-sizing: border-box; margin: 0; padding: 0; }
+                body {
+                    background: #111;
+                    color: #fff;
+                    font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    height: 100vh;
+                    padding: 16px 20px;
+                    overflow: hidden;
+                }
+                #pip-jp {
+                    font-size: 30px;
+                    font-weight: bold;
+                    line-height: 1.3;
+                    color: #fff;
+                    word-break: break-all;
+                }
+                #pip-orig {
+                    font-size: 13px;
+                    color: rgba(255,255,255,0.55);
+                    margin-top: 6px;
+                    font-style: italic;
+                    word-break: break-all;
+                }
+                #pip-waiting {
+                    font-size: 16px;
+                    color: rgba(255,255,255,0.4);
+                }
+            `;
+            pip.document.head.appendChild(style);
+
+            const jpEl = pip.document.createElement('p');
+            jpEl.id = 'pip-jp';
+            jpEl.style.display = 'none';
+
+            const origEl = pip.document.createElement('p');
+            origEl.id = 'pip-orig';
+
+            const waitEl = pip.document.createElement('p');
+            waitEl.id = 'pip-waiting';
+            waitEl.textContent = '🎙 生徒の発話を待っています…';
+
+            pip.document.body.appendChild(waitEl);
+            pip.document.body.appendChild(jpEl);
+            pip.document.body.appendChild(origEl);
+
+            pip.addEventListener('pagehide', () => {
+                setIsPipOpen(false);
+                pipWindowRef.current = null;
+            });
+
+            setIsPipOpen(true);
+        } catch (err) {
+            if (err instanceof DOMException && err.name === 'NotAllowedError') return;
+            console.error('PiP open error:', err);
+        }
+    }, []);
+
+    const closeSubtitlePip = useCallback(() => {
+        pipWindowRef.current?.close();
+        pipWindowRef.current = null;
+        setIsPipOpen(false);
+    }, []);
+
+    // 新しい翻訳が届いたらPiPウィンドウを更新
+    useEffect(() => {
+        if (!pipWindowRef.current || liveTranslations.length === 0) return;
+        const latest = liveTranslations[0];
+        const doc = pipWindowRef.current.document;
+        const waitEl = doc.getElementById('pip-waiting');
+        const jpEl = doc.getElementById('pip-jp');
+        const origEl = doc.getElementById('pip-orig');
+        if (waitEl) waitEl.style.display = 'none';
+        if (jpEl) { jpEl.style.display = 'block'; jpEl.textContent = latest.japanese; }
+        if (origEl) origEl.textContent = latest.original || '';
+    }, [liveTranslations]);
+
+    // アンマウント時にPiPも閉じる
+    useEffect(() => {
+        return () => { closeSubtitlePip(); };
+    }, [closeSubtitlePip]);
+
     // アンマウント時にクリーンアップ（stopTranslationMode宣言の後に配置）
     useEffect(() => {
         return () => { stopListening(); stopTranslationMode(); };
@@ -647,6 +755,21 @@ export default function LiveLessonPage() {
                         >
                             <Zap size={14} />
                             {isTranslationMode ? '翻訳中' : '翻訳ON'}
+                        </button>
+                    )}
+
+                    {/* 字幕PiP（Document PiP・Chrome 116+） */}
+                    {isPipSupported && (
+                        <button
+                            onClick={isPipOpen ? closeSubtitlePip : openSubtitlePip}
+                            title={isPipOpen ? '字幕PiPを閉じる' : '字幕をフローティングウィンドウで表示（翻訳ONと組み合わせて使用）'}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all ${isPipOpen
+                                ? 'bg-emerald-500 text-white'
+                                : 'bg-white/20 hover:bg-white/30 text-white'
+                                }`}
+                        >
+                            <PictureInPicture2 size={14} />
+                            {isPipOpen ? 'PiP中' : '字幕PiP'}
                         </button>
                     )}
 
@@ -943,6 +1066,17 @@ export default function LiveLessonPage() {
                                 </div>
                             )}
 
+                            {/* 字幕PiPの案内（翻訳が届いている場合のみ） */}
+                            {liveTranslations.length > 0 && isPipSupported && !isPipOpen && (
+                                <button
+                                    onClick={openSubtitlePip}
+                                    className="w-full flex items-center gap-2 px-3 py-2.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-700 font-bold hover:bg-emerald-100 transition-colors"
+                                >
+                                    <PictureInPicture2 size={14} />
+                                    Preplyの上に字幕を浮かせる（字幕PiPを起動）
+                                </button>
+                            )}
+
                             {/* 空状態：何も表示がない場合 */}
                             {aiTranslationSuggestions.length === 0 && liveTranslations.length === 0 && (
                                 <div className="h-full flex flex-col items-center justify-center py-12 gap-3">
@@ -957,6 +1091,9 @@ export default function LiveLessonPage() {
                                                 {isChromeDesktop && (
                                                     <p>🎤 <span className="font-bold">音声翻訳</span>: ヘッダーの「翻訳ON」で生徒音声をリアルタイム翻訳</p>
                                                 )}
+                                                {isPipSupported && (
+                                                    <p>📺 <span className="font-bold">字幕PiP</span>: 翻訳をPreplyの上に浮かせて表示</p>
+                                                )}
                                             </div>
                                         </>
                                     ) : (
@@ -966,6 +1103,9 @@ export default function LiveLessonPage() {
                                             </div>
                                             <p className="text-sm font-bold text-[#1a1c1e]">翻訳モード起動中</p>
                                             <p className="text-xs text-[#4b454e]">生徒が話すと約7秒後に翻訳が表示されます</p>
+                                            {isPipSupported && (
+                                                <p className="text-xs text-[#4b454e]">翻訳が届いたら「字幕PiP」でPreplyの上に浮かせられます</p>
+                                            )}
                                         </>
                                     )}
                                 </div>
