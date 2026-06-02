@@ -1,8 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Check, Sparkles, Loader2 } from 'lucide-react';
+
+// useSearchParams を使うため静的プリレンダリングを無効化
+export const dynamic = 'force-dynamic';
 
 const FEATURES = [
     '生徒管理・レッスン記録（無制限）',
@@ -13,7 +16,7 @@ const FEATURES = [
     'AIによる宿題・目標提案',
 ];
 
-export default function PricingPage() {
+function PricingContent() {
     const searchParams = useSearchParams();
     const canceled = searchParams.get('canceled') === '1';
     const [loading, setLoading] = useState(false);
@@ -104,5 +107,13 @@ export default function PricingPage() {
                 <a href="/login" className="text-[#6f5385] underline ml-1">ログイン</a>
             </p>
         </div>
+    );
+}
+
+export default function PricingPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-[#f4f3f7] flex items-center justify-center"><Loader2 className="animate-spin text-[#6f5385]" size={28} /></div>}>
+            <PricingContent />
+        </Suspense>
     );
 }

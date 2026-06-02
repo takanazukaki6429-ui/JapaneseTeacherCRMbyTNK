@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { stripe, STRIPE_PRICE_ID } from '@/lib/stripe';
+import { getStripe, getStripePriceId } from '@/lib/stripe';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
         }
 
         const origin = req.headers.get('origin') ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+        const stripe = getStripe();
 
         // Stripe Customer を取得 or 新規作成
         let customerId = settings?.stripe_customer_id;
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
             customer: customerId,
             mode: 'subscription',
             payment_method_types: ['card'],
-            line_items: [{ price: STRIPE_PRICE_ID, quantity: 1 }],
+            line_items: [{ price: getStripePriceId(), quantity: 1 }],
             success_url: `${origin}/settings/billing?success=1`,
             cancel_url: `${origin}/pricing?canceled=1`,
             locale: 'ja',

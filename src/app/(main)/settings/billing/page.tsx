@@ -1,9 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { CheckCircle, CreditCard, Loader2, AlertCircle } from 'lucide-react';
+
+// useSearchParams を使う＋認証必須のユーザー固有ページのため静的化を無効
+export const dynamic = 'force-dynamic';
 
 type BillingInfo = {
     is_free: boolean;
@@ -19,7 +22,7 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
     inactive: { label: '未契約', color: 'text-gray-600 bg-gray-50 border-gray-200' },
 };
 
-export default function BillingPage() {
+function BillingContent() {
     const searchParams = useSearchParams();
     const success = searchParams.get('success') === '1';
 
@@ -130,5 +133,13 @@ export default function BillingPage() {
                 </a>
             )}
         </div>
+    );
+}
+
+export default function BillingPage() {
+    return (
+        <Suspense fallback={<div className="flex h-64 items-center justify-center"><Loader2 className="animate-spin text-[#6f5385]" size={28} /></div>}>
+            <BillingContent />
+        </Suspense>
     );
 }
