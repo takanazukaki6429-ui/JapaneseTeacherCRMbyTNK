@@ -3,6 +3,18 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * v1.0 工程表 4.17: 音声データ即時削除確認
+ *
+ * 本エンドポイントは音声データを以下の方針で取り扱う:
+ *   1. 音声 Blob は HTTP リクエストのメモリ内のみ保持（DB保存しない）
+ *   2. Gemini への送信が完了次第、base64Audio / arrayBuffer はスコープ外となり
+ *      JS ガベージコレクタにより回収される（明示的な保管期間ゼロ）
+ *   3. ローカルファイル書き出しは行わない
+ *   4. レスポンスは文字起こし結果（テキスト）のみ返す
+ *
+ * これにより要件定義書 v1.0 §4.2.2「STT処理後に必ず削除・保持期間ゼロ」を満たす。
+ */
 export async function POST(req: NextRequest) {
     try {
         const formData = await req.formData();
@@ -15,6 +27,8 @@ export async function POST(req: NextRequest) {
         const arrayBuffer = await audioBlob.arrayBuffer();
         const base64Audio = Buffer.from(arrayBuffer).toString('base64');
         const mimeType = (audioBlob.type || 'audio/webm').split(';')[0];
+        // ↑ ここまでで音声バイナリを取得。以降の処理が終わり次第、
+        //   arrayBuffer / base64Audio / audioBlob は全てスコープ外となり即時GC対象。
 
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
         const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });

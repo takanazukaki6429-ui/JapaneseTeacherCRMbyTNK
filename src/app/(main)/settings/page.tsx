@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { User, Database, Loader2, Download, Eye, EyeOff } from 'lucide-react';
+import { User, Database, Loader2, Download, Eye, EyeOff, AlertTriangle, Trash2 } from 'lucide-react';
 
 function toCSV(rows: Record<string, unknown>[]): string {
     if (!rows.length) return '';
@@ -26,6 +27,7 @@ function downloadCSV(csv: string, filename: string) {
 
 export default function SettingsPage() {
     const supabase = createClient();
+    const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [exporting, setExporting] = useState(false);
 
@@ -38,6 +40,31 @@ export default function SettingsPage() {
     const [pwError, setPwError] = useState('');
     const [pwSuccess, setPwSuccess] = useState(false);
     const [showPw, setShowPw] = useState(false);
+
+    // アカウント削除（v1.0 §4.16 個人情報削除機能）
+    const [deleteOpen, setDeleteOpen] = useState(false);
+    const [deleteConfirm, setDeleteConfirm] = useState('');
+    const [deleteLoading, setDeleteLoading] = useState(false);
+    const [deleteError, setDeleteError] = useState('');
+
+    const handleAccountDelete = async () => {
+        setDeleteError('');
+        setDeleteLoading(true);
+        try {
+            const res = await fetch('/api/account/delete', { method: 'POST' });
+            const data = await res.json();
+            if (!res.ok) {
+                setDeleteError(data.error || 'アカウントの削除に失敗しました');
+                return;
+            }
+            alert('アカウントを削除しました。ご利用ありがとうございました。');
+            router.push('/login');
+        } catch (e) {
+            setDeleteError(e instanceof Error ? e.message : '通信エラーが発生しました');
+        } finally {
+            setDeleteLoading(false);
+        }
+    };
 
     useEffect(() => {
         supabase.auth.getUser().finally(() => setLoading(false));
@@ -175,6 +202,67 @@ export default function SettingsPage() {
                         </button>
                     }
                 />
+            </SectionCard>
+
+            {/* 危険ゾーン: アカウント削除 */}
+            <SectionCard icon={<AlertTriangle size={16} className="text-[#ba1a1a]" />} title="危険な操作">
+                <RowItem
+                    label="アカウントを削除"
+                    desc="すべての生徒情報・レッスン記録・教材データが削除されます。元に戻せません"
+                    action={
+                        <button
+                            onClick={() => { setDeleteOpen(true); setDeleteError(''); setDeleteConfirm(''); }}
+                            className="inline-flex items-center gap-1.5 text-xs bg-[#fff0f0] text-[#ba1a1a] px-3 py-1.5 rounded-lg hover:bg-[#ffe0e0] transition-colors border border-[#f4b8b8]"
+                        >
+                            <Trash2 size={12} />
+                            削除する
+                        </button>
+                    }
+                />
+
+                {deleteOpen && (
+                    <div className="mt-4 bg-[#fff0f0] border border-[#f4b8b8] rounded-2xl p-5">
+                        <p className="text-sm font-bold text-[#ba1a1a] mb-2">本当に削除しますか？</p>
+                        <p className="text-xs text-[#ba1a1a]/80 mb-3 leading-relaxed">
+                            この操作は<strong>元に戻せません</strong>。以下のデータがすべて削除されます：
+                        </p>
+                        <ul className="text-xs text-[#ba1a1a]/80 mb-4 list-disc pl-5 space-y-0.5">
+                            <li>登録生徒のすべての情報</li>
+                            <li>レッスン記録・宿題履歴</li>
+                            <li>作成した教材・AI生成データ</li>
+                            <li>個人プロフィール・設定情報</li>
+                        </ul>
+                        <p className="text-xs text-[#4b454e] mb-2">
+                            続行するには下の入力欄に <code className="bg-white px-1.5 py-0.5 rounded text-[#ba1a1a] font-bold">DELETE</code> と入力してください
+                        </p>
+                        <input
+                            type="text"
+                            value={deleteConfirm}
+                            onChange={e => setDeleteConfirm(e.target.value)}
+                            placeholder="DELETE"
+                            className="w-full text-sm px-3 py-2.5 rounded-xl border border-[#f4b8b8] focus:outline-none focus:ring-2 focus:ring-[#ba1a1a] bg-white font-mono"
+                        />
+                        {deleteError && <p className="text-xs text-[#ba1a1a] mt-2">{deleteError}</p>}
+                        <div className="flex gap-2 pt-3">
+                            <button
+                                type="button"
+                                onClick={() => setDeleteOpen(false)}
+                                className="text-xs px-4 py-2 rounded-xl bg-white text-[#4b454e] border border-[#c9a8e0]/30 hover:bg-[#f2daff] transition-colors"
+                            >
+                                キャンセル
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleAccountDelete}
+                                disabled={deleteConfirm !== 'DELETE' || deleteLoading}
+                                className="text-xs px-4 py-2 rounded-xl bg-[#ba1a1a] text-white font-bold hover:bg-[#960000] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+                            >
+                                {deleteLoading && <Loader2 size={12} className="animate-spin" />}
+                                {deleteLoading ? '削除中...' : 'アカウントを完全に削除'}
+                            </button>
+                        </div>
+                    </div>
+                )}
             </SectionCard>
         </div>
     );

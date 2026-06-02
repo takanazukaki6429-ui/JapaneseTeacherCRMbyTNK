@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import { checkPasswordStrength } from '@/lib/password-policy';
 import { checkRateLimit, getRequestIdentifier } from '@/lib/rate-limit';
+import { logAudit } from '@/lib/audit';
 
 const signUpSchema = z.object({
     email: z.string().email(),
@@ -101,6 +102,17 @@ export async function POST(req: NextRequest) {
         if (markError) {
             console.error("Failed to mark code as used:", markError);
         }
+
+        // v1.0 §4.13 監査ログ: signup成功を記録
+        await logAudit({
+            action: 'auth.signup',
+            actorUserId: newUserId,
+            actorEmail: email,
+            resourceType: 'invite_code',
+            resourceId: codeData.id,
+            outcome: 'success',
+            req,
+        });
 
         return NextResponse.json({
             success: true,
