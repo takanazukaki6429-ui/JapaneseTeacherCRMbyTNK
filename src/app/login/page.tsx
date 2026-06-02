@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Loader2, KeyRound } from 'lucide-react';
 import { parseAppError, AppError } from '@/lib/error-handler';
+import { checkPasswordStrength, getStrengthLabel } from '@/lib/password-policy';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -16,6 +17,11 @@ export default function LoginPage() {
     const [message, setMessage] = useState<string | null>(null);
     const router = useRouter();
     const supabase = createClient();
+
+    // パスワード強度（新規登録時のみ評価）
+    const pwStrength = useMemo(() =>
+        isSignUp && password ? checkPasswordStrength(password) : null,
+    [isSignUp, password]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -111,13 +117,43 @@ export default function LoginPage() {
                             <input
                                 type="password"
                                 required
-                                minLength={6}
+                                minLength={isSignUp ? 8 : 6}
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
                                 placeholder="••••••••"
                                 className="w-full px-4 py-3 bg-[#f4f3f7] rounded-xl text-sm text-[#1a1c1e] outline-none focus:bg-[#f2daff] transition-colors placeholder:text-[#4b454e]/50"
                             />
-                            {isSignUp && <p className="text-[11px] text-[#4b454e]">6文字以上で設定してください</p>}
+                            {isSignUp && (
+                                <div className="space-y-1">
+                                    {pwStrength && password.length > 0 && (
+                                        <>
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex-1 h-1.5 bg-[#f4f3f7] rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full transition-all duration-200"
+                                                        style={{
+                                                            width: `${(pwStrength.score / 4) * 100}%`,
+                                                            backgroundColor: getStrengthLabel(pwStrength.score).color,
+                                                        }}
+                                                    />
+                                                </div>
+                                                <span
+                                                    className="text-[10px] font-bold tabular-nums"
+                                                    style={{ color: getStrengthLabel(pwStrength.score).color }}
+                                                >
+                                                    {getStrengthLabel(pwStrength.score).label}
+                                                </span>
+                                            </div>
+                                            {pwStrength.errors.length > 0 && (
+                                                <p className="text-[11px] text-[#ba1a1a]">{pwStrength.errors[0]}</p>
+                                            )}
+                                        </>
+                                    )}
+                                    {!password && (
+                                        <p className="text-[11px] text-[#4b454e]">8文字以上、英大文字・小文字・数字・記号から3種類以上</p>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {isSignUp && (
