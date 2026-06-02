@@ -582,7 +582,7 @@ export default function LiveLessonPage() {
                 } catch (err) { console.error('Translation chunk error:', err); }
             };
 
-            recorder.start(7000); // 7秒チャンク
+            recorder.start(2500); // 2.5秒チャンク（A'案: Google STT で体感3-4秒の疑似ストリーミング）
             setIsTranslationMode(true);
             setActiveTab('translation');
 
@@ -1102,7 +1102,7 @@ export default function LiveLessonPage() {
                                                 <Zap size={22} className="text-[#6f5385]" />
                                             </div>
                                             <p className="text-sm font-bold text-[#1a1c1e]">翻訳モード起動中</p>
-                                            <p className="text-xs text-[#4b454e]">生徒が話すと約7秒後に翻訳が表示されます</p>
+                                            <p className="text-xs text-[#4b454e]">生徒が話すと約3〜4秒後に翻訳が表示されます</p>
                                             {isPipSupported && (
                                                 <p className="text-xs text-[#4b454e]">翻訳が届いたら「字幕PiP」でPreplyの上に浮かせられます</p>
                                             )}
