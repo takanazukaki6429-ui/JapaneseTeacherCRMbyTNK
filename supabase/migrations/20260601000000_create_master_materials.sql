@@ -122,18 +122,18 @@ CREATE POLICY "master_vocab_read"
 -- master_*: 書き込みは管理者のみ（ADMIN_EMAILS ベース）
 CREATE POLICY "master_materials_admin_write"
     ON master_materials FOR ALL TO authenticated
-    USING (auth.jwt() ->> 'email' = 'takanazukaki6429@gmail.com')
-    WITH CHECK (auth.jwt() ->> 'email' = 'takanazukaki6429@gmail.com');
+    USING (auth.jwt() ->> 'email' IN ('pommetann@gmail.com', 'takanazukaki6429@gmail.com'))
+    WITH CHECK (auth.jwt() ->> 'email' IN ('pommetann@gmail.com', 'takanazukaki6429@gmail.com'));
 
 CREATE POLICY "master_sections_admin_write"
     ON master_material_sections FOR ALL TO authenticated
-    USING (auth.jwt() ->> 'email' = 'takanazukaki6429@gmail.com')
-    WITH CHECK (auth.jwt() ->> 'email' = 'takanazukaki6429@gmail.com');
+    USING (auth.jwt() ->> 'email' IN ('pommetann@gmail.com', 'takanazukaki6429@gmail.com'))
+    WITH CHECK (auth.jwt() ->> 'email' IN ('pommetann@gmail.com', 'takanazukaki6429@gmail.com'));
 
 CREATE POLICY "master_vocab_admin_write"
     ON master_material_vocabulary FOR ALL TO authenticated
-    USING (auth.jwt() ->> 'email' = 'takanazukaki6429@gmail.com')
-    WITH CHECK (auth.jwt() ->> 'email' = 'takanazukaki6429@gmail.com');
+    USING (auth.jwt() ->> 'email' IN ('pommetann@gmail.com', 'takanazukaki6429@gmail.com'))
+    WITH CHECK (auth.jwt() ->> 'email' IN ('pommetann@gmail.com', 'takanazukaki6429@gmail.com'));
 
 -- generated_materials: 教師は自分が生成した分のみアクセス可
 CREATE POLICY "generated_materials_owner"

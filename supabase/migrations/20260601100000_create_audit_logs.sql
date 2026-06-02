@@ -65,7 +65,7 @@ ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "audit_logs_admin_read"
     ON audit_logs FOR SELECT TO authenticated
-    USING (auth.jwt() ->> 'email' = 'takanazukaki6429@gmail.com');
+    USING (auth.jwt() ->> 'email' IN ('pommetann@gmail.com', 'takanazukaki6429@gmail.com'));
 
 -- INSERT は API側で service_role を使用するため、ここではポリシーを定めない
 -- （RLSで明示的に拒否することで誤って anon から書き込まれることを防ぐ）

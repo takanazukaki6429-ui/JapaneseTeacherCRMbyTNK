@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { User, Database, Loader2, Download, Eye, EyeOff, AlertTriangle, Trash2 } from 'lucide-react';
+import { MfaSection } from '@/components/settings/mfa-section';
 
 function toCSV(rows: Record<string, unknown>[]): string {
     if (!rows.length) return '';
@@ -146,6 +147,7 @@ export default function SettingsPage() {
             </div>
 
             <SectionCard icon={<User size={16} className="text-[#6f5385]" />} title="アカウント設定">
+                <MfaSection />
                 <RowItem label="パスワード変更" desc="ログインパスワードの更新"
                     action={<button onClick={() => { setPwOpen(true); setPwError(''); setPwSuccess(false); }} className="text-xs bg-[#f4f3f7] text-[#4b454e] px-3 py-1.5 rounded-lg hover:bg-[#f2daff] hover:text-[#6f5385] transition-colors">変更</button>} />
 

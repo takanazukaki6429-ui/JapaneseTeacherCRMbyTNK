@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
+import { SupportWidget } from "@/components/support/support-widget";
 
 export default function MainLayout({
     children,
@@ -15,6 +16,7 @@ export default function MainLayout({
                     {children}
                 </main>
             </div>
+            <SupportWidget />
         </div>
     );
 }
