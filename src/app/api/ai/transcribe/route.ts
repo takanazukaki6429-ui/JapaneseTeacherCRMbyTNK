@@ -67,7 +67,7 @@ async function transcribeWithGoogle(audioBytes: Buffer): Promise<TranscribeResul
  */
 async function transcribeWithGemini(base64Audio: string, mimeType: string): Promise<TranscribeResult> {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const result = await model.generateContent([
         { inlineData: { mimeType, data: base64Audio } },

@@ -206,7 +206,7 @@ ${conversation_notes}
 
         // Fetch User Settings for Model Preference
         // User is already authenticated from above
-        let selectedModel = 'gemini-2.0-flash';
+        let selectedModel = 'gemini-2.5-flash';
 
         if (user) {
             const { data: settings } = await supabase
@@ -226,7 +226,7 @@ ${conversation_notes}
         // Define fallback models (all 1.x models are deprecated as of 2026)
         const modelsToTry = Array.from(new Set([
             selectedModel,
-            'gemini-2.0-flash',
+            'gemini-2.5-flash',
             'gemini-2.5-flash',
             'gemini-2.5-pro'
         ]));

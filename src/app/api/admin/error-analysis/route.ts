@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const prompt = `あなたはSaaSの運用エンジニアです。以下はASTA（日本語教師向けCRM）の直近のエラーログ（${logs.length}件）です。
 これを分析し、日本語で以下を簡潔にまとめてください：

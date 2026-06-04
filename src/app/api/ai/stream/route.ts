@@ -77,14 +77,14 @@ ${transcript}
 
         // Geminiストリーミング
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
         const result = await model.generateContentStream(prompt);
 
         // 使用ログ記録（非同期・ノンブロッキング）
         supabase.from('ai_usage_log').insert({
             user_id: user.id,
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-flash',
             prompt_type: type || 'live_assistant',
             token_usage: 0
         }).then(() => {}, console.error);
