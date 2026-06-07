@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASTA CRM — UXモック v1</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* === Design Tokens === */
+  :root {
+    --primary: #6f5385;
+    --primary-container: #c9a8e0;
+    --primary-fixed: #f2daff;
+    --secondary: #655a6f;
+    --secondary-container: #eddcf4;
+    --on-secondary-container: #211430;
+    --tertiary: #805347;
+    --tertiary-container: #ffdbd1;
+    --on-tertiary-container: #321209;
+    --surface: #faf9fd;
+    --surface-low: #f4f3f7;
+    --surface-lowest: #ffffff;
+    --on-surface: #1a1c1e;
+    --on-surface-variant: #4b454e;
+    --outline-variant: #cdc3ce;
+    --error: #ba1a1a;
+    --error-container: #ffdad6;
+    --shadow-glow: rgba(111, 83, 133, 0.06);
+    --shadow-glow-md: rgba(111, 83, 133, 0.10);
+
+    /* Typography */
+    --display-md: 2.25rem;
+    --headline-lg: 1.75rem;
+    --headline-md: 1.375rem;
+    --title-lg: 1.125rem;
+    --title-md: 1rem;
+    --body-lg: 1rem;
+    --body-md: 0.875rem;
+    --label-md: 0.75rem;
+    --label-sm: 0.6875rem;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: var(--surface);
+    color: var(--on-surface);
+    height: 100vh;
+    display: flex;
+    overflow: hidden;
+    font-size: var(--body-lg);
+    line-height: 1.6;
+  }
+
+  /* === Sidebar === */
+  .sidebar {
+    width: 260px;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-right: 1px solid rgba(205, 195, 206, 0.15);
+    display: flex;
+    flex-direction: column;
+    padding: 2rem 1rem;
+    flex-shrink: 0;
+    z-index: 10;
+  }
+
+  .sidebar-logo {
+    padding: 0 0.75rem 2rem;
+  }
+
+  .sidebar-logo .logo-mark {
+    font-size: 1.375rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-container) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .sidebar-logo .logo-sub {
+    font-size: var(--label-md);
+    color: var(--on-surface-variant);
+    margin-top: 2px;
+  }
+
+  .nav-section {
+    flex: 1;
+  }
+
+  .nav-label {
+    font-size: var(--label-sm);
+    font-weight: 600;
+    color: var(--on-surface-variant);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0 0.75rem;
+    margin-bottom: 0.5rem;
+    margin-top: 1.25rem;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0.875rem;
+    border-radius: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--on-surface-variant);
+    font-size: var(--body-md);
+    font-weight: 500;
+    position: relative;
+    text-decoration: none;
+  }
+
+  .nav-item:hover {
+    background: var(--surface-low);
+    color: var(--on-surface);
+  }
+
+  .nav-item.active {
+    background: var(--tertiary-container);
+    color: var(--on-tertiary-container);
+    font-weight: 600;
+  }
+
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 20%;
+    bottom: 20%;
+    width: 3px;
+    background: var(--tertiary);
+    border-radius: 0 2px 2px 0;
+  }
+
+  .nav-icon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .sidebar-footer {
+    padding-top: 1rem;
+    border-top: 1px solid rgba(205, 195, 206, 0.2);
+    margin-top: auto;
+  }
+
+  .user-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0.875rem;
+    border-radius: 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .user-chip:hover { background: var(--surface-low); }
+
+  .user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--primary-container));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+  }
+
+  .user-info .name {
+    font-size: var(--body-md);
+    font-weight: 600;
+    color: var(--on-surface);
+  }
+
+  .user-info .plan {
+    font-size: var(--label-md);
+    color: var(--on-surface-variant);
+  }
+
+  /* === Main Content === */
+  .main {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--surface-low);
+    padding: 2.5rem;
+    min-width: 0;
+  }
+
+  /* === Page Header === */
+  .page-header {
+    margin-bottom: 2rem;
+  }
+
+  .page-header .greeting {
+    font-size: var(--label-md);
+    color: var(--on-surface-variant);
+    margin-bottom: 0.25rem;
+  }
+
+  .page-header h1 {
+    font-size: var(--headline-lg);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--on-surface);
+  }
+
+  /* === Cards === */
+  .card {
+    background: var(--surface-lowest);
+    border-radius: 1.25rem;
+    padding: 2rem;
+    box-shadow: 0 0 50px var(--shadow-glow);
+  }
+
+  .card-sm {
+    background: var(--surface-lowest);
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+    box-shadow: 0 0 40px var(--shadow-glow);
+  }
+
+  /* === Today's Lesson Banner === */
+  .lesson-banner {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-container) 100%);
+    border-radius: 1.25rem;
+    padding: 2rem;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 8px 48px rgba(111, 83, 133, 0.25);
+  }
+
+  .lesson-banner .left .time {
+    font-size: var(--label-md);
+    opacity: 0.8;
+    margin-bottom: 0.25rem;
+  }
+
+  .lesson-banner .left .student-name {
+    font-size: var(--headline-md);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .lesson-banner .left .goal {
+    font-size: var(--body-md);
+    opacity: 0.85;
+    margin-top: 0.25rem;
+  }
+
+  .lesson-banner .actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .btn-primary {
+    background: white;
+    color: var(--primary);
+    border: none;
+    border-radius: 999px;
+    padding: 0.75rem 1.5rem;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: var(--body-md);
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .btn-primary:hover { transform: scale(1.02); }
+
+  .btn-ghost {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 1.25rem;
+    padding: 0.75rem 1.5rem;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: var(--body-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .btn-ghost:hover { background: rgba(255,255,255,0.3); }
+
+  /* === Grid === */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  /* === Section heading === */
+  .section-title {
+    font-size: var(--title-md);
+    font-weight: 700;
+    color: var(--on-surface);
+    margin-bottom: 1rem;
+  }
+
+  /* === Activity List === */
+  .activity-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem 0;
+  }
+
+  .activity-item + .activity-item {
+    padding-top: 1rem;
+    margin-top: 0;
+  }
+
+  .activity-dot {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .activity-dot.lesson { background: var(--primary-fixed); }
+  .activity-dot.note { background: var(--tertiary-container); }
+  .activity-dot.ai { background: var(--secondary-container); }
+
+  .activity-body .label {
+    font-size: var(--body-md);
+    font-weight: 600;
+    color: var(--on-surface);
+  }
+
+  .activity-body .meta {
+    font-size: var(--label-md);
+    color: var(--on-surface-variant);
+    margin-top: 2px;
+  }
+
+  .activity-spacer {
+    height: 1px;
+    background: var(--surface-low);
+    margin: 0 -2rem;
+  }
+
+  /* === Quick Actions === */
+  .quick-action {
+    background: var(--surface-low);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .quick-action:hover {
+    background: var(--primary-fixed);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px var(--shadow-glow-md);
+  }
+
+  .quick-action .icon {
+    font-size: 1.5rem;
+  }
+
+  .quick-action .label {
+    font-size: var(--label-md);
+    font-weight: 600;
+    color: var(--on-surface);
+  }
+
+  /* === Student Card === */
+  .student-card {
+    background: var(--surface-lowest);
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 0 40px var(--shadow-glow);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 0.75rem;
+  }
+
+  .student-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 40px var(--shadow-glow-md);
+  }
+
+  .student-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-container), var(--primary-fixed));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.125rem;
+    flex-shrink: 0;
+  }
+
+  .student-info { flex: 1; min-width: 0; }
+  .student-info .name {
+    font-size: var(--title-md);
+    font-weight: 700;
+    color: var(--on-surface);
+  }
+
+  .student-info .sub {
+    font-size: var(--label-md);
+    color: var(--on-surface-variant);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* === Tags === */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: var(--label-sm);
+    font-weight: 600;
+  }
+
+  .tag-purple { background: var(--primary-fixed); color: var(--primary); }
+  .tag-peach { background: var(--tertiary-container); color: var(--tertiary); }
+  .tag-green { background: #d7f8e4; color: #1a7a44; }
+
+  /* === Stars === */
+  .stars { color: #f5b731; font-size: 0.8rem; letter-spacing: -1px; }
+
+  /* === Progress Bar === */
+  .progress-track {
+    background: var(--surface-low);
+    border-radius: 999px;
+    height: 6px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--primary), var(--primary-container));
+    transition: width 0.4s ease;
+  }
+
+  /* === Student Detail Page === */
+  .detail-hero {
+    background: linear-gradient(135deg, var(--primary-fixed) 0%, var(--surface-lowest) 100%);
+    border-radius: 1.25rem;
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 0 60px rgba(111, 83, 133, 0.07);
+  }
+
+  .detail-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--primary-container));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    flex-shrink: 0;
+  }
+
+  .detail-info .name {
+    font-size: var(--headline-md);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .detail-info .meta {
+    font-size: var(--body-md);
+    color: var(--on-surface-variant);
+    margin-top: 0.25rem;
+  }
+
+  .detail-info .tags {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  /* === Action Buttons (detail page) === */
+  .action-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .action-btn {
+    background: var(--surface-lowest);
+    border-radius: 1.25rem;
+    padding: 1.25rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.625rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 0 40px var(--shadow-glow);
+    text-align: center;
+  }
+
+  .action-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px var(--shadow-glow-md);
+  }
+
+  .action-btn .icon-wrap {
+    width: 44px;
+    height: 44px;
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+  }
+
+  .action-btn .label {
+    font-size: var(--label-md);
+    font-weight: 600;
+    color: var(--on-surface);
+  }
+
+  .action-btn .sub {
+    font-size: 0.625rem;
+    color: var(--on-surface-variant);
+    margin-top: -4px;
+  }
+
+  .action-primary .icon-wrap {
+    background: linear-gradient(135deg, var(--primary), var(--primary-container));
+    color: white;
+  }
+
+  .action-peach .icon-wrap { background: var(--tertiary-container); }
+  .action-lilac .icon-wrap { background: var(--primary-fixed); }
+  .action-green .icon-wrap { background: #d7f8e4; }
+
+  /* === Lesson History Item === */
+  .lesson-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 0;
+  }
+
+  .lesson-row + .lesson-row {
+    border-top: 12px solid transparent;
+    padding-top: 0;
+  }
+
+  .lesson-row-inner {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    padding: 1rem;
+    border-radius: 1rem;
+    transition: background 0.15s ease;
+    cursor: pointer;
+  }
+
+  .lesson-row-inner:hover { background: var(--surface-low); }
+
+  .lesson-date {
+    text-align: center;
+    min-width: 44px;
+  }
+
+  .lesson-date .day {
+    font-size: var(--headline-md);
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1;
+  }
+
+  .lesson-date .month {
+    font-size: var(--label-sm);
+    color: var(--on-surface-variant);
+    font-weight: 500;
+  }
+
+  .lesson-content { flex: 1; min-width: 0; }
+  .lesson-content .topic {
+    font-size: var(--body-md);
+    font-weight: 600;
+    color: var(--on-surface);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .lesson-content .detail {
+    font-size: var(--label-md);
+    color: var(--on-surface-variant);
+    margin-top: 2px;
+  }
+
+  /* === Search Bar === */
+  .search-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: var(--surface-lowest);
+    border-radius: 1rem;
+    padding: 0.875rem 1.25rem;
+    box-shadow: 0 0 40px var(--shadow-glow);
+    margin-bottom: 1.5rem;
+  }
+
+  .search-bar input {
+    border: none;
+    outline: none;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: var(--body-md);
+    color: var(--on-surface);
+    background: transparent;
+    flex: 1;
+  }
+
+  .search-bar input::placeholder { color: var(--on-surface-variant); }
+
+  /* === Tabs === */
+  .tab-bar {
+    display: flex;
+    gap: 0.25rem;
+    background: var(--surface-lowest);
+    border-radius: 1rem;
+    padding: 0.375rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 0 40px var(--shadow-glow);
+    width: fit-content;
+  }
+
+  .tab-btn {
+    padding: 0.5rem 1.25rem;
+    border-radius: 0.75rem;
+    border: none;
+    background: transparent;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: var(--body-md);
+    font-weight: 500;
+    color: var(--on-surface-variant);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tab-btn.active {
+    background: var(--primary-fixed);
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  /* === Views === */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* === Notice bar === */
+  .notice {
+    background: var(--secondary-container);
+    border-radius: 1rem;
+    padding: 1rem 1.5rem;
+    font-size: var(--body-md);
+    color: var(--on-secondary-container);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  /* === Roadmap Bar === */
+  .roadmap-phase {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 0;
+  }
+
+  .phase-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .phase-line {
+    width: 2px;
+    height: 24px;
+    background: var(--outline-variant);
+    margin-left: 5px;
+    margin-top: -4px;
+    margin-bottom: -4px;
+  }
+
+  /* === Empty State === */
+  .empty {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--on-surface-variant);
+  }
+
+  .empty .emoji { font-size: 2.5rem; margin-bottom: 1rem; }
+  .empty .title { font-size: var(--title-md); font-weight: 600; margin-bottom: 0.5rem; color: var(--on-surface); }
+  .empty .desc { font-size: var(--body-md); }
+
+  /* === Scrollbar === */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: 3px; }
+
+  /* === Section label chip === */
+  .section-chip {
+    display: inline-block;
+    background: var(--primary-fixed);
+    color: var(--primary);
+    font-size: var(--label-sm);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    margin-bottom: 0.75rem;
+  }
+
+  /* === AI Sparkle === */
+  .ai-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    background: linear-gradient(135deg, var(--primary-fixed), var(--tertiary-container));
+    border-radius: 999px;
+    padding: 0.25rem 0.75rem;
+    font-size: var(--label-sm);
+    font-weight: 700;
+    color: var(--primary);
+  }
+
+  /* === Mock label === */
+  .mock-banner {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    background: rgba(111, 83, 133, 0.9);
+    color: white;
+    border-radius: 999px;
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    z-index: 100;
+    backdrop-filter: blur(8px);
+  }
+
+  /* === Stat chips === */
+  .stat-row {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .stat {
+    flex: 1;
+    background: var(--surface-low);
+    border-radius: 1rem;
+    padding: 1rem;
+    text-align: center;
+  }
+
+  .stat .value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: -0.02em;
+  }
+
+  .stat .key {
+    font-size: var(--label-sm);
+    color: var(--on-surface-variant);
+    margin-top: 2px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">✦ ASTA</div>
+    <div class="logo-sub">Japanese Teacher CRM</div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">メイン</div>
+    <a class="nav-item active" onclick="showView('home')">
+      <span class="nav-icon">🏠</span> ホーム
+    </a>
+    <a class="nav-item" onclick="showView('students')">
+      <span class="nav-icon">👥</span> 生徒
+    </a>
+    <a class="nav-item" onclick="showView('materials')">
+      <span class="nav-icon">📚</span> 教材
+    </a>
+
+    <div class="nav-label">設定</div>
+    <a class="nav-item" onclick="showView('settings')">
+      <span class="nav-icon">⚙️</span> 設定
+    </a>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="user-chip">
+      <div class="user-avatar">田</div>
+      <div class="user-info">
+        <div class="name">田中 先生</div>
+        <div class="plan">フリープラン</div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<main class="main">
+
+  <!-- =============== HOME =============== -->
+  <div id="view-home" class="view active">
+    <div class="page-header">
+      <div class="greeting">おはようございます ☀️</div>
+      <h1>今日のレッスン</h1>
+    </div>
+
+    <!-- Today's lesson banner -->
+    <div class="lesson-banner">
+      <div class="left">
+        <div class="time">🕙 10:00〜11:00</div>
+        <div class="student-name">Maria Santos</div>
+        <div class="goal">目標：旅行で使える日本語 · N4レベル</div>
+      </div>
+      <div class="actions">
+        <button class="btn-ghost" onclick="showView('prepare')">📋 準備する</button>
+        <button class="btn-primary" onclick="showView('live')">▶ 今すぐ開始</button>
+      </div>
+    </div>
+
+    <!-- Notice -->
+    <div class="notice">
+      ✨ <span>次のレッスンまで 3時間。<strong>Maria</strong> さんの前回メモを確認しましょう。</span>
+    </div>
+
+    <div class="grid-2">
+      <!-- 直近の動き -->
+      <div class="card">
+        <div class="section-chip">直近の動き</div>
+        <div class="section-title">アクティビティ</div>
+
+        <div class="activity-item">
+          <div class="activity-dot lesson">📖</div>
+          <div class="activity-body">
+            <div class="label">レッスン記録 — Maria Santos</div>
+            <div class="meta">N4 敬語 · 理解度 ⭐⭐⭐⭐ · 昨日 14:30</div>
+          </div>
+        </div>
+        <div class="activity-spacer"></div>
+
+        <div class="activity-item">
+          <div class="activity-dot ai">✦</div>
+          <div class="activity-body">
+            <div class="label"><span class="ai-badge">✦ AI</span> カリキュラム提案を生成</div>
+            <div class="meta">Yuki Kim · N3 → N2 ブリッジ · 2日前</div>
+          </div>
+        </div>
+        <div class="activity-spacer"></div>
+
+        <div class="activity-item">
+          <div class="activity-dot note">🎉</div>
+          <div class="activity-body">
+            <div class="label">誕生日 — Yuki Kim</div>
+            <div class="meta">3日後 · 自動リマインド済み</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats + Quick Actions -->
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <div class="card-sm">
+          <div class="section-chip">今月の実績</div>
+          <div class="stat-row">
+            <div class="stat">
+              <div class="value">24</div>
+              <div class="key">レッスン数</div>
+            </div>
+            <div class="stat">
+              <div class="value">4.6</div>
+              <div class="key">平均理解度</div>
+            </div>
+            <div class="stat">
+              <div class="value">8</div>
+              <div class="key">生徒数</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-sm">
+          <div class="section-title">クイックアクション</div>
+          <div class="grid-3" style="margin-top: 0.75rem;">
+            <div class="quick-action">
+              <div class="icon">➕</div>
+              <div class="label">生徒追加</div>
+            </div>
+            <div class="quick-action">
+              <div class="icon">✦</div>
+              <div class="label">AI提案</div>
+            </div>
+            <div class="quick-action">
+              <div class="icon">📝</div>
+              <div class="label">記録する</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============== STUDENTS =============== -->
+  <div id="view-students" class="view">
+    <div class="page-header">
+      <h1>生徒</h1>
+    </div>
+
+    <div class="search-bar">
+      <span>🔍</span>
+      <input type="text" placeholder="名前・目標・レベルで検索…">
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab-btn active">全員 (8)</button>
+      <button class="tab-btn">今月アクティブ</button>
+      <button class="tab-btn">レッスン予定</button>
+    </div>
+
+    <div class="student-card" onclick="showView('detail')">
+      <div class="student-avatar">🇧🇷</div>
+      <div class="student-info">
+        <div class="name">Maria Santos</div>
+        <div class="sub">旅行 · N4 · 最終レッスン: 昨日</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.375rem;">
+        <span class="tag tag-purple">N4</span>
+        <span class="stars">★★★★☆</span>
+      </div>
+    </div>
+
+    <div class="student-card">
+      <div class="student-avatar">🇰🇷</div>
+      <div class="student-info">
+        <div class="name">Yuki Kim</div>
+        <div class="sub">JLPT挑戦 · N3 · 最終レッスン: 3日前</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.375rem;">
+        <span class="tag tag-green">N3</span>
+        <span class="stars">★★★★★</span>
+      </div>
+    </div>
+
+    <div class="student-card">
+      <div class="student-avatar">🇺🇸</div>
+      <div class="student-info">
+        <div class="name">Alex Johnson</div>
+        <div class="sub">アニメ好き · N5 · 最終レッスン: 1週間前</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.375rem;">
+        <span class="tag tag-peach">N5</span>
+        <span class="stars">★★★☆☆</span>
+      </div>
+    </div>
+
+    <div class="student-card">
+      <div class="student-avatar">🇨🇳</div>
+      <div class="student-info">
+        <div class="name">Li Wei</div>
+        <div class="sub">ビジネス · N2 · 最終レッスン: 今日</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.375rem;">
+        <span class="tag tag-purple">N2</span>
+        <span class="stars">★★★★★</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============== STUDENT DETAIL =============== -->
+  <div id="view-detail" class="view">
+    <!-- Back -->
+    <div style="margin-bottom:1.5rem;">
+      <a onclick="showView('students')" style="font-size:var(--body-md);color:var(--on-surface-variant);cursor:pointer;display:inline-flex;align-items:center;gap:0.375rem;">
+        ← 生徒一覧に戻る
+      </a>
+    </div>
+
+    <!-- Hero -->
+    <div class="detail-hero">
+      <div class="detail-avatar">🇧🇷</div>
+      <div class="detail-info">
+        <div class="name">Maria Santos</div>
+        <div class="meta">ブラジル出身 · 28歳 · 受講歴 6ヶ月</div>
+        <div class="tags">
+          <span class="tag tag-purple">N4</span>
+          <span class="tag tag-peach">旅行</span>
+          <span class="ai-badge">✦ AI分析済み</span>
+        </div>
+      </div>
+      <div style="margin-left:auto;text-align:center;min-width:100px;">
+        <div style="font-size:2rem;font-weight:700;color:var(--primary);letter-spacing:-0.03em;">Lv.62</div>
+        <div style="font-size:var(--label-md);color:var(--on-surface-variant);">総合スコア</div>
+      </div>
+    </div>
+
+    <!-- 4 Action Buttons
+         並び順の案:
+         A案（頻度順）: ライブ授業 / 準備する / レッスン記録 / ロードマップ
+         B案（フロー順）: 準備する / ライブ授業 / レッスン記録 / ロードマップ
+         ← 下のモックはB案（フロー順）で表示 -->
+    <div class="notice" style="margin-bottom:1rem;">
+      💡 アクションの並び順：<strong>A案（頻度順）</strong> vs <strong>B案（フロー順）</strong> — どちらが直感的ですか？
+    </div>
+
+    <!-- B案: フロー順 -->
+    <div style="margin-bottom:0.5rem;">
+      <div class="section-chip">B案 — フロー順（準備→開始→記録→計画）</div>
+    </div>
+    <div class="action-grid" style="margin-bottom:1rem;">
+      <div class="action-btn action-lilac">
+        <div class="icon-wrap">📋</div>
+        <div class="label">準備する</div>
+        <div class="sub">次回の計画</div>
+      </div>
+      <div class="action-btn action-primary">
+        <div class="icon-wrap">▶</div>
+        <div class="label">ライブ授業</div>
+        <div class="sub">今すぐ開始</div>
+      </div>
+      <div class="action-btn action-peach">
+        <div class="icon-wrap">📝</div>
+        <div class="label">レッスン記録</div>
+        <div class="sub">授業後に記録</div>
+      </div>
+      <div class="action-btn action-green">
+        <div class="icon-wrap">🗺</div>
+        <div class="label">ロードマップ</div>
+        <div class="sub">学習計画</div>
+      </div>
+    </div>
+
+    <!-- A案: 頻度順 -->
+    <div style="margin-bottom:0.5rem;">
+      <div class="section-chip" style="background:var(--tertiary-container);color:var(--tertiary);">A案 — 頻度順（最もよく使う順）</div>
+    </div>
+    <div class="action-grid">
+      <div class="action-btn action-primary">
+        <div class="icon-wrap">▶</div>
+        <div class="label">ライブ授業</div>
+        <div class="sub">今すぐ開始</div>
+      </div>
+      <div class="action-btn action-lilac">
+        <div class="icon-wrap">📋</div>
+        <div class="label">準備する</div>
+        <div class="sub">次回の計画</div>
+      </div>
+      <div class="action-btn action-peach">
+        <div class="icon-wrap">📝</div>
+        <div class="label">レッスン記録</div>
+        <div class="sub">授業後に記録</div>
+      </div>
+      <div class="action-btn action-green">
+        <div class="icon-wrap">🗺</div>
+        <div class="label">ロードマップ</div>
+        <div class="sub">学習計画</div>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="card" style="margin-top:1.5rem;margin-bottom:1.5rem;">
+      <div class="grid-2">
+        <div>
+          <div class="section-title">学習進捗</div>
+          <div style="margin-bottom:0.75rem;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:0.375rem;">
+              <span style="font-size:var(--body-md);color:var(--on-surface-variant);">N5 → N4 全体</span>
+              <span style="font-size:var(--body-md);font-weight:700;color:var(--primary);">62%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width:62%"></div>
+            </div>
+          </div>
+          <div style="margin-bottom:0.75rem;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:0.375rem;">
+              <span style="font-size:var(--body-md);color:var(--on-surface-variant);">文法</span>
+              <span style="font-size:var(--body-md);font-weight:700;color:var(--primary);">78%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width:78%"></div>
+            </div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:0.375rem;">
+              <span style="font-size:var(--body-md);color:var(--on-surface-variant);">語彙</span>
+              <span style="font-size:var(--body-md);font-weight:700;color:var(--primary);">45%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width:45%"></div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-title">直近のメモ</div>
+          <div style="background:var(--primary-fixed);border-radius:1rem;padding:1rem;font-size:var(--body-md);color:var(--on-surface);">
+            <span class="ai-badge" style="margin-bottom:0.5rem;display:inline-flex;">✦ AI要約</span><br>
+            「〜てもいいですか」の使い方は定着しつつあり。敬語のニュアンスに課題。次回は実際の旅行シーンで練習を。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lesson History -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+        <div class="section-title" style="margin-bottom:0;">レッスン履歴</div>
+        <span style="font-size:var(--label-md);color:var(--on-surface-variant);">計 12回</span>
+      </div>
+
+      <div class="lesson-row">
+        <div class="lesson-row-inner">
+          <div class="lesson-date">
+            <div class="day">18</div>
+            <div class="month">4月</div>
+          </div>
+          <div class="lesson-content">
+            <div class="topic">敬語・〜ていただけますか</div>
+            <div class="detail">語彙：15語 · 宿題あり</div>
+          </div>
+          <span class="stars">★★★★☆</span>
+        </div>
+      </div>
+
+      <div style="height:1px;background:var(--surface-low);margin:0 1rem;"></div>
+
+      <div class="lesson-row">
+        <div class="lesson-row-inner">
+          <div class="lesson-date">
+            <div class="day">14</div>
+            <div class="month">4月</div>
+          </div>
+          <div class="lesson-content">
+            <div class="topic">交通・道案内の表現</div>
+            <div class="detail">語彙：12語 · 復習カード作成</div>
+          </div>
+          <span class="stars">★★★★★</span>
+        </div>
+      </div>
+
+      <div style="height:1px;background:var(--surface-low);margin:0 1rem;"></div>
+
+      <div class="lesson-row">
+        <div class="lesson-row-inner">
+          <div class="lesson-date">
+            <div class="day">10</div>
+            <div class="month">4月</div>
+          </div>
+          <div class="lesson-content">
+            <div class="topic">〜てもいいですか / 許可・禁止</div>
+            <div class="detail">語彙：8語 · つまずき：敬語変換</div>
+          </div>
+          <span class="stars">★★★☆☆</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============== MATERIALS =============== -->
+  <div id="view-materials" class="view">
+    <div class="page-header">
+      <h1>教材ライブラリ</h1>
+    </div>
+    <div class="notice">📚 教材ページは現在の内容（教材ライブラリ）をそのまま維持します。デザインのみ刷新。</div>
+    <div class="card">
+      <div class="empty">
+        <div class="emoji">📚</div>
+        <div class="title">教材ライブラリ（現状維持）</div>
+        <div class="desc">このページの内容・機能は変更なし。<br>デザイン（カラー・フォント・カード形状）のみ Ethereal Workspace に合わせます。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============== SETTINGS =============== -->
+  <div id="view-settings" class="view">
+    <div class="page-header">
+      <h1>設定</h1>
+    </div>
+    <div class="grid-2" style="gap:1rem;">
+      <div class="card">
+        <div class="section-chip">統合予定</div>
+        <div class="section-title">招待コード管理</div>
+        <div style="font-size:var(--body-md);color:var(--on-surface-variant);">（旧メニューから設定へ移管）</div>
+      </div>
+      <div class="card">
+        <div class="section-chip">統合予定</div>
+        <div class="section-title">AIツール設定</div>
+        <div style="font-size:var(--body-md);color:var(--on-surface-variant);">（旧メニューから設定へ移管）</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div class="mock-banner">UXモック v1 — クリックで画面切替可</div>
+
+<script>
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+  const viewMap = {
+    home: 'view-home',
+    students: 'view-students',
+    detail: 'view-detail',
+    materials: 'view-materials',
+    settings: 'view-settings',
+    prepare: 'view-home', // placeholder
+    live: 'view-home',    // placeholder
+  };
+
+  const navMap = {
+    home: 0, students: 1, detail: 1, materials: 2, settings: 3, prepare: 0, live: 0
+  };
+
+  const targetId = viewMap[id] || 'view-home';
+  const el = document.getElementById(targetId);
+  if (el) el.classList.add('active');
+
+  const navIdx = navMap[id] ?? 0;
+  const navItems = document.querySelectorAll('.nav-item');
+  if (navItems[navIdx]) navItems[navIdx].classList.add('active');
+
+  document.querySelector('.main').scrollTop = 0;
+}
+</script>
+
+</body>
+</html>

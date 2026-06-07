@@ -3,10 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Loader2, User, Check } from "lucide-react";
+import { Loader2, ArrowRight } from "lucide-react";
 
 export default function OnboardingPage() {
     const router = useRouter();
@@ -19,7 +16,6 @@ export default function OnboardingPage() {
         e.preventDefault();
         setLoading(true);
         setError(null);
-
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("No user found");
@@ -34,14 +30,9 @@ export default function OnboardingPage() {
                 });
 
             if (updateError) throw updateError;
-
-            // Force refresh/redirect to dashboard
             router.refresh();
-            // Client-side router sometimes keeps old state, encourage full reload to re-run middleware checks
             window.location.href = "/";
-
         } catch (err: unknown) {
-            console.error(err);
             const message = err instanceof Error ? err.message : "プロフィールの保存に失敗しました";
             setError(message);
         } finally {
@@ -50,63 +41,54 @@ export default function OnboardingPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-amber-50/30 p-4">
-            <Card className="w-full max-w-md shadow-xl border-amber-100">
-                <CardHeader className="text-center space-y-4 pb-8">
-                    <div className="mx-auto w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 mb-2">
-                        <User size={40} />
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f4f3f7] to-[#f2daff] p-4">
+            <div className="w-full max-w-md">
+                {/* フォームカード */}
+                <div className="bg-white rounded-2xl shadow-[0_8px_48px_rgba(111,83,133,0.15)] overflow-hidden">
+                    <div className="px-5 py-3.5 bg-[#f4f3f7] flex items-center gap-2">
+                        <p className="text-xs font-bold text-[#6f5385]">STEP 1 / 1</p>
+                        <p className="text-xs text-[#4b454e]">プロフィール設定</p>
                     </div>
-                    <CardTitle className="text-2xl font-bold text-slate-800">
-                        ASTAへようこそ！
-                    </CardTitle>
-                    <CardDescription className="text-base">
-                        はじめに、あなたのお名前を教えてください。
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div className="space-y-2">
-                            <label htmlFor="name" className="text-sm font-bold text-slate-700 block">
-                                表示名 (必須)
-                            </label>
-                            <Input
-                                id="name"
-                                placeholder="例: 田中 太郎"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                required
-                                className="text-lg py-6"
-                                autoFocus
-                            />
-                            <p className="text-xs text-slate-500">
-                                ※後から設定画面でいつでも変更できます。
-                            </p>
-                        </div>
-
-                        {error && (
-                            <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-100">
-                                {error}
+                    <div className="p-6">
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="space-y-1.5">
+                                <label htmlFor="name" className="text-sm font-semibold text-[#1a1c1e]">
+                                    表示名 <span className="text-[#ba1a1a]">*</span>
+                                </label>
+                                <input
+                                    id="name"
+                                    type="text"
+                                    placeholder="例: 田中 太郎"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    required
+                                    autoFocus
+                                    className="w-full text-sm px-4 py-3 rounded-xl border border-[#c9a8e0]/40 focus:outline-none focus:ring-2 focus:ring-[#c9a8e0] bg-[#f4f3f7] placeholder:text-[#4b454e]/50"
+                                />
+                                <p className="text-xs text-[#4b454e]/70">※後から設定画面でいつでも変更できます</p>
                             </div>
-                        )}
 
-                        <Button
-                            type="submit"
-                            className="w-full py-6 text-lg font-bold bg-amber-500 hover:bg-amber-600 shadow-md hover:shadow-lg transition-all"
-                            disabled={loading || !name.trim()}
-                        >
-                            {loading ? (
-                                <span className="flex items-center gap-2">
-                                    <Loader2 className="animate-spin" /> 保存中...
-                                </span>
-                            ) : (
-                                <span className="flex items-center gap-2">
-                                    ASTAを始める <Check size={20} />
-                                </span>
+                            {error && (
+                                <div className="p-3 text-xs text-[#ba1a1a] bg-red-50 rounded-xl border border-red-100">
+                                    {error}
+                                </div>
                             )}
-                        </Button>
-                    </form>
-                </CardContent>
-            </Card>
+
+                            <button
+                                type="submit"
+                                disabled={loading || !name.trim()}
+                                className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] text-white font-bold text-sm rounded-xl hover:scale-[1.01] transition-transform shadow-[0_4px_20px_rgba(111,83,133,0.25)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                            >
+                                {loading ? (
+                                    <><Loader2 size={16} className="animate-spin" /> 保存中...</>
+                                ) : (
+                                    <>ASTAを始める <ArrowRight size={16} /></>
+                                )}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

@@ -3,89 +3,75 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Material } from '@/types/material';
 import { formatDate } from '@/lib/utils';
-import { ArrowLeft, Zap, FileText, Edit } from 'lucide-react';
+import { ArrowLeft, Zap, FileText } from 'lucide-react';
+import { PublicToggleButton } from './public-toggle';
+import { DeleteMaterialButton } from './delete-button';
 
 export const revalidate = 0;
 
 async function getMaterial(id: string) {
     const supabase = await createClient();
-    const { data, error } = await supabase
-        .from('materials')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-    if (error || !data) {
-        return null;
-    }
-
+    const { data, error } = await supabase.from('materials').select('*').eq('id', id).single();
+    if (error || !data) return null;
     return data as Material;
 }
 
-// Client Component for Deletion
-import { DeleteMaterialButton } from './delete-button';
-
-type Props = {
-    params: Promise<{ id: string }>;
-};
+type Props = { params: Promise<{ id: string }> };
 
 export default async function MaterialDetailPage({ params }: Props) {
     const { id } = await params;
     const material = await getMaterial(id);
-
-    if (!material) {
-        notFound();
-    }
+    if (!material) notFound();
 
     return (
-        <div className="max-w-3xl mx-auto space-y-6">
+        <div className="max-w-3xl mx-auto space-y-5">
+            {/* Header */}
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                     <Link
                         href="/materials"
-                        className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
+                        className="inline-flex items-center gap-1.5 text-sm text-[#4b454e] hover:text-[#1a1c1e] transition-colors"
                     >
-                        <ArrowLeft size={20} />
+                        <ArrowLeft size={16} />
+                        教材一覧
                     </Link>
-                    <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${material.type === 'prompt' ? 'bg-purple-100 text-purple-600' :
-                            material.type === 'content' ? 'bg-blue-100 text-blue-600' :
-                                'bg-slate-100 text-slate-600'
-                            }`}>
-                            {material.type === 'prompt' ? <Zap size={18} /> : <FileText size={18} />}
-                        </div>
-                        <div>
-                            <h1 className="text-xl font-bold tracking-tight text-slate-900">{material.title}</h1>
-                            <p className="text-xs text-slate-500">{formatDate(material.created_at)}</p>
-                        </div>
-                    </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    <PublicToggleButton id={material.id} isPublic={material.is_public} />
                     <DeleteMaterialButton id={material.id} />
                 </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                    <div className="flex gap-2">
+            {/* Title card */}
+            <div className="bg-white rounded-2xl p-5 shadow-[0_0_40px_rgba(111,83,133,0.06)] flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                    material.type === 'prompt' ? 'bg-[#f2daff] text-[#6f5385]' : 'bg-[#eddcf4] text-[#655a6f]'
+                }`}>
+                    {material.type === 'prompt' ? <Zap size={22} /> : <FileText size={22} />}
+                </div>
+                <div>
+                    <h1 className="text-lg font-bold text-[#1a1c1e]">{material.title}</h1>
+                    <p className="text-xs text-[#4b454e] mt-0.5">{formatDate(material.created_at)}</p>
+                </div>
+            </div>
+
+            {/* Content */}
+            <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] overflow-hidden">
+                {/* Tags row */}
+                {(material.tags?.length || 0) > 0 && (
+                    <div className="px-5 py-3 bg-[#f4f3f7] flex items-center gap-2 flex-wrap">
                         {material.tags?.map((tag, i) => (
-                            <span key={i} className="px-2 py-1 text-xs font-medium bg-white border border-slate-200 text-slate-600 rounded">
+                            <span key={i} className="px-2.5 py-0.5 text-xs font-medium bg-white text-[#4b454e] rounded-full border border-[#cdc3ce]/30">
                                 #{tag}
                             </span>
                         ))}
+                        <span className="ml-auto text-[10px] font-mono text-[#4b454e] uppercase">{material.type}</span>
                     </div>
-                    <span className="text-xs font-mono text-slate-400 uppercase">{material.type}</span>
-                </div>
+                )}
                 <div className="p-6">
-                    <pre className="whitespace-pre-wrap font-mono text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <pre className="whitespace-pre-wrap font-mono text-sm text-[#1a1c1e] leading-relaxed bg-[#f4f3f7] p-4 rounded-xl">
                         {material.content}
                     </pre>
-                </div>
-                <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
-                    <button className="text-sm text-teal-600 font-medium hover:underline flex items-center gap-1">
-                        <Edit size={16} />
-                        編集する (未実装)
-                    </button>
                 </div>
             </div>
         </div>

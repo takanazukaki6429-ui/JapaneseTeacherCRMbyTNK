@@ -1,42 +1,68 @@
 @import "tailwindcss";
 
 :root {
-  --background: #FAFAFA;
-  /* Off White */
-  --foreground: #5D4037;
-  /* Soil Brown - Text Base */
-  --primary: #FFC107;
-  /* Sunflower Gold */
-  --primary-foreground: #3E2723;
-  /* Dark Brown */
-  --secondary: #FF9800;
-  /* Morning Orange */
-  --secondary-foreground: #FFFFFF;
-  --accent: #FFF8E1;
-  /* Pale Yellow */
-  --accent-foreground: #5D4037;
-  --muted: #FFF3E0;
-  /* Pale Orange */
-  --muted-foreground: #8D6E63;
+  /* Ethereal Workspace — Dreamy Lilac */
+  --background: #faf9fd;
+  --foreground: #1a1c1e;
+
+  /* Primary — Lilac */
+  --primary: #6f5385;
+  --primary-container: #c9a8e0;
+  --primary-fixed: #f2daff;
+
+  /* Secondary */
+  --secondary: #655a6f;
+  --secondary-container: #eddcf4;
+  --on-secondary-container: #211430;
+
+  /* Tertiary — Blush Peach */
+  --tertiary: #805347;
+  --tertiary-container: #ffdbd1;
+  --on-tertiary-container: #321209;
+
+  /* Surface */
+  --surface: #faf9fd;
+  --surface-low: #f4f3f7;
+  --surface-lowest: #ffffff;
+  --on-surface: #1a1c1e;
+  --on-surface-variant: #4b454e;
+  --outline-variant: #cdc3ce;
+
+  /* Error */
+  --error: #ba1a1a;
+  --error-container: #ffdad6;
+
+  /* Legacy aliases */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: #ffffff;
+  --color-accent: var(--primary-fixed);
+  --color-accent-foreground: var(--primary);
+  --color-muted: var(--surface-low);
+  --color-muted-foreground: var(--on-surface-variant);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-foreground: #ffffff;
   --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --font-sans: var(--font-geist-sans);
+  --color-secondary-foreground: #ffffff;
+  --color-accent: var(--primary-fixed);
+  --color-accent-foreground: var(--primary);
+  --color-muted: var(--surface-low);
+  --color-muted-foreground: var(--on-surface-variant);
+  --font-sans: var(--font-plus-jakarta);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+  font-family: 'Plus Jakarta Sans', "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+  line-height: 1.6;
 }

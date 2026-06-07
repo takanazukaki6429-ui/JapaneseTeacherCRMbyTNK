@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Sparkles, BookOpen, Calendar, Lightbulb, X } from 'lucide-react';
+import { Sparkles, BookOpen, Lightbulb, X, Loader2 } from 'lucide-react';
 import { Student } from '@/types/student';
 
 interface AIProfileAnalyzerProps {
@@ -11,7 +11,6 @@ interface AIProfileAnalyzerProps {
 interface AnalysisResult {
     recommended_textbooks: { title: string; reason: string }[];
     teaching_strategy: string;
-    week_schedule: string;
 }
 
 export function AIProfileAnalyzer({ student }: AIProfileAnalyzerProps) {
@@ -21,7 +20,7 @@ export function AIProfileAnalyzer({ student }: AIProfileAnalyzerProps) {
 
     const handleAnalyze = async () => {
         setLoading(true);
-        setIsOpen(true); // Open modal/drawer immediately
+        setIsOpen(true);
         try {
             const res = await fetch('/api/ai', {
                 method: 'POST',
@@ -31,20 +30,16 @@ export function AIProfileAnalyzer({ student }: AIProfileAnalyzerProps) {
                     name: student.name,
                     level: student.jlpt_level,
                     objective: student.goal_text,
-                    weak_points: student.memo, // Use memo as it contains personality/weaknesses
+                    weak_points: student.memo,
                     notes: student.memo
                 }),
             });
-
             if (!res.ok) throw new Error('Analysis failed');
-
             const data = await res.json();
-            // Parse JSON from text if needed, handling markdown code blocks
             const cleanText = data.text.replace(/```json/g, '').replace(/```/g, '').trim();
             setResult(JSON.parse(cleanText));
         } catch (error) {
             console.error('Analysis error:', error);
-            // In a real app, show error toast
         } finally {
             setLoading(false);
         }
@@ -54,96 +49,74 @@ export function AIProfileAnalyzer({ student }: AIProfileAnalyzerProps) {
         <>
             <button
                 onClick={handleAnalyze}
-                className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all hover:scale-[1.02]"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#f2daff] text-[#6f5385] font-bold text-sm rounded-full hover:bg-[#eddcf4] hover:-translate-y-0.5 transition-all"
             >
-                <Sparkles size={18} className="text-yellow-200" />
-                AIで学習プランを分析・提案
+                <Sparkles size={15} />
+                教材・指導方針を提案
             </button>
 
-            {/* Modal / Overlay */}
             {isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1a1c1e]/40 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-[0_24px_80px_rgba(111,83,133,0.2)] w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
                         {/* Header */}
-                        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                <Sparkles className="text-purple-500" size={20} />
-                                AI学習プラン提案
+                        <div className="px-5 py-4 bg-[#f4f3f7] flex items-center justify-between">
+                            <h3 className="font-bold text-[#1a1c1e] flex items-center gap-2 text-sm">
+                                <Sparkles size={15} className="text-[#6f5385]" />
+                                AI教材・指導方針提案
                             </h3>
-                            <button
-                                onClick={() => setIsOpen(false)}
-                                className="p-2 hover:bg-slate-200 rounded-full transition-colors"
-                            >
-                                <X size={20} className="text-slate-500" />
+                            <button onClick={() => setIsOpen(false)} className="p-1.5 hover:bg-[#f2daff] rounded-full transition-colors">
+                                <X size={16} className="text-[#4b454e]" />
                             </button>
                         </div>
 
                         {/* Content */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6">
                             {loading ? (
-                                <div className="text-center py-12 space-y-4">
-                                    <div className="relative w-16 h-16 mx-auto">
-                                        <div className="absolute inset-0 rounded-full border-4 border-slate-100"></div>
-                                        <div className="absolute inset-0 rounded-full border-4 border-purple-500 border-t-transparent animate-spin"></div>
-                                    </div>
-                                    <p className="text-slate-600 font-medium animate-pulse">
-                                        {student.name}さんのプロフィールを分析中...
+                                <div className="flex flex-col items-center justify-center py-14 gap-4">
+                                    <Loader2 size={32} className="animate-spin text-[#6f5385]" />
+                                    <p className="text-sm font-medium text-[#4b454e] animate-pulse">
+                                        {student.name}さんのプロフィールを分析中…
                                     </p>
-                                    <p className="text-xs text-slate-400">最適な教材とスケジュールを考えています</p>
+                                    <p className="text-xs text-[#4b454e]/60">最適な教材と指導方針を考えています</p>
                                 </div>
                             ) : result ? (
                                 <>
-                                    {/* Strategy */}
-                                    <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-5">
-                                        <h4 className="font-bold text-indigo-900 flex items-center gap-2 mb-3">
-                                            <Lightbulb size={20} />
+                                    {/* 指導方針 */}
+                                    <div className="bg-[#f2daff] rounded-2xl p-5">
+                                        <h4 className="font-bold text-[#6f5385] flex items-center gap-2 mb-3 text-sm">
+                                            <Lightbulb size={15} />
                                             指導・接し方の方針
                                         </h4>
-                                        <p className="text-indigo-800 text-sm leading-relaxed">
-                                            {result.teaching_strategy}
-                                        </p>
+                                        <p className="text-sm text-[#1a1c1e] leading-relaxed">{result.teaching_strategy}</p>
                                     </div>
 
-                                    {/* Textbooks */}
+                                    {/* おすすめ教材 */}
                                     <div>
-                                        <h4 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
-                                            <BookOpen size={20} className="text-teal-600" />
+                                        <h4 className="font-bold text-[#1a1c1e] flex items-center gap-2 mb-3 text-sm">
+                                            <BookOpen size={15} className="text-[#6f5385]" />
                                             おすすめの教材
                                         </h4>
-                                        <div className="grid gap-4 sm:grid-cols-2">
+                                        <div className="grid gap-3 sm:grid-cols-2">
                                             {result.recommended_textbooks.map((book, i) => (
-                                                <div key={i} className="border border-slate-200 rounded-lg p-4 hover:border-teal-300 transition-colors bg-white shadow-sm">
-                                                    <p className="font-bold text-slate-900 mb-2">{book.title}</p>
-                                                    <p className="text-xs text-slate-500 leading-relaxed">{book.reason}</p>
+                                                <div key={i} className="bg-[#f4f3f7] rounded-2xl p-4 hover:bg-[#f2daff] transition-colors">
+                                                    <p className="font-bold text-[#1a1c1e] text-sm mb-1">{book.title}</p>
+                                                    <p className="text-xs text-[#4b454e] leading-relaxed">{book.reason}</p>
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
 
-                                    {/* Schedule */}
-                                    <div>
-                                        <h4 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
-                                            <Calendar size={20} className="text-blue-600" />
-                                            推奨スケジュール
-                                        </h4>
-                                        <div className="bg-slate-50 border border-slate-100 rounded-xl p-5">
-                                            <p className="text-slate-700 text-sm whitespace-pre-wrap leading-relaxed">
-                                                {result.week_schedule}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="pt-4 border-t border-slate-100 flex justify-end">
+                                    <div className="flex justify-end pt-2 border-t border-[#f4f3f7]">
                                         <button
                                             onClick={() => setIsOpen(false)}
-                                            className="px-6 py-2 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition-colors"
+                                            className="px-5 py-2 bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] text-white font-bold text-sm rounded-full hover:scale-[1.02] transition-transform shadow-[0_4px_20px_rgba(111,83,133,0.25)]"
                                         >
                                             閉じる
                                         </button>
                                     </div>
                                 </>
                             ) : (
-                                <div className="text-center text-red-500">
+                                <div className="text-center text-sm text-[#ba1a1a] py-8">
                                     データの取得に失敗しました。もう一度お試しください。
                                 </div>
                             )}

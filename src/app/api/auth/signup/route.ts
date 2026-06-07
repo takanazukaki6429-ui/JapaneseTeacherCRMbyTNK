@@ -1,17 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
+import { checkPasswordStrength } from '@/lib/password-policy';
+import { checkRateLimit, getRequestIdentifier } from '@/lib/rate-limit';
+import { logAudit } from '@/lib/audit';
 
 const signUpSchema = z.object({
     email: z.string().email(),
-    password: z.string().min(6),
+    password: z.string().min(8),  // v1.0 §4.2.1 セキュリティL2: 最低8文字
     inviteCode: z.string().min(1, '招待コードを入力してください')
 });
 
 export async function POST(req: NextRequest) {
     try {
+        // v1.0 §4.14 APIレート制限: 認証エンドポイントは厳しめ（5回/分/IP）
+        const rateLimit = checkRateLimit(getRequestIdentifier(req), {
+            limit: 5,
+            windowMs: 60_000,
+            scope: 'auth:signup',
+        });
+        if (!rateLimit.allowed) {
+            return NextResponse.json(
+                { error: '短時間に多くのリクエストがありました。しばらく待ってからお試しください。' },
+                { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSec) } }
+            );
+        }
+
         const body = await req.json();
         const { email, password, inviteCode } = signUpSchema.parse(body);
+
+        // v1.0 §4.11 パスワード強度ポリシー: 8文字以上＋3種類以上＋辞書チェック
+        const pwCheck = checkPasswordStrength(password);
+        if (!pwCheck.valid) {
+            return NextResponse.json(
+                { error: pwCheck.errors[0], details: pwCheck.errors },
+                { status: 400 }
+            );
+        }
 
         const supabase = await createClient();
 
@@ -64,20 +89,7 @@ export async function POST(req: NextRequest) {
 
         const newUserId = authData.user.id;
 
-        // 3. Mark the invite code as used
-        // Since the user is not logged in yet (auth state not fully set on this request object),
-        // we might hit RLS on this update.
-        // Let's use the standard client. The policy allows update if used_at IS NULL, 
-        // but does it allow anonymous update? We need an RLS policy that allows anonymous update for this specific flow,
-        // OR we use the service_role key to bypass RLS to mark it as used securely.
-
-        // Let's create an admin client to bypass RLS for this critical update to not leak permissions
-        const supabaseAdmin = createClient(); // Wait, regular createClient respects RLS. 
-        // If RLS prevents this, we might need a dedicated supabase action or temporarily lower security on that field.
-        // Given we don't have the service_role key handy in a safe way without risking exposing it, lets try to update it.
-        // Previously we set `CREATE POLICY "Users can mark code as used during signup" ON public.invite_codes FOR UPDATE USING (used_at IS NULL);`
-        // We will try the update. If it fails due to anon context, we may need to adjust the RLS.
-
+        // 3. Mark the invite code as used (anon role, allowed by RLS policy with WITH CHECK (true))
         const { error: markError } = await supabase
             .from('invite_codes')
             .update({
@@ -89,10 +101,18 @@ export async function POST(req: NextRequest) {
 
         if (markError) {
             console.error("Failed to mark code as used:", markError);
-            // Ideally we should rollback the auth user creation here, but we lack admin rights.
-            // This is a known edge case. But the code WILL be marked used if the RLS allows it.
-            // The safest approach for enterprise is a DB Trigger `after insert on auth.users` or using service_role.
         }
+
+        // v1.0 §4.13 監査ログ: signup成功を記録
+        await logAudit({
+            action: 'auth.signup',
+            actorUserId: newUserId,
+            actorEmail: email,
+            resourceType: 'invite_code',
+            resourceId: codeData.id,
+            outcome: 'success',
+            req,
+        });
 
         return NextResponse.json({
             success: true,

@@ -22,6 +22,7 @@ export interface Database {
                     textbook: string | null
                     current_phase: string | null
                     memo: string | null
+                    initial_hearing_done: boolean
                     // teacher_id: string | null
                 }
                 Insert: {
@@ -37,6 +38,7 @@ export interface Database {
                     current_phase?: string | null
                     memo?: string | null
                     email?: string | null
+                    initial_hearing_done?: boolean
                 }
                 Update: {
                     id?: string
@@ -51,6 +53,7 @@ export interface Database {
                     current_phase?: string | null
                     memo?: string | null
                     email?: string | null
+                    initial_hearing_done?: boolean
                 }
             }
             lessons: {

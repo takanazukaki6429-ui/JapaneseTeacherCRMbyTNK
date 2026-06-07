@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { type, transcript, studentContext } = body;
+        const { type, transcript, studentContext, prepContext } = body;
 
         if (!transcript || transcript.trim().length === 0) {
             return NextResponse.json({ error: 'transcript is required' }, { status: 400 });
@@ -40,33 +40,51 @@ export async function POST(req: NextRequest) {
         // プロンプト構築
         let prompt = '';
         if (type === 'live_assistant') {
-            prompt = `あなたは日本語授業のリアルタイムアシスタントです。
-教師の授業会話を分析して、教師に役立つアドバイスを簡潔に提供してください。
+            const prepSection = prepContext
+                ? `\n【本日の授業計画（準備ページより）】\n${prepContext}\n`
+                : '';
 
-${studentContext ? `【生徒情報】\n${studentContext}\n` : ''}
-【授業会話（直近）】
+            prompt = `あなたはベテラン日本語教師の判断力を持つリアルタイム授業アシスタントです。
+教師の発言から今この瞬間の授業状況を分析し、「課の進め方」と「翻訳補助」の2種類のサジェストを出力してください。
+
+${studentContext ? `【生徒情報・カリキュラム】\n${studentContext}\n` : ''}${prepSection}
+【直近の授業会話（最新）】
 ${transcript}
 
-以下の観点から、教師に有益な情報を3点以内・各1〜2文で答えてください：
-- 生徒が理解しにくそうな箇所への補足案
-- より自然な言い回し・言い換え候補
-- 英語での補足説明が有効な場合はその例文
+## 出力フォーマット（必ずこの形式で）
 
-⚠️ 日本語で回答。箇条書きで簡潔に。余計な前置きは不要。`;
+[COURSE]
+・課の進め方サジェストを最大2点、各1〜2文で記載。
+・各サジェストの冒頭に緊急度ラベルを付けること：[今すぐ] / [この課で] / [次回以降]
+　例：「[今すぐ] Unit5（漢字）はこの生徒のゴールには不要→Unit8へ飛ぶことを推奨」
+　例：「[この課で] Unit3の助詞が定着していない→10分追加練習してから次へ」
+　例：「[次回以降] 旅行フレーズUnit8を前倒し検討を」
+　※ 特に指摘がない場合は「現在のペースで進めてOK」と記載
+[/COURSE]
+
+[TRANSLATION]
+・教師が説明に迷いそうな語・表現の翻訳補助を最大2点、各1〜2文で記載。
+・生徒の母国語（生徒情報参照）での言い方を優先して示すこと。
+　例：「『〜てもらえますか』→ Could you ~? (EN) / ¿Podría ~? (ES)（丁寧依頼）」
+　例：「『高い』→ expensive(価格) / tall(高さ) の違い—使い分けを強調」
+　※ 翻訳補助が不要な場面なら「翻訳補助の出番なし」と記載
+[/TRANSLATION]
+
+⚠️ 日本語で回答。箇条書き・簡潔に。前置き・敬語・説明不要。[COURSE][/COURSE]、[TRANSLATION][/TRANSLATION]のタグは必ず含めること。`;
         } else {
             prompt = transcript;
         }
 
         // Geminiストリーミング
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
         const result = await model.generateContentStream(prompt);
 
         // 使用ログ記録（非同期・ノンブロッキング）
         supabase.from('ai_usage_log').insert({
             user_id: user.id,
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-flash',
             prompt_type: type || 'live_assistant',
             token_usage: 0
         }).then(() => {}, console.error);

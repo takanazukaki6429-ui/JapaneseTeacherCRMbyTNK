@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, KeyRound, Copy, Check, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { showAppError } from '@/lib/error-handler';
+import { isAdminEmail } from '@/lib/admin';
 
 type InviteCode = {
     id: string;
@@ -46,9 +47,8 @@ export default function InviteCodesAdminPage() {
     useEffect(() => {
         const checkAccess = async () => {
             const { data: { user } } = await supabase.auth.getUser();
-            const ADMIN_EMAILS = ['pommetann@gmail.com', 'takanazukaki6429@gmail.com'];
 
-            if (!user || (!user.email) || !ADMIN_EMAILS.includes(user.email)) {
+            if (!user || !isAdminEmail(user.email)) {
                 router.replace('/');
                 return;
             }

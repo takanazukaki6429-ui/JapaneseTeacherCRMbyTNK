@@ -1,76 +1,35 @@
 "use client";
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Send, Loader2, Copy, Check, Save } from "lucide-react";
+import { Sparkles, Send, Loader2, Copy, Check, Save, X } from "lucide-react";
 import { createClient } from '@/lib/supabase/client';
-import { toast } from "sonner";
-import { showAppError } from '@/lib/error-handler';
 
 export default function AIToolsPage() {
     const [prompt, setPrompt] = useState('');
     const [response, setResponse] = useState('');
     const [loading, setLoading] = useState(false);
     const [copied, setCopied] = useState(false);
-
-    // Save state
     const [isSaving, setIsSaving] = useState(false);
     const [saveTitle, setSaveTitle] = useState('');
     const [savingLoading, setSavingLoading] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
     const supabase = createClient();
-
-    const handleSave = async () => {
-        if (!saveTitle.trim() || !response) return;
-        setSavingLoading(true);
-
-        try {
-            const { error } = await supabase.from('materials').insert([
-                {
-                    title: saveTitle,
-                    content: response,
-                    type: 'content', // generated content
-                    is_public: false, // Default private for now
-                    tags: ['AI生成'],
-                }
-            ]);
-
-            if (error) throw error;
-
-            toast.success("教材として保存しました！");
-            setIsSaving(false);
-            setSaveTitle('');
-        } catch (error) {
-            console.error('Error saving material:', error);
-            showAppError(error, "教材の保存に失敗しました");
-        } finally {
-            setSavingLoading(false);
-        }
-    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!prompt.trim()) return;
-
         setLoading(true);
-        setResponse(''); // Clear previous response
+        setResponse('');
         try {
             const res = await fetch('/api/ai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt }),
             });
-
             const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(data.details || data.error || 'Failed to generate content');
-            }
-
+            if (!res.ok) throw new Error(data.details || data.error || 'Failed');
             setResponse(data.text);
         } catch (error) {
-            console.error('Error:', error);
             setResponse(`エラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
         } finally {
             setLoading(false);
@@ -83,152 +42,153 @@ export default function AIToolsPage() {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const tools = [
-        { id: 'chat', name: 'AIアシスタント', icon: Sparkles, desc: '自由に質問や相談ができます' },
-        // Future tools can be added here
+    const handleSave = async () => {
+        if (!saveTitle.trim() || !response) return;
+        setSavingLoading(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('ログインが必要です');
+            const { error } = await supabase.from('materials').insert([{
+                title: saveTitle,
+                content: response,
+                type: 'content',
+                is_public: false,
+                tags: ['AI生成'],
+                author_id: user.id,
+            }]);
+            if (error) throw error;
+            setSaveSuccess(true);
+            setTimeout(() => { setIsSaving(false); setSaveTitle(''); setSaveSuccess(false); }, 1500);
+        } catch (error) {
+            console.error('Error saving material:', error);
+        } finally {
+            setSavingLoading(false);
+        }
+    };
+
+    const hints = [
+        'N3文法の例文を3つ作って',
+        'この文章を自然な日本語に直して',
+        '日本のアニメについて簡単な説明文を書いて',
+        '〜ている と 〜てある の違いを説明して',
     ];
 
     return (
-        <div className="space-y-6 max-w-4xl mx-auto p-6">
-            <div className="flex items-center gap-3 mb-8">
-                <div className="p-3 bg-teal-100 rounded-xl">
-                    <Sparkles className="w-8 h-8 text-teal-600" />
-                </div>
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900">AIツール (Beta)</h1>
-                    <p className="text-slate-500">授業準備や生徒へのフィードバック作成をサポートします</p>
-                </div>
+        <div className="max-w-4xl mx-auto space-y-5 pb-12">
+            <div>
+                <h1 className="text-2xl font-bold tracking-tight text-[#1a1c1e]">AIツール</h1>
+                <p className="text-sm text-[#4b454e] mt-0.5">授業準備・例文作成・フィードバック文章など自由に依頼できます</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Tools Sidebar (Placeholder for now) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                {/* サイドバー */}
                 <div className="space-y-4">
-                    <Card className="bg-teal-50 border-teal-200">
-                        <CardHeader>
-                            <CardTitle className="text-sm font-medium text-teal-900">利用可能なツール</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                            {tools.map((tool) => (
+                    <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] overflow-hidden">
+                        <div className="px-4 py-3 bg-[#f4f3f7] flex items-center gap-2">
+                            <Sparkles size={14} className="text-[#6f5385]" />
+                            <p className="text-xs font-bold text-[#1a1c1e]">使い方のヒント</p>
+                        </div>
+                        <div className="p-4 space-y-2">
+                            {hints.map((h, i) => (
                                 <button
-                                    key={tool.id}
-                                    className="w-full flex items-center gap-3 p-3 bg-white rounded-lg border border-teal-100 shadow-sm text-left hover:bg-teal-50 transition-colors"
+                                    key={i}
+                                    onClick={() => setPrompt(h)}
+                                    className="w-full text-left text-xs text-[#4b454e] bg-[#f4f3f7] hover:bg-[#f2daff] hover:text-[#6f5385] px-3 py-2 rounded-xl transition-colors leading-relaxed"
                                 >
-                                    <tool.icon className="w-4 h-4 text-teal-600" />
-                                    <div>
-                                        <p className="font-medium text-sm text-slate-900">{tool.name}</p>
-                                        <p className="text-xs text-slate-500">{tool.desc}</p>
-                                    </div>
+                                    「{h}」
                                 </button>
                             ))}
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="p-4">
-                            <h3 className="text-xs font-semibold text-slate-500 uppercase mb-3">使用のヒント</h3>
-                            <ul className="text-sm text-slate-600 space-y-2 list-disc pl-4">
-                                <li>「N3文法の例文を3つ作って」</li>
-                                <li>「この文章を自然な日本語に直して」</li>
-                                <li>「日本のアニメについて簡単な説明文を書いて」</li>
-                            </ul>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Main Chat Area */}
-                <div className="md:col-span-2 space-y-6">
-                    <Card className="min-h-[500px] flex flex-col">
-                        <CardContent className="flex-1 p-6 flex flex-col gap-4">
-                            {/* Input Area */}
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <Textarea
+                {/* メインエリア */}
+                <div className="md:col-span-2 space-y-4">
+                    <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] overflow-hidden">
+                        <div className="px-5 py-3.5 bg-[#f4f3f7] flex items-center gap-2">
+                            <Sparkles size={14} className="text-[#6f5385]" />
+                            <h2 className="font-bold text-sm text-[#1a1c1e]">AIアシスタント</h2>
+                        </div>
+                        <div className="p-5 space-y-4">
+                            <form onSubmit={handleSubmit} className="space-y-3">
+                                <textarea
                                     placeholder="ここに依頼内容を入力してください..."
                                     value={prompt}
                                     onChange={(e) => setPrompt(e.target.value)}
-                                    className="resize-none h-32 text-base"
                                     disabled={loading}
+                                    rows={5}
+                                    className="w-full text-sm px-4 py-3 rounded-xl border border-[#c9a8e0]/40 focus:outline-none focus:ring-2 focus:ring-[#c9a8e0] bg-[#f4f3f7] resize-none placeholder:text-[#4b454e]/50"
                                 />
                                 <div className="flex justify-end">
-                                    <Button type="submit" disabled={loading || !prompt.trim()}>
-                                        {loading ? (
-                                            <>
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                生成中...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Send className="mr-2 h-4 w-4" />
-                                                送信する
-                                            </>
-                                        )}
-                                    </Button>
+                                    <button
+                                        type="submit"
+                                        disabled={loading || !prompt.trim()}
+                                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] text-white font-bold text-sm rounded-full hover:scale-[1.02] transition-transform shadow-[0_4px_20px_rgba(111,83,133,0.25)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                                    >
+                                        {loading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                                        {loading ? '生成中...' : '送信する'}
+                                    </button>
                                 </div>
                             </form>
 
-                            {/* Response Area */}
                             {response && (
-                                <div className="mt-6 pt-6 border-t border-slate-100 animate-in fade-in slide-in-from-bottom-2">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                                            <Sparkles className="w-4 h-4 text-teal-500" />
+                                <div className="border-t border-[#f4f3f7] pt-4 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs font-bold text-[#6f5385] flex items-center gap-1.5">
+                                            <Sparkles size={12} />
                                             AIからの回答
-                                        </h3>
+                                        </p>
                                         <div className="flex gap-2">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => setIsSaving(!isSaving)}
-                                                className="text-slate-600 border-slate-200 hover:bg-slate-50"
+                                            <button
+                                                onClick={() => setIsSaving(v => !v)}
+                                                className="inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-[#f4f3f7] text-[#4b454e] rounded-lg hover:bg-[#f2daff] hover:text-[#6f5385] transition-colors"
                                             >
-                                                <Save className="w-4 h-4 mr-1" />
+                                                <Save size={11} />
                                                 保存
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
+                                            </button>
+                                            <button
                                                 onClick={handleCopy}
-                                                className="text-slate-500"
+                                                className="inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-[#f4f3f7] text-[#4b454e] rounded-lg hover:bg-[#f2daff] hover:text-[#6f5385] transition-colors"
                                             >
-                                                {copied ? (
-                                                    <Check className="w-4 h-4 text-green-500 mr-1" />
-                                                ) : (
-                                                    <Copy className="w-4 h-4 mr-1" />
-                                                )}
-                                                {copied ? 'コピー完了' : 'コピー'}
-                                            </Button>
+                                                {copied ? <Check size={11} className="text-green-600" /> : <Copy size={11} />}
+                                                {copied ? 'コピー済み' : 'コピー'}
+                                            </button>
                                         </div>
                                     </div>
 
                                     {isSaving && (
-                                        <div className="mb-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                                            <div className="flex gap-2 mb-2">
+                                        <div className="bg-[#f4f3f7] rounded-2xl p-4 space-y-2">
+                                            <div className="flex gap-2">
                                                 <input
                                                     type="text"
-                                                    placeholder="タイトルを入力 (例: N3文法例文)"
-                                                    className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                    placeholder="教材タイトル（例: N3文法例文）"
                                                     value={saveTitle}
-                                                    onChange={(e) => setSaveTitle(e.target.value)}
+                                                    onChange={e => setSaveTitle(e.target.value)}
+                                                    className="flex-1 text-sm px-3 py-2 rounded-xl border border-[#c9a8e0]/40 focus:outline-none focus:ring-2 focus:ring-[#c9a8e0] bg-white"
                                                 />
-                                                <Button
-                                                    size="sm"
+                                                <button
                                                     onClick={handleSave}
-                                                    disabled={savingLoading || !saveTitle.trim()}
-                                                    className="bg-teal-600 hover:bg-teal-700 text-white"
+                                                    disabled={savingLoading || !saveTitle.trim() || saveSuccess}
+                                                    className="text-xs px-4 py-2 bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] text-white font-bold rounded-xl hover:scale-[1.02] transition-transform disabled:opacity-50 flex items-center gap-1"
                                                 >
-                                                    {savingLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : '保存する'}
-                                                </Button>
+                                                    {savingLoading ? <Loader2 size={11} className="animate-spin" /> : saveSuccess ? <Check size={11} /> : null}
+                                                    {saveSuccess ? '保存済み' : '保存する'}
+                                                </button>
+                                                <button onClick={() => setIsSaving(false)} className="p-2 text-[#4b454e]/60 hover:text-[#4b454e] transition-colors">
+                                                    <X size={14} />
+                                                </button>
                                             </div>
-                                            <p className="text-xs text-slate-400">「教材・資産管理」ページに保存されます。</p>
+                                            <p className="text-xs text-[#4b454e]/60">「教材・資産管理」ページに保存されます</p>
                                         </div>
                                     )}
 
-                                    <div className="bg-slate-50 p-4 rounded-lg text-slate-800 whitespace-pre-wrap leading-relaxed border border-slate-200">
+                                    <div className="bg-[#f4f3f7] rounded-2xl p-4 text-sm text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">
                                         {response}
                                     </div>
                                 </div>
                             )}
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
