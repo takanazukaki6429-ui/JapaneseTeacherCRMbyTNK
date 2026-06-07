@@ -178,8 +178,9 @@ export default function LiveLessonPage() {
                     'フランス': 'French', 'ドイツ': 'German', 'イタリア': 'Italian',
                     'タイ': 'Thai', 'ベトナム': 'Vietnamese', 'インドネシア': 'Indonesian',
                 };
-                if (student.nationality && nationalityToLang[student.nationality]) {
-                    setStudentNativeLanguage(nationalityToLang[student.nationality]);
+                const nativeLang = student.nationality ? nationalityToLang[student.nationality] : null;
+                if (nativeLang) {
+                    setStudentNativeLanguage(nativeLang);
                 }
 
                 const lines: string[] = [
@@ -187,6 +188,7 @@ export default function LiveLessonPage() {
                     `現在レベル: ${student.jlpt_level || '未設定'}`,
                     `使用教材: ${student.textbook || '未設定'}`,
                     `現在の進度: ${student.current_phase || '未設定'}`,
+                    `生徒のネイティブ言語: ${nativeLang || 'English'}（翻訳補助はこの言語で出力すること）`,
                 ];
 
                 if (lessons && lessons.length > 0) {
