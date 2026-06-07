@@ -416,6 +416,8 @@ ${conversationNotes}`.trim();
             const contentToSave = hasValidCards
                 ? mat.cards!.map((c, i) => `[${i + 1}] 表: ${c.front}\n     裏: ${c.back}`).join('\n')
                 : mat.content;
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('ログインが必要です');
             const { error: insertError } = await supabase.from('materials').insert([{
                 title: mat.title,
                 content: contentToSave,
@@ -423,6 +425,7 @@ ${conversationNotes}`.trim();
                 is_public: false,
                 tags: [MATERIAL_TYPES[selectedMaterialType].tag, student.name],
                 student_id: studentId,
+                author_id: user.id,
             }]);
             if (!insertError) setMaterialSaved(true);
         } catch (err) {

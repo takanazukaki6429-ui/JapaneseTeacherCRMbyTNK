@@ -259,6 +259,8 @@ ${typeInstructions[selectedType]}
                 ? mat.cards.map((c, i) => `[${i + 1}] 表: ${c.front}\n     裏: ${c.back}`).join('\n')
                 : mat.content;
 
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('ログインが必要です');
             const { error } = await supabase.from('materials').insert([{
                 title: mat.title,
                 content: contentToSave,
@@ -266,6 +268,7 @@ ${typeInstructions[selectedType]}
                 is_public: shareToCommunity,
                 tags: [MATERIAL_TYPES[selectedType].tag, student?.name ?? ''],
                 student_id: studentId,
+                author_id: user.id,
             }]);
 
             if (error) {
@@ -277,6 +280,7 @@ ${typeInstructions[selectedType]}
                         type: 'content',
                         is_public: shareToCommunity,
                         tags: [MATERIAL_TYPES[selectedType].tag, student?.name ?? ''],
+                        author_id: user.id,
                     }]);
                 } else {
                     throw error;

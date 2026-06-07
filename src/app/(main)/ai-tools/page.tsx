@@ -46,12 +46,15 @@ export default function AIToolsPage() {
         if (!saveTitle.trim() || !response) return;
         setSavingLoading(true);
         try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('ログインが必要です');
             const { error } = await supabase.from('materials').insert([{
                 title: saveTitle,
                 content: response,
                 type: 'content',
                 is_public: false,
                 tags: ['AI生成'],
+                author_id: user.id,
             }]);
             if (error) throw error;
             setSaveSuccess(true);

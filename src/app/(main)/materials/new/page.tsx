@@ -31,12 +31,15 @@ export default function NewMaterialPage() {
         setLoading(true);
         try {
             const tagsArray = formData.tags.split(',').map(t => t.trim()).filter(t => t);
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('ログインが必要です');
             const { error } = await supabase.from('materials').insert([{
                 title: formData.title,
                 type: formData.type,
                 content: formData.content,
                 tags: tagsArray,
                 is_public: formData.is_public,
+                author_id: user.id,
             }]);
             if (error) throw error;
             router.push('/materials');

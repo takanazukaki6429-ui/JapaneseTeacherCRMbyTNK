@@ -10,9 +10,12 @@ export const revalidate = 0;
 
 async function getMyMaterials() {
     const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
     const { data, error } = await supabase
         .from('materials')
         .select('*')
+        .eq('author_id', user.id)
         .order('created_at', { ascending: false });
     if (error) return [];
     return data as Material[];
