@@ -154,6 +154,16 @@ export default function LoginPage() {
                                     )}
                                 </div>
                             )}
+                            {!isSignUp && (
+                                <div className="text-right pt-1">
+                                    <a
+                                        href="/reset-password"
+                                        className="text-[11px] text-[#6f5385] hover:underline"
+                                    >
+                                        パスワードを忘れた場合
+                                    </a>
+                                </div>
+                            )}
                         </div>
 
                         {isSignUp && (
