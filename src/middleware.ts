@@ -38,6 +38,7 @@ export async function middleware(request: NextRequest) {
         request.nextUrl.pathname.startsWith('/login') ||
         request.nextUrl.pathname.startsWith('/auth') ||
         request.nextUrl.pathname.startsWith('/api/auth') || // 認証API（新規登録・認証不要）
+        request.nextUrl.pathname.startsWith('/reset-password') || // パスワード再設定メール送信ページ（認証不要）
         request.nextUrl.pathname.startsWith('/student-view') || // 生徒ビュー（認証不要）
         request.nextUrl.pathname.startsWith('/pricing') ||      // 料金ページ（認証不要）
         request.nextUrl.pathname.startsWith('/status') ||       // ステータスページ（認証不要・公開）
