@@ -72,7 +72,13 @@ export default function UpdatePasswordPage() {
                     {sessionReady === false && (
                         <div className="bg-[#fff0f0] border border-[#f4b8b8] rounded-2xl p-4 text-sm mb-4">
                             <p className="font-bold text-[#ba1a1a] mb-1">リンクが無効か、期限切れです</p>
-                            <p className="text-[#ba1a1a]/80">お手数ですが、もう一度「パスワードを忘れた場合」からやり直してください。</p>
+                            <p className="text-[#ba1a1a]/80 mb-3">お手数ですが、もう一度パスワード再設定をやり直してください。</p>
+                            <a
+                                href="/reset-password"
+                                className="inline-block px-4 py-2 bg-[#ba1a1a] text-white text-xs font-bold rounded-full hover:opacity-90 transition-opacity"
+                            >
+                                パスワード再設定をやり直す
+                            </a>
                         </div>
                     )}
 
