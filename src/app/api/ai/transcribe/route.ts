@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getSpeechClient, getTranslateClient, getProjectId, isGoogleCloudConfigured } from '@/lib/google-cloud';
+import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
+
+// 翻訳モードは2.5秒チャンクで叩かれる特殊ルート。
+// 正常利用（連続75分）で約1800回/時になるため、上限はその水準に設定。
+// これを超える＝複数タブ・閉じ忘れ・外部からの濫用とみなして遮断する。
+const TRANSCRIBE_HOURLY_LIMIT = 1800;
 
 /**
  * v1.0 工程表 Week2: リアルタイム翻訳（Streaming STT 疑似ストリーミング = A'案）
@@ -87,6 +93,30 @@ async function transcribeWithGemini(base64Audio: string, mimeType: string): Prom
 
 export async function POST(req: NextRequest) {
     try {
+        const supabase = await createClient();
+
+        // 認証チェック（従来は無認証＝誰でも叩き放題だった。最重要のコスト栓）
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (!user || authError) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // レート制限（transcribe専用カウント。/api/ai・/api/ai/stream の上限とは分離）
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+        const { count } = await supabase
+            .from('ai_usage_log')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('prompt_type', 'transcribe')
+            .gte('created_at', oneHourAgo);
+
+        if (count !== null && count >= TRANSCRIBE_HOURLY_LIMIT) {
+            return NextResponse.json(
+                { error: 'Rate limit exceeded', original: '', japanese: '' },
+                { status: 429 }
+            );
+        }
+
         const formData = await req.formData();
         const audioBlob = formData.get('audio') as Blob;
 
@@ -99,10 +129,22 @@ export async function POST(req: NextRequest) {
         const base64Audio = audioBuffer.toString('base64');
         const mimeType = (audioBlob.type || 'audio/webm').split(';')[0];
 
+        // 使用ログ記録（非同期・ノンブロッキング）
+        // token_usage には音声バイト数を記録（チャンクは2.5秒固定なので行数×2.5秒で利用時間を集計できる）
+        const logUsage = (engine: string) => {
+            supabase.from('ai_usage_log').insert({
+                user_id: user.id,
+                model: engine,
+                prompt_type: 'transcribe',
+                token_usage: audioBlob.size,
+            }).then(() => {}, console.error);
+        };
+
         // 1. Google Cloud STT v2 + Translate を優先
         if (isGoogleCloudConfigured()) {
             try {
                 const result = await transcribeWithGoogle(audioBuffer);
+                logUsage('google-stt');
                 return NextResponse.json({ ...result, engine: 'google-stt' });
             } catch (googleError) {
                 console.warn('[transcribe] Google STT failed, falling back to Gemini:',
@@ -113,6 +155,7 @@ export async function POST(req: NextRequest) {
 
         // 2. Gemini フォールバック
         const result = await transcribeWithGemini(base64Audio, mimeType);
+        logUsage('gemini-2.5-flash');
         return NextResponse.json({ ...result, engine: 'gemini' });
 
     } catch (error) {
