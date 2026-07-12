@@ -29,20 +29,18 @@ export default function InviteCodesAdminPage() {
     const fetchCodes = useCallback(async () => {
         try {
             setLoading(true);
-            const { data, error } = await supabase
-                .from('invite_codes')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            setCodes(data || []);
+            // データ口への直接アクセスは廃止（管理者権限接続のAPI経由に一本化）
+            const res = await fetch('/api/admin/invite-codes');
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || '取得に失敗しました');
+            setCodes(data.codes || []);
         } catch (error) {
             console.error('Error fetching invite codes:', error);
             showAppError(error, '招待コードの取得に失敗しました');
         } finally {
             setLoading(false);
         }
-    }, [supabase]);
+    }, []);
 
     useEffect(() => {
         const checkAccess = async () => {
@@ -71,25 +69,10 @@ export default function InviteCodesAdminPage() {
     const generateCode = async () => {
         try {
             setGenerating(true);
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('Not authenticated');
-
-            // Generate a random 8-character code like A8F3-K9P2
-            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Excluded confusing chars like I, 1, O, 0
-            let codeStr = '';
-            for (let i = 0; i < 8; i++) {
-                if (i === 4) codeStr += '-';
-                codeStr += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-
-            const { error } = await supabase
-                .from('invite_codes')
-                .insert({
-                    code: codeStr,
-                    created_by: user.id
-                });
-
-            if (error) throw error;
+            // コード生成・登録はサーバ側（管理者権限接続）で行う
+            const res = await fetch('/api/admin/invite-codes', { method: 'POST' });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || '発行に失敗しました');
 
             toast.success('新しい招待コードを発行しました！');
             fetchCodes(); // Refresh list

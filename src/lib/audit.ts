@@ -15,7 +15,7 @@
  * 非同期で実行・失敗してもメイン処理を止めない（fire-and-forget）。
  */
 
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export type AuditAction =
     | 'auth.signup'
@@ -57,7 +57,9 @@ export type LogAuditInput = {
 
 export async function logAudit(input: LogAuditInput): Promise<void> {
     try {
-        const supabase = await createClient();
+        // audit_logs はINSERTポリシーを定義しない設計（誤って匿名から書かれるのを防ぐ）のため、
+        // 書き込みは管理者権限接続で行う。匿名・セッション接続だとRLSに弾かれて全件消える
+        const supabase = createAdminClient();
 
         const ip = input.req
             ? (input.req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
