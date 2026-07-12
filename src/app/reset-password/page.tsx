@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { createClient as createRawSupabaseClient } from '@supabase/supabase-js';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
@@ -10,7 +10,18 @@ export default function ResetPasswordPage() {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const supabase = createClient();
+
+    // パスワード再設定は「申請した端末」と「メールを開く端末」が違うのが普通。
+    // 通常のクライアント（PKCE方式）だと code_verifier が申請端末のクッキーに
+    // 残るため、別端末で /auth/confirm を開くと verifyOtp が code_verifier を
+    // 要求して失敗する（=クロスデバイスで「リンク無効」）。
+    // ここだけ implicit 方式の素クライアントで送信し、TokenHash を code_verifier
+    // 非依存の OTP ハッシュにする → どの端末で開いても通る。
+    const otpClient = createRawSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { auth: { flowType: 'implicit', persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
+    );
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -19,7 +30,7 @@ export default function ResetPasswordPage() {
         setMessage(null);
 
         const origin = typeof window !== 'undefined' ? window.location.origin : '';
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        const { error } = await otpClient.auth.resetPasswordForEmail(email, {
             redirectTo: `${origin}/auth/update-password`,
         });
 
