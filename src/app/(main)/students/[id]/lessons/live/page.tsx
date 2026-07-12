@@ -94,6 +94,7 @@ export default function LiveLessonPage() {
     const displayStreamRef = useRef<MediaStream | null>(null);
     const translationRecorderRef = useRef<MediaRecorder | null>(null);
     const translationCounterRef = useRef(0);
+    const translationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // ── 字幕PiP state（Document Picture-in-Picture）──
     const [isPipOpen, setIsPipOpen] = useState(false);
@@ -570,6 +571,18 @@ export default function LiveLessonPage() {
                 formData.append('audio', e.data, 'chunk.webm');
                 try {
                     const res = await fetch('/api/ai/transcribe', { method: 'POST', body: formData });
+                    if (res.status === 429) {
+                        // 利用上限到達 → 2.5秒ごとの再送を止めるため翻訳モードごと停止（課金暴走の栓）
+                        stopTranslationMode();
+                        translationCounterRef.current += 1;
+                        setLiveTranslations(prev => [{
+                            id: translationCounterRef.current,
+                            original: '',
+                            japanese: '⚠️ 翻訳の利用量が上限に達したため自動停止しました。1時間ほど置いてから再度お試しください。',
+                            timestamp: new Date(),
+                        }, ...prev.slice(0, 9)]);
+                        return;
+                    }
                     const data = await res.json();
                     if (data.japanese?.trim()) {
                         translationCounterRef.current += 1;
@@ -589,6 +602,18 @@ export default function LiveLessonPage() {
             setActiveTab('translation');
 
             stream.getAudioTracks()[0].onended = () => stopTranslationMode();
+
+            // 閉じ忘れ対策：連続90分で自動停止（STT課金が一晩中続く事故を防ぐ）
+            translationTimerRef.current = setTimeout(() => {
+                stopTranslationMode();
+                translationCounterRef.current += 1;
+                setLiveTranslations(prev => [{
+                    id: translationCounterRef.current,
+                    original: '',
+                    japanese: '⏰ 連続90分が経過したため翻訳を自動停止しました。続ける場合はもう一度「翻訳」をONにしてください。',
+                    timestamp: new Date(),
+                }, ...prev.slice(0, 9)]);
+            }, 90 * 60 * 1000);
         } catch (err) {
             // ユーザーがキャンセル or 権限拒否 → コンソールエラーを出さない
             if (err instanceof DOMException && err.name === 'NotAllowedError') return;
@@ -597,6 +622,10 @@ export default function LiveLessonPage() {
     }, [isChromeDesktop]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const stopTranslationMode = useCallback(() => {
+        if (translationTimerRef.current) {
+            clearTimeout(translationTimerRef.current);
+            translationTimerRef.current = null;
+        }
         translationRecorderRef.current?.stop();
         translationRecorderRef.current = null;
         displayStreamRef.current?.getTracks().forEach(t => t.stop());

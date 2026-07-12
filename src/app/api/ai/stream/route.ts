@@ -26,11 +26,13 @@ export async function POST(req: NextRequest) {
         }
 
         // レート制限（1時間あたり40リクエスト：ライブ授業は通常より上限を高く）
+        // transcribe（2.5秒チャンクの翻訳）は別枠のため集計から除外
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
         const { count } = await supabase
             .from('ai_usage_log')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
+            .neq('prompt_type', 'transcribe')
             .gte('created_at', oneHourAgo);
 
         if (count !== null && count >= 40) {

@@ -46,11 +46,13 @@ export async function POST(req: NextRequest) {
         // [Rate Limiting] Check usage in the last hour
         // Limit: 20 requests per hour
         // Note: This requires 'ai_usage_log' table in Supabase
+        // transcribe（2.5秒チャンクの翻訳）は別枠のため集計から除外
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
         const { count, error: usageError } = await supabase
             .from('ai_usage_log')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
+            .neq('prompt_type', 'transcribe')
             .gte('created_at', oneHourAgo);
 
         if (usageError) {
