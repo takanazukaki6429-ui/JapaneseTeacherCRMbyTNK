@@ -569,6 +569,8 @@ export default function LiveLessonPage() {
                 if (e.data.size < 500) return;
                 const formData = new FormData();
                 formData.append('audio', e.data, 'chunk.webm');
+                // 生徒の母国語をSTTの検出対象に使う（母国語+en-USの2言語検出）
+                formData.append('language', studentNativeLangRef.current);
                 try {
                     const res = await fetch('/api/ai/transcribe', { method: 'POST', body: formData });
                     if (res.status === 429) {
