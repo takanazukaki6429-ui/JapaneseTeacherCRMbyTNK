@@ -16,6 +16,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getRequestIdentifier } from '@/lib/rate-limit';
 
@@ -65,7 +66,9 @@ export async function POST(req: NextRequest) {
         // user_settings がなくても削除は続行
     }
 
-    // 紐付くテーブルを順に削除（外部キー制約に従い ON DELETE CASCADE で連鎖削除されるテーブルもあるが、念のため明示）
+    // 紐付くテーブルを順に削除。RLSに阻まれないよう管理者権限接続で行う
+    // （userIdは認証済みセッションから取得しているため、他人のデータを消す経路にはならない）
+    const admin = createAdminClient();
     const errors: string[] = [];
     const cascadeTables = [
         'generated_materials',     // teacher_id
@@ -74,7 +77,7 @@ export async function POST(req: NextRequest) {
         'materials',               // author_id
         'lesson_chat_logs',        // user_id
         'user_settings',           // user_id
-        'invite_codes',            // used_by（FK ON DELETE SET NULL想定）
+        'invite_codes',            // created_by（自分が発行したコード。used_byはFKのSET NULLに任せる）
     ];
 
     for (const table of cascadeTables) {
@@ -82,8 +85,9 @@ export async function POST(req: NextRequest) {
             const userColumn =
                 table === 'generated_materials' ? 'teacher_id' :
                 table === 'materials' ? 'author_id' :
+                table === 'invite_codes' ? 'created_by' :
                 'user_id';
-            const { error } = await supabase.from(table).delete().eq(userColumn, userId);
+            const { error } = await admin.from(table).delete().eq(userColumn, userId);
             if (error && !/does not exist|column/i.test(error.message)) {
                 errors.push(`${table}: ${error.message}`);
             }
@@ -92,17 +96,26 @@ export async function POST(req: NextRequest) {
         }
     }
 
-    // auth.users の削除は service_role でないと不可。Phase 1 では Supabase Auth管理画面 or admin API経由を前提とし、
-    // ここではユーザーセッションを無効化＋データ削除完了通知のみで対応
+    // セッションを無効化してから、ログイン情報（auth.users）本体を削除。
+    // ここを消さないと「削除しました」表示後も再ログインできてしまう（退会が退会にならない）
     await supabase.auth.signOut();
 
-    // 完了監査ログ（actor_user_id は NULL になるが actor_email で追跡可能）
+    try {
+        const { error: deleteUserError } = await admin.auth.admin.deleteUser(userId);
+        if (deleteUserError) {
+            errors.push(`auth.users: ${deleteUserError.message}`);
+        }
+    } catch (e) {
+        errors.push(`auth.users: ${e instanceof Error ? e.message : String(e)}`);
+    }
+
+    // 完了監査ログ（auth.users削除済みのためactor_user_idは残さず、actor_emailで追跡）
     await logAudit({
         action: 'account.deleted',
-        actorUserId: userId,
+        actorUserId: null,
         actorEmail: userEmail,
         outcome: errors.length === 0 ? 'success' : 'failure',
-        metadata: errors.length > 0 ? { errors } : {},
+        metadata: errors.length > 0 ? { errors, userId } : { userId },
         req,
     });
 
