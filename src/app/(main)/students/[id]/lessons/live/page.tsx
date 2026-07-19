@@ -555,6 +555,23 @@ export default function LiveLessonPage() {
         if (!isChromeDesktop) return;
         try {
             const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true } as DisplayMediaStreamOptions);
+
+            // 音声トラックの無い共有（「画面全体」「ウィンドウ」選択時）は翻訳できない。
+            // 従来はここを素通りして「翻訳中」表示のまま無言で失敗していた → 明示的に案内して中止する
+            const audioTrack = stream.getAudioTracks()[0];
+            if (!audioTrack) {
+                stream.getTracks().forEach(t => t.stop());
+                translationCounterRef.current += 1;
+                setLiveTranslations(prev => [{
+                    id: translationCounterRef.current,
+                    original: '',
+                    japanese: '⚠️ 共有に音声が含まれていません。共有画面で「Chromeタブ」を選び、下の「タブの音声も共有」にチェックを入れてから、生徒の声が流れるタブ（Preply等）を選んでください。',
+                    timestamp: new Date(),
+                }, ...prev.slice(0, 9)]);
+                setActiveTab('translation');
+                return;
+            }
+
             // videoトラックは音声取得のために必要だが映像は不要なので即停止
             stream.getVideoTracks().forEach(t => t.stop());
             displayStreamRef.current = stream;
@@ -603,7 +620,7 @@ export default function LiveLessonPage() {
             setIsTranslationMode(true);
             setActiveTab('translation');
 
-            stream.getAudioTracks()[0].onended = () => stopTranslationMode();
+            audioTrack.onended = () => stopTranslationMode();
 
             // 閉じ忘れ対策：連続90分で自動停止（STT課金が一晩中続く事故を防ぐ）
             translationTimerRef.current = setTimeout(() => {
