@@ -270,6 +270,8 @@ export default function LiveLessonPage() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        // 発話ごとに飛ぶ高頻度用途。専用の回数枠（600/時）で数えるため type を明示する
+                        type: 'student_translation',
                         prompt: `Translate the following Japanese text to ${studentNativeLangRef.current}. Output ONLY the translation, nothing else.\n\n${japaneseText}`,
                     }),
                 });

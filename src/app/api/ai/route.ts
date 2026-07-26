@@ -43,26 +43,36 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // [Rate Limiting] Check usage in the last hour
-        // Limit: 20 requests per hour
-        // Note: This requires 'ai_usage_log' table in Supabase
-        // transcribe（2.5秒チャンクの翻訳）は別枠のため集計から除外
+        // [Rate Limiting] 直近1時間の利用回数で制限する。
+        // 用途ごとに発生頻度が桁違いなので枠を分ける（同じ枠にすると授業中に即枯れる）:
+        //   - student_translation: 教師の発話ごとに生徒向け翻訳が飛ぶ。50分授業で数百回想定 → 600/時
+        //   - それ以外（教材生成・ヒアリング解析・手動チャット等）: 20/時
+        //   - transcribe（2.5秒チャンク）は /api/ai/transcribe 側の別枠なので常に除外
+        const isStudentTranslation = type === 'student_translation';
+        const hourlyLimit = isStudentTranslation ? 600 : 20;
+
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-        const { count, error: usageError } = await supabase
+        let usageQuery = supabase
             .from('ai_usage_log')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
             .neq('prompt_type', 'transcribe')
             .gte('created_at', oneHourAgo);
 
+        usageQuery = isStudentTranslation
+            ? usageQuery.eq('prompt_type', 'student_translation')
+            : usageQuery.neq('prompt_type', 'student_translation');
+
+        const { count, error: usageError } = await usageQuery;
+
         if (usageError) {
             console.error('Rate limit check failed:', usageError);
             // Optionally fail open or closed. Failing open for now to avoid blocking on DB errors, but logging it.
-        } else if (count !== null && count >= 20) {
+        } else if (count !== null && count >= hourlyLimit) {
             return NextResponse.json(
                 {
                     error: 'Rate limit exceeded',
-                    details: 'You have reached the limit of 20 AI requests per hour. Please try again later.'
+                    details: `You have reached the limit of ${hourlyLimit} AI requests per hour for this feature. Please try again later.`
                 },
                 { status: 429 }
             );
@@ -244,12 +254,15 @@ ${conversation_notes}
                 const text = response.text();
 
                 // [Audit] Log usage to DB
+                // token_usage は実測値を記録する（従来0固定で原価が算出できなかった）。
+                // 価格確定（2026-09末）に必要な1ユーザーあたり実原価の集計元になる。
                 if (user) {
+                    const usage = response.usageMetadata;
                     await supabase.from('ai_usage_log').insert({
                         user_id: user.id,
                         model: modelName,
                         prompt_type: type || 'general',
-                        token_usage: 0
+                        token_usage: usage?.totalTokenCount ?? 0
                     });
                 }
 
