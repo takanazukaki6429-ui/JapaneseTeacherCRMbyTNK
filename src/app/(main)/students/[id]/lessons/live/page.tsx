@@ -579,10 +579,8 @@ export default function LiveLessonPage() {
             const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
                 ? 'audio/webm;codecs=opus'
                 : 'audio/webm';
-            const recorder = new MediaRecorder(stream, { mimeType });
-            translationRecorderRef.current = recorder;
 
-            recorder.ondataavailable = async (e) => {
+            const handleChunk = async (e: BlobEvent) => {
                 if (e.data.size < 500) return;
                 const formData = new FormData();
                 formData.append('audio', e.data, 'chunk.webm');
@@ -616,7 +614,25 @@ export default function LiveLessonPage() {
                 } catch (err) { console.error('Translation chunk error:', err); }
             };
 
-            recorder.start(2500); // 2.5秒チャンク（A'案: Google STT で体感3-4秒の疑似ストリーミング）
+            // 2.5秒ごとに MediaRecorder を作り直す（ローリング方式）。
+            // start(2500) の連続録音だと2個目以降のチャンクにコンテナヘッダが無く、
+            // Google STT が「supported encoding ではない」と拒否する（2026-07-20 分割実験で実証）。
+            // 毎回 stop→新規起動することで、全チャンクがヘッダ付きの完全な webm になる。
+            const startChunkRecorder = () => {
+                if (!displayStreamRef.current) return;
+                const recorder = new MediaRecorder(displayStreamRef.current, { mimeType });
+                translationRecorderRef.current = recorder;
+                recorder.ondataavailable = handleChunk;
+                recorder.onstop = () => {
+                    // stopTranslationMode 経由の停止（ref がnull化 or 差し替え済み）なら再起動しない
+                    if (translationRecorderRef.current === recorder) startChunkRecorder();
+                };
+                recorder.start();
+                setTimeout(() => {
+                    if (recorder.state === 'recording') recorder.stop();
+                }, 2500);
+            };
+            startChunkRecorder();
             setIsTranslationMode(true);
             setActiveTab('translation');
 
@@ -645,8 +661,10 @@ export default function LiveLessonPage() {
             clearTimeout(translationTimerRef.current);
             translationTimerRef.current = null;
         }
-        translationRecorderRef.current?.stop();
+        // 先に ref を null 化してから stop する（ローリング方式の onstop 再起動を防ぐ）
+        const recorder = translationRecorderRef.current;
         translationRecorderRef.current = null;
+        if (recorder && recorder.state === 'recording') recorder.stop();
         displayStreamRef.current?.getTracks().forEach(t => t.stop());
         displayStreamRef.current = null;
         setIsTranslationMode(false);
