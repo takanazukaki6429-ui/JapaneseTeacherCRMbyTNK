@@ -18,7 +18,10 @@ export default function OnboardingPage() {
         setError(null);
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error("No user found");
+            if (!user) {
+                setError("ログイン情報が確認できませんでした。お手数ですが、一度ログインし直してからもう一度お試しください。");
+                return;
+            }
 
             const { error: updateError } = await supabase
                 .from("user_settings")
@@ -29,12 +32,31 @@ export default function OnboardingPage() {
                     updated_at: new Date().toISOString(),
                 });
 
-            if (updateError) throw updateError;
+            if (updateError) {
+                setError(`保存できませんでした。もう一度お試しいただくか、うまくいかない場合はこの文言をご連絡ください：${updateError.message}`);
+                return;
+            }
+
+            // 保存できたことを実際に読み直して確かめてから次の画面へ進む。
+            // 確認せずに進むと、保存に失敗していた場合に入力欄が空のまま
+            // 登録画面へ戻され、利用者からは「何も起きない」ように見える
+            // （2026-08-13 実クライアントの申告がこの見え方だった）
+            const { data: saved } = await supabase
+                .from("user_settings")
+                .select("display_name")
+                .eq("user_id", user.id)
+                .single();
+
+            if (!saved?.display_name) {
+                setError("保存を確認できませんでした。通信状況をご確認のうえ、もう一度お試しください。");
+                return;
+            }
+
             router.refresh();
             window.location.href = "/";
         } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : "プロフィールの保存に失敗しました";
-            setError(message);
+            const detail = err instanceof Error ? err.message : String(err);
+            setError(`保存中に問題が起きました。もう一度お試しください。（${detail}）`);
         } finally {
             setLoading(false);
         }
