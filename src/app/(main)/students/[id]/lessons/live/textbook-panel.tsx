@@ -43,6 +43,7 @@ export function TextbookPanel({ studentId }: Props) {
     const [result, setResult] = useState('');
     const [error, setError] = useState('');
 
+
     useEffect(() => {
         const supabase = createClient();
         supabase
@@ -145,6 +146,7 @@ export function TextbookPanel({ studentId }: Props) {
                         </button>
                     ))}
                 </div>
+
             </div>
 
             <div className="flex-1 overflow-y-auto p-4">

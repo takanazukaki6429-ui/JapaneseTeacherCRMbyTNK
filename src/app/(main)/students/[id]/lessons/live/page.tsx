@@ -5,7 +5,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
     ArrowLeft, Send, MessageCircle, BookOpen, CheckCircle,
-    Save, Sparkles, X, Mic, MicOff, Loader2, Zap, PictureInPicture2
+    Save, Sparkles, X, Mic, MicOff, Loader2, Zap, PictureInPicture2, ImagePlus, Download
 } from 'lucide-react';
 import Link from 'next/link';
 import { TextbookPanel } from './textbook-panel';
@@ -68,7 +68,7 @@ export default function LiveLessonPage() {
 
     // ── 既存state ──
     const [prepContent, setPrepContent] = useState<PrepContent | null>(null);
-    const [activeTab, setActiveTab] = useState<'prep' | 'course' | 'translation' | 'chat' | 'textbook'>('prep');
+    const [activeTab, setActiveTab] = useState<'prep' | 'course' | 'translation' | 'chat' | 'textbook' | 'illust'>('prep');
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
@@ -96,6 +96,14 @@ export default function LiveLessonPage() {
     const translationRecorderRef = useRef<MediaRecorder | null>(null);
     const translationCounterRef = useRef(0);
     const translationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // ── 即興イラスト生成（機能B-2）──
+    // 授業中どのタブを見ていても押せるよう、ヘッダーに置く。
+    // 課が選ばれていなくても、直近の会話から場面を起こせる
+    const [illustMode, setIllustMode] = useState<'fast' | 'quality' | null>(null);
+    const [illustUrl, setIllustUrl] = useState('');
+    const [illustSec, setIllustSec] = useState(0);
+    const [illustError, setIllustError] = useState('');
 
     // ── 字幕PiP state（Document Picture-in-Picture）──
     const [isPipOpen, setIsPipOpen] = useState(false);
@@ -772,6 +780,38 @@ export default function LiveLessonPage() {
         return () => { stopListening(); stopTranslationMode(); };
     }, [stopListening, stopTranslationMode]);
 
+    // 即興イラスト生成。先生は追加入力をしない。
+    // 今の会話（直近500字）と生徒の情報から場面を起こす
+    const generateIllustration = async (mode: 'fast' | 'quality') => {
+        setIllustMode(mode);
+        setIllustError('');
+        setIllustUrl('');
+        setActiveTab('illust');
+        try {
+            const res = await fetch('/api/materials/illustrate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    studentId,
+                    mode,
+                    transcript: transcriptRef.current.slice(-500),
+                    nativeLanguage: studentNativeLangRef.current,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setIllustError(data.error ?? 'イラストの生成に失敗しました。');
+                return;
+            }
+            setIllustUrl(data.dataUrl);
+            setIllustSec(Math.round((data.elapsedMs ?? 0) / 1000));
+        } catch {
+            setIllustError('通信に失敗しました。もう一度お試しください。');
+        } finally {
+            setIllustMode(null);
+        }
+    };
+
     const finishLesson = () => {
         stopListening();
         stopTranslationMode();
@@ -844,6 +884,30 @@ export default function LiveLessonPage() {
                         </button>
                     )}
 
+                    {/* 即興イラスト：授業中どのタブからでも押せる */}
+                    <button
+                        onClick={() => generateIllustration('fast')}
+                        disabled={illustMode !== null}
+                        title="今の会話に合うイラストを約10秒で作る"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white font-bold rounded-full text-xs transition-all disabled:opacity-50"
+                    >
+                        {illustMode === 'fast'
+                            ? <Loader2 size={14} className="animate-spin" />
+                            : <ImagePlus size={14} />}
+                        絵を描く
+                    </button>
+                    <button
+                        onClick={() => generateIllustration('quality')}
+                        disabled={illustMode !== null}
+                        title="文字までしっかり作る。約30〜40秒かかる"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white font-bold rounded-full text-xs transition-all disabled:opacity-50"
+                    >
+                        {illustMode === 'quality'
+                            ? <Loader2 size={14} className="animate-spin" />
+                            : <ImagePlus size={14} />}
+                        絵（きれい）
+                    </button>
+
                     {/* 言語セレクタ */}
                     <select
                         value={studentNativeLanguage}
@@ -887,7 +951,7 @@ export default function LiveLessonPage() {
 
                 {/* タブ（モバイル） */}
                 <div className="md:hidden flex border-b border-[#f4f3f7]">
-                    {(['prep', 'course', 'translation', 'textbook', 'chat'] as const).map((tab) => (
+                    {(['prep', 'course', 'translation', 'textbook', 'illust', 'chat'] as const).map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -915,6 +979,7 @@ export default function LiveLessonPage() {
                                 </span>
                             )}
                             {tab === 'textbook' && '📖教科書'}
+                            {tab === 'illust' && '🎨イラスト'}
                             {tab === 'chat' && 'チャット'}
                         </button>
                     ))}
@@ -1005,6 +1070,16 @@ export default function LiveLessonPage() {
                             }`}
                         >
                             📖 教科書
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('illust')}
+                            className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${
+                                activeTab === 'illust'
+                                    ? 'text-[#6f5385] border-[#6f5385]'
+                                    : 'text-[#4b454e] border-transparent hover:text-[#1a1c1e]'
+                            }`}
+                        >
+                            🎨 イラスト
                         </button>
                         <button
                             onClick={() => setActiveTab('chat')}
@@ -1198,6 +1273,62 @@ export default function LiveLessonPage() {
                     {/* 📖 教科書パネル（機能B: 授業中の即興生成） */}
                     <div className={`flex-1 flex flex-col overflow-hidden ${activeTab === 'textbook' ? 'flex' : 'hidden'}`}>
                         <TextbookPanel studentId={studentId} />
+                    </div>
+
+                    {/* 🎨 イラストパネル（ヘッダーのボタンで生成した結果） */}
+                    <div className={`flex-1 flex flex-col overflow-hidden ${activeTab === 'illust' ? 'flex' : 'hidden'}`}>
+                        <div className="flex-1 overflow-y-auto p-4">
+                            {illustError && (
+                                <div className="p-3 bg-[#fff0f0] border border-[#f4b8b8] rounded-2xl text-xs text-[#ba1a1a] mb-3">
+                                    {illustError}
+                                </div>
+                            )}
+
+                            {illustMode && (
+                                <div className="h-full flex flex-col items-center justify-center py-10 gap-3">
+                                    <Loader2 size={28} className="animate-spin text-[#6f5385]" />
+                                    <p className="text-sm font-bold text-[#1a1c1e]">イラストを描いています…</p>
+                                    <p className="text-xs text-[#4b454e]">
+                                        {illustMode === 'fast' ? '約10秒' : '約30〜40秒'}かかります。授業を続けながらお待ちください。
+                                    </p>
+                                </div>
+                            )}
+
+                            {!illustMode && illustUrl && (
+                                <div className="bg-white border border-[#c9a8e0]/30 rounded-2xl p-3 shadow-[0_0_20px_rgba(111,83,133,0.06)]">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-[10px] font-bold text-[#6f5385]">🎨 生成したイラスト（{illustSec}秒）</span>
+                                        <a
+                                            href={illustUrl}
+                                            download="asta-illustration.png"
+                                            className="inline-flex items-center gap-1 text-[10px] text-[#6f5385] hover:underline"
+                                        >
+                                            <Download size={11} />保存
+                                        </a>
+                                    </div>
+                                    {/* 生成画像は data URL のため next/image ではなく素の img で表示する */}
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={illustUrl} alt="生成したイラスト" className="w-full rounded-xl" />
+                                    <p className="text-[10px] text-[#4b454e] mt-2 leading-relaxed">
+                                        ※ AIが作った画像です。文字が正しいか目で確かめてから生徒さんに見せてください。
+                                    </p>
+                                </div>
+                            )}
+
+                            {!illustMode && !illustUrl && !illustError && (
+                                <div className="h-full flex flex-col items-center justify-center py-10 text-center gap-2">
+                                    <div className="w-12 h-12 rounded-full bg-[#f2daff] flex items-center justify-center">
+                                        <ImagePlus size={22} className="text-[#6f5385]" />
+                                    </div>
+                                    <p className="text-sm font-bold text-[#1a1c1e]">その場で絵を描く</p>
+                                    <p className="text-xs text-[#4b454e] leading-relaxed max-w-xs">
+                                        画面上の「絵を描く」を押すと、いま話している内容と
+                                        生徒さんに合わせたイラストをその場で作ります。
+                                        急ぐときは「絵を描く」、しっかり作りたいときは「絵（きれい）」を。
+                                    </p>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* 💬 手動チャットパネル */}
