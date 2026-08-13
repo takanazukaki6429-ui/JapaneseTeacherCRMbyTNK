@@ -52,6 +52,7 @@ export async function middleware(request: NextRequest) {
         request.nextUrl.pathname.startsWith('/reset-password') || // パスワード再設定メール送信ページ（認証不要）
         request.nextUrl.pathname.startsWith('/student-view') || // 生徒ビュー（認証不要）
         request.nextUrl.pathname.startsWith('/pricing') ||      // 料金ページ（認証不要）
+        request.nextUrl.pathname.startsWith('/legal') ||        // 利用規約・プライバシーポリシー（契約前に読めること）
         request.nextUrl.pathname.startsWith('/status') ||       // ステータスページ（認証不要・公開）
         request.nextUrl.pathname.startsWith('/api/health') ||   // ヘルスチェック（外部監視用）
         request.nextUrl.pathname === '/api/stripe/webhook';     // Stripe通知（セッション無し・署名検証はハンドラ側）

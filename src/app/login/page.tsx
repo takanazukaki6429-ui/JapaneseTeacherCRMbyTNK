@@ -14,6 +14,8 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<AppError | null>(null);
     const [isSignUp, setIsSignUp] = useState(false);
+    // 契約前に規約を読んで同意したことを、本人の操作として残す（有料化の前提）
+    const [agreed, setAgreed] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const router = useRouter();
     const supabase = createClient();
@@ -184,9 +186,26 @@ export default function LoginPage() {
                             </div>
                         )}
 
+                        {isSignUp && (
+                            <label className="flex items-start gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={agreed}
+                                    onChange={e => setAgreed(e.target.checked)}
+                                    className="mt-0.5 w-4 h-4 accent-[#6f5385] shrink-0"
+                                />
+                                <span className="text-[11px] text-[#4b454e] leading-relaxed">
+                                    <a href="/legal/terms" target="_blank" className="text-[#6f5385] underline">利用規約</a>
+                                    {' と '}
+                                    <a href="/legal/privacy" target="_blank" className="text-[#6f5385] underline">プライバシーポリシー</a>
+                                    {' に同意します'}
+                                </span>
+                            </label>
+                        )}
+
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={loading || (isSignUp && !agreed)}
                             className="w-full py-3 mt-2 bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] text-white font-bold rounded-full hover:scale-[1.01] transition-transform shadow-[0_4px_20px_rgba(111,83,133,0.3)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         >
                             {loading

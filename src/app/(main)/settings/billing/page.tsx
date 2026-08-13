@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { CheckCircle, CreditCard, Loader2, AlertCircle } from 'lucide-react';
+import { PLAN_PRICE_LABEL } from '@/lib/pricing';
 
 // useSearchParams を使う＋認証必須のユーザー固有ページのため静的化を無効
 export const dynamic = 'force-dynamic';
@@ -85,7 +86,7 @@ function BillingContent() {
                     <div>
                         <p className="text-xs font-bold text-[#4b454e] uppercase tracking-wider mb-1">現在のプラン</p>
                         <p className="text-lg font-bold text-[#1a1c1e]">
-                            {info?.is_free ? '無償プラン（招待）' : 'プロプラン ¥3,980/月'}
+                            {info?.is_free ? '無償プラン（招待）' : `プロプラン ${PLAN_PRICE_LABEL}/月`}
                         </p>
                     </div>
                     <CreditCard size={24} className="text-[#6f5385]" />

@@ -3,6 +3,7 @@
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Check, Sparkles, Loader2 } from 'lucide-react';
+import { PLAN_PRICE_LABEL } from '@/lib/pricing';
 
 // useSearchParams を使うため静的プリレンダリングを無効化
 export const dynamic = 'force-dynamic';
@@ -65,7 +66,7 @@ function PricingContent() {
                             プロプラン
                         </span>
                         <div className="mt-3 flex items-end gap-1">
-                            <span className="text-4xl font-black text-[#1a1c1e]">¥3,980</span>
+                            <span className="text-4xl font-black text-[#1a1c1e]">{PLAN_PRICE_LABEL}</span>
                             <span className="text-sm text-[#4b454e] mb-1">/月（税込）</span>
                         </div>
                     </div>
