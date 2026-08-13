@@ -8,6 +8,7 @@ import {
     Save, Sparkles, X, Mic, MicOff, Loader2, Zap, PictureInPicture2
 } from 'lucide-react';
 import Link from 'next/link';
+import { TextbookPanel } from './textbook-panel';
 
 // ────────────────────────────────────────────
 // 型定義
@@ -67,7 +68,7 @@ export default function LiveLessonPage() {
 
     // ── 既存state ──
     const [prepContent, setPrepContent] = useState<PrepContent | null>(null);
-    const [activeTab, setActiveTab] = useState<'prep' | 'course' | 'translation' | 'chat'>('prep');
+    const [activeTab, setActiveTab] = useState<'prep' | 'course' | 'translation' | 'chat' | 'textbook'>('prep');
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
@@ -886,7 +887,7 @@ export default function LiveLessonPage() {
 
                 {/* タブ（モバイル） */}
                 <div className="md:hidden flex border-b border-[#f4f3f7]">
-                    {(['prep', 'course', 'translation', 'chat'] as const).map((tab) => (
+                    {(['prep', 'course', 'translation', 'textbook', 'chat'] as const).map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -913,6 +914,7 @@ export default function LiveLessonPage() {
                                     )}
                                 </span>
                             )}
+                            {tab === 'textbook' && '📖教科書'}
                             {tab === 'chat' && 'チャット'}
                         </button>
                     ))}
@@ -993,6 +995,16 @@ export default function LiveLessonPage() {
                                     {liveTranslations.length + aiTranslationSuggestions.length}
                                 </span>
                             )}
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('textbook')}
+                            className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${
+                                activeTab === 'textbook'
+                                    ? 'text-[#6f5385] border-[#6f5385]'
+                                    : 'text-[#4b454e] border-transparent hover:text-[#1a1c1e]'
+                            }`}
+                        >
+                            📖 教科書
                         </button>
                         <button
                             onClick={() => setActiveTab('chat')}
@@ -1181,6 +1193,11 @@ export default function LiveLessonPage() {
                                 </div>
                             )}
                         </div>
+                    </div>
+
+                    {/* 📖 教科書パネル（機能B: 授業中の即興生成） */}
+                    <div className={`flex-1 flex flex-col overflow-hidden ${activeTab === 'textbook' ? 'flex' : 'hidden'}`}>
+                        <TextbookPanel studentId={studentId} />
                     </div>
 
                     {/* 💬 手動チャットパネル */}
