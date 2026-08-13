@@ -100,6 +100,9 @@ export default function LiveLessonPage() {
     // ── 即興イラスト生成（機能B-2）──
     // 授業中どのタブを見ていても押せるよう、ヘッダーに置く。
     // 課が選ばれていなくても、直近の会話から場面を起こせる
+    // 教科書タブで選んだ課。ヘッダーのイラスト生成でも使う
+    const [selectedLessonId, setSelectedLessonId] = useState('');
+    const handleLessonChange = useCallback((id: string) => setSelectedLessonId(id), []);
     const [illustMode, setIllustMode] = useState<'fast' | 'quality' | null>(null);
     const [illustUrl, setIllustUrl] = useState('');
     const [illustSec, setIllustSec] = useState(0);
@@ -794,6 +797,7 @@ export default function LiveLessonPage() {
                 body: JSON.stringify({
                     studentId,
                     mode,
+                    masterMaterialId: selectedLessonId || undefined,
                     transcript: transcriptRef.current.slice(-500),
                     nativeLanguage: studentNativeLangRef.current,
                 }),
@@ -1272,7 +1276,7 @@ export default function LiveLessonPage() {
 
                     {/* 📖 教科書パネル（機能B: 授業中の即興生成） */}
                     <div className={`flex-1 flex flex-col overflow-hidden ${activeTab === 'textbook' ? 'flex' : 'hidden'}`}>
-                        <TextbookPanel studentId={studentId} />
+                        <TextbookPanel studentId={studentId} lessonId={selectedLessonId} onLessonChange={handleLessonChange} />
                     </div>
 
                     {/* 🎨 イラストパネル（ヘッダーのボタンで生成した結果） */}

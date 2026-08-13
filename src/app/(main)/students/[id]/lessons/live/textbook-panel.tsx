@@ -32,12 +32,16 @@ const MODES: { key: Mode; label: string; hint: string }[] = [
 
 const LEVELS = ['N5', 'N4', 'N3', 'N2'];
 
-type Props = { studentId: string };
+type Props = {
+    studentId: string;
+    /** 選択中の課。ヘッダーのイラスト生成でも使うため親で保持する */
+    lessonId: string;
+    onLessonChange: (id: string) => void;
+};
 
-export function TextbookPanel({ studentId }: Props) {
+export function TextbookPanel({ studentId, lessonId, onLessonChange }: Props) {
     const [level, setLevel] = useState('N5');
     const [lessons, setLessons] = useState<Lesson[]>([]);
-    const [lessonId, setLessonId] = useState('');
     const [note, setNote] = useState('');
     const [loadingMode, setLoadingMode] = useState<Mode | null>(null);
     const [result, setResult] = useState('');
@@ -54,9 +58,9 @@ export function TextbookPanel({ studentId }: Props) {
             .order('lesson_sub')
             .then(({ data }) => {
                 setLessons((data as Lesson[]) ?? []);
-                setLessonId('');
+                onLessonChange('');
             });
-    }, [level]);
+    }, [level]);   // onLessonChange は親で useCallback 済み
 
     const generate = async (mode: Mode) => {
         if (!lessonId) {
@@ -100,7 +104,7 @@ export function TextbookPanel({ studentId }: Props) {
                     </select>
                     <select
                         value={lessonId}
-                        onChange={e => setLessonId(e.target.value)}
+                        onChange={e => onLessonChange(e.target.value)}
                         className="flex-1 min-w-0 text-xs bg-white border border-[#cdc3ce]/50 rounded-lg px-2 py-1.5 outline-none"
                     >
                         <option value="">今やっている課を選ぶ…</option>
