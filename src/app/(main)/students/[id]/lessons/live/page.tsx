@@ -103,10 +103,14 @@ export default function LiveLessonPage() {
     // 教科書タブで選んだ課。ヘッダーのイラスト生成でも使う
     const [selectedLessonId, setSelectedLessonId] = useState('');
     const handleLessonChange = useCallback((id: string) => setSelectedLessonId(id), []);
-    const [illustMode, setIllustMode] = useState<'fast' | 'quality' | null>(null);
+    // イラストは案C（2026-08-16 かずき決定）：1ボタンで速い絵を先に出し、
+    // 裏で丁寧な絵も作って「差し替える？」と提案する。先生はモードを選ばない
+    const [illustBusy, setIllustBusy] = useState(false);
     const [illustUrl, setIllustUrl] = useState('');
     const [illustSec, setIllustSec] = useState(0);
     const [illustError, setIllustError] = useState('');
+    const [qualityUrl, setQualityUrl] = useState('');   // 裏で作った丁寧版（差し替え候補）
+    const illustRunRef = useRef(0);                     // 連打時に古い結果を捨てるための世代番号
 
     // ── 字幕PiP state（Document Picture-in-Picture）──
     const [isPipOpen, setIsPipOpen] = useState(false);
@@ -783,36 +787,51 @@ export default function LiveLessonPage() {
         return () => { stopListening(); stopTranslationMode(); };
     }, [stopListening, stopTranslationMode]);
 
-    // 即興イラスト生成。先生は追加入力をしない。
-    // 今の会話（直近500字）と生徒の情報から場面を起こす
-    const generateIllustration = async (mode: 'fast' | 'quality') => {
-        setIllustMode(mode);
+    // 即興イラスト生成（案C）。先生は追加入力もモード選択もしない。
+    // 速い絵（約8秒）と丁寧な絵（約35秒）を同時に作り始め、
+    // 速い方を先に見せて、丁寧な方ができたら「差し替える？」と提案する。
+    // 速い方は日本語の誤字が出ることがある（実機で確認済み）ための二段構え
+    const requestIllust = async (mode: 'fast' | 'quality') => {
+        const res = await fetch('/api/materials/illustrate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                studentId,
+                mode,
+                masterMaterialId: selectedLessonId || undefined,
+                transcript: transcriptRef.current.slice(-500),
+                nativeLanguage: studentNativeLangRef.current,
+            }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? 'イラストの生成に失敗しました。');
+        return data as { dataUrl: string; elapsedMs?: number };
+    };
+
+    const generateIllustration = async () => {
+        const run = ++illustRunRef.current;
+        setIllustBusy(true);
         setIllustError('');
         setIllustUrl('');
+        setQualityUrl('');
         setActiveTab('illust');
+
+        // 丁寧版は裏で静かに走らせる。失敗しても速い版があるので黙って諦める
+        requestIllust('quality')
+            .then(d => { if (illustRunRef.current === run) setQualityUrl(d.dataUrl); })
+            .catch(() => { /* 速い版で続行 */ });
+
         try {
-            const res = await fetch('/api/materials/illustrate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    studentId,
-                    mode,
-                    masterMaterialId: selectedLessonId || undefined,
-                    transcript: transcriptRef.current.slice(-500),
-                    nativeLanguage: studentNativeLangRef.current,
-                }),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                setIllustError(data.error ?? 'イラストの生成に失敗しました。');
-                return;
+            const d = await requestIllust('fast');
+            if (illustRunRef.current !== run) return;
+            setIllustUrl(d.dataUrl);
+            setIllustSec(Math.round((d.elapsedMs ?? 0) / 1000));
+        } catch (e) {
+            if (illustRunRef.current === run) {
+                setIllustError(e instanceof Error ? e.message : 'イラストの生成に失敗しました。');
             }
-            setIllustUrl(data.dataUrl);
-            setIllustSec(Math.round((data.elapsedMs ?? 0) / 1000));
-        } catch {
-            setIllustError('通信に失敗しました。もう一度お試しください。');
         } finally {
-            setIllustMode(null);
+            if (illustRunRef.current === run) setIllustBusy(false);
         }
     };
 
@@ -837,115 +856,103 @@ export default function LiveLessonPage() {
 
             {/* ヘッダー */}
             <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-[#6f5385] to-[#9b77b5] text-white shrink-0">
-                <div className="flex items-center gap-3">
-                    <button onClick={() => router.back()} className="p-1.5 hover:bg-white/20 rounded-full transition-colors">
+                <div className="flex items-center gap-3 min-w-0">
+                    <button onClick={() => router.back()} className="p-1.5 hover:bg-white/20 rounded-full transition-colors shrink-0">
                         <ArrowLeft size={18} />
                     </button>
-                    <h1 className="font-bold text-base flex items-center gap-2">
-                        LIVE カンペモード
-                        <span className="text-[10px] bg-red-500 px-2 py-0.5 rounded-full animate-pulse font-bold">ON AIR</span>
-                    </h1>
+                    <h1 className="font-bold text-base whitespace-nowrap">授業中</h1>
+
+                    {/* 状態はこの信号1つに集約。押すと録音の一時停止/再開 */}
+                    <button
+                        onClick={isListening ? stopListening : startListening}
+                        title={isListening ? '押すと録音を一時停止' : '押すと録音を再開'}
+                        className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 hover:bg-white/25 transition-all text-xs font-bold whitespace-nowrap"
+                    >
+                        <span className={`w-2.5 h-2.5 rounded-full ${isListening ? 'bg-red-400 animate-pulse' : 'bg-white/50'}`} />
+                        {isListening ? '録音中' : '一時停止中'}
+                        {isTranslationMode && (
+                            <span className="border-l border-white/40 pl-2 font-medium opacity-90">生徒の画面に翻訳を表示中</span>
+                        )}
+                    </button>
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <button
-                        onClick={isListening ? stopListening : startListening}
-                        title={isListening ? '録音を一時停止' : '録音を再開'}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all ${isListening
-                            ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
-                            : 'bg-white/30 hover:bg-white/40 text-white border border-white/40'
-                            }`}
-                    >
-                        {isListening ? <MicOff size={14} /> : <Mic size={14} />}
-                        {isListening ? '録音中' : '録音再開'}
-                    </button>
-
                     {isChromeDesktop && (
                         <button
                             onClick={isTranslationMode ? stopTranslationMode : startTranslationMode}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all ${isTranslationMode
-                                ? 'bg-[#c9a8e0] text-white animate-pulse'
+                            title={isTranslationMode ? '翻訳を止める' : '画面共有の音声から翻訳を始める'}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all whitespace-nowrap ${isTranslationMode
+                                ? 'bg-[#c9a8e0] text-white'
                                 : 'bg-white/20 hover:bg-white/30 text-white'
                                 }`}
                         >
                             <Zap size={14} />
-                            {isTranslationMode ? '翻訳中' : '翻訳ON'}
+                            {isTranslationMode ? '翻訳を止める' : '翻訳を始める'}
                         </button>
                     )}
 
-                    {/* 字幕PiP（Document PiP・Chrome 116+） */}
+                    {/* 字幕の小窓（共有画面に浮かべて生徒に見せる） */}
                     {isPipSupported && (
                         <button
                             onClick={isPipOpen ? closeSubtitlePip : openSubtitlePip}
-                            title={isPipOpen ? '字幕PiPを閉じる' : '字幕をフローティングウィンドウで表示（翻訳ONと組み合わせて使用）'}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all ${isPipOpen
+                            title={isPipOpen ? '字幕の小窓を閉じる' : '字幕を小窓で浮かべる（共有画面にのせて生徒に見せる）'}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all whitespace-nowrap ${isPipOpen
                                 ? 'bg-emerald-500 text-white'
                                 : 'bg-white/20 hover:bg-white/30 text-white'
                                 }`}
                         >
                             <PictureInPicture2 size={14} />
-                            {isPipOpen ? 'PiP中' : '字幕PiP'}
+                            {isPipOpen ? '字幕を閉じる' : '字幕を出す'}
                         </button>
                     )}
 
-                    {/* 即興イラスト：授業中どのタブからでも押せる */}
+                    {/* 即興イラスト（案C）：1ボタン。速い絵→丁寧な絵に差し替え提案 */}
                     <button
-                        onClick={() => generateIllustration('fast')}
-                        disabled={illustMode !== null}
-                        title="今の会話に合うイラストを約10秒で作る"
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white font-bold rounded-full text-xs transition-all disabled:opacity-50"
+                        onClick={generateIllustration}
+                        disabled={illustBusy}
+                        title="いまの会話と課に合う絵を約10秒で作る。そのあと文字まできれいな版も自動で用意"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white font-bold rounded-full text-xs transition-all disabled:opacity-50 whitespace-nowrap"
                     >
-                        {illustMode === 'fast'
+                        {illustBusy
                             ? <Loader2 size={14} className="animate-spin" />
                             : <ImagePlus size={14} />}
-                        絵を描く
-                    </button>
-                    <button
-                        onClick={() => generateIllustration('quality')}
-                        disabled={illustMode !== null}
-                        title="文字までしっかり作る。約30〜40秒かかる"
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white font-bold rounded-full text-xs transition-all disabled:opacity-50"
-                    >
-                        {illustMode === 'quality'
-                            ? <Loader2 size={14} className="animate-spin" />
-                            : <ImagePlus size={14} />}
-                        絵（きれい）
+                        絵で見せる
                     </button>
 
-                    {/* 言語セレクタ */}
+                    {/* 生徒の母国語（生徒の画面に出す翻訳の言語） */}
                     <select
                         value={studentNativeLanguage}
                         onChange={e => setStudentNativeLanguage(e.target.value)}
                         className="text-xs bg-white/20 hover:bg-white/30 text-white border-0 rounded-full px-2 py-1.5 font-bold cursor-pointer outline-none"
-                        title="生徒の母国語"
+                        title="生徒の母国語（翻訳して見せる言語）"
                     >
-                        <option value="English">🇺🇸 EN</option>
-                        <option value="Spanish">🇪🇸 ES</option>
-                        <option value="Portuguese">🇧🇷 PT</option>
-                        <option value="Korean">🇰🇷 KO</option>
-                        <option value="Chinese">🇨🇳 ZH</option>
-                        <option value="French">🇫🇷 FR</option>
-                        <option value="German">🇩🇪 DE</option>
-                        <option value="Thai">🇹🇭 TH</option>
-                        <option value="Vietnamese">🇻🇳 VI</option>
-                        <option value="Indonesian">🇮🇩 ID</option>
+                        <option value="English">英語</option>
+                        <option value="Spanish">スペイン語</option>
+                        <option value="Portuguese">ポルトガル語</option>
+                        <option value="Korean">韓国語</option>
+                        <option value="Chinese">中国語</option>
+                        <option value="French">フランス語</option>
+                        <option value="German">ドイツ語</option>
+                        <option value="Thai">タイ語</option>
+                        <option value="Vietnamese">ベトナム語</option>
+                        <option value="Indonesian">インドネシア語</option>
                     </select>
 
-                    {/* 生徒ビュー（A案: 画面共有用） */}
+                    {/* 提示ウィンドウ：Zoom等ではこの窓だけを共有する（台本や提案は生徒に見せない） */}
                     <button
                         onClick={() => window.open(`/student-view/${studentId}`, '_blank', 'width=1024,height=640,noopener')}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white font-bold rounded-full text-xs transition-all"
-                        title="生徒に見せる翻訳ビューを開く"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white font-bold rounded-full text-xs transition-all whitespace-nowrap"
+                        title="生徒に見せる専用の窓を開く。画面共有ではこの窓だけを共有する"
                     >
-                        👁 生徒ビュー
+                        👁 生徒に見せる画面
                     </button>
 
                     <button
                         onClick={finishLesson}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-[#6f5385] font-bold rounded-full hover:bg-[#f2daff] transition-colors text-xs shadow-sm"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-[#6f5385] font-bold rounded-full hover:bg-[#f2daff] transition-colors text-xs shadow-sm whitespace-nowrap ml-2"
                     >
                         <Save size={14} />
-                        終了・記録
+                        授業を終える
                     </button>
                 </div>
             </div>
@@ -1288,20 +1295,20 @@ export default function LiveLessonPage() {
                                 </div>
                             )}
 
-                            {illustMode && (
+                            {illustBusy && (
                                 <div className="h-full flex flex-col items-center justify-center py-10 gap-3">
                                     <Loader2 size={28} className="animate-spin text-[#6f5385]" />
-                                    <p className="text-sm font-bold text-[#1a1c1e]">イラストを描いています…</p>
+                                    <p className="text-sm font-bold text-[#1a1c1e]">絵を描いています…</p>
                                     <p className="text-xs text-[#4b454e]">
-                                        {illustMode === 'fast' ? '約10秒' : '約30〜40秒'}かかります。授業を続けながらお待ちください。
+                                        約10秒で出ます。授業を続けながらお待ちください。
                                     </p>
                                 </div>
                             )}
 
-                            {!illustMode && illustUrl && (
+                            {!illustBusy && illustUrl && (
                                 <div className="bg-white border border-[#c9a8e0]/30 rounded-2xl p-3 shadow-[0_0_20px_rgba(111,83,133,0.06)]">
                                     <div className="flex items-center justify-between mb-2">
-                                        <span className="text-[10px] font-bold text-[#6f5385]">🎨 生成したイラスト（{illustSec}秒）</span>
+                                        <span className="text-[10px] font-bold text-[#6f5385]">🎨 できた絵（{illustSec}秒）</span>
                                         <a
                                             href={illustUrl}
                                             download="asta-illustration.png"
@@ -1313,22 +1320,37 @@ export default function LiveLessonPage() {
                                     {/* 生成画像は data URL のため next/image ではなく素の img で表示する */}
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img src={illustUrl} alt="生成したイラスト" className="w-full rounded-xl" />
+
+                                    {/* 案C：裏で作った丁寧版ができたら差し替えを提案する */}
+                                    {qualityUrl && qualityUrl !== illustUrl && (
+                                        <button
+                                            onClick={() => { setIllustUrl(qualityUrl); }}
+                                            className="w-full mt-2 text-left text-[11px] bg-[#fdf6e7] border border-[#ecd9a8] text-[#8a6d1f] rounded-xl px-3 py-2 hover:bg-[#fbefd2] transition-colors"
+                                        >
+                                            🖌 <b className="text-[#6f5385]">文字まできれいな版</b>ができました → 押すと差し替えます
+                                        </button>
+                                    )}
+                                    {!qualityUrl && (
+                                        <p className="text-[10px] text-[#9a93a5] mt-2">
+                                            🖌 文字まできれいな版も裏で作っています（約30秒後）。できたらここでお知らせします。
+                                        </p>
+                                    )}
                                     <p className="text-[10px] text-[#4b454e] mt-2 leading-relaxed">
                                         ※ AIが作った画像です。文字が正しいか目で確かめてから生徒さんに見せてください。
                                     </p>
                                 </div>
                             )}
 
-                            {!illustMode && !illustUrl && !illustError && (
+                            {!illustBusy && !illustUrl && !illustError && (
                                 <div className="h-full flex flex-col items-center justify-center py-10 text-center gap-2">
                                     <div className="w-12 h-12 rounded-full bg-[#f2daff] flex items-center justify-center">
                                         <ImagePlus size={22} className="text-[#6f5385]" />
                                     </div>
                                     <p className="text-sm font-bold text-[#1a1c1e]">その場で絵を描く</p>
                                     <p className="text-xs text-[#4b454e] leading-relaxed max-w-xs">
-                                        画面上の「絵を描く」を押すと、いま話している内容と
-                                        生徒さんに合わせたイラストをその場で作ります。
-                                        急ぐときは「絵を描く」、しっかり作りたいときは「絵（きれい）」を。
+                                        画面上の「絵で見せる」を押すと、いま話している内容と
+                                        生徒さんに合わせた絵を約10秒で作ります。
+                                        そのあと文字まできれいな版も自動で用意し、差し替えられます。
                                     </p>
                                 </div>
                             )}
