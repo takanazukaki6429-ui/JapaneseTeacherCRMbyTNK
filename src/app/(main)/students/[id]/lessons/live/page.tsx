@@ -1061,14 +1061,12 @@ export default function LiveLessonPage() {
                 </div>
 
                 {/* 左パネル：きょうの進め方（台本） */}
-                <div className="hidden md:flex">
-                    <GuidePanel
-                        studentId={studentId}
-                        prepContent={prepContent}
-                        lessonId={selectedLessonId}
-                        onLessonChange={handleLessonChange}
-                    />
-                </div>
+                <GuidePanel
+                    studentId={studentId}
+                    prepContent={prepContent}
+                    lessonId={selectedLessonId}
+                    onLessonChange={handleLessonChange}
+                />
 
                 {/* 右エリア：授業の流れ + 翻訳ログ + チャット */}
                 <div className="flex-1 flex flex-col overflow-hidden">

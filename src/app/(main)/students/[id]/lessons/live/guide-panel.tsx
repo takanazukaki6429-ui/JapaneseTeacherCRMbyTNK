@@ -99,8 +99,9 @@ export function GuidePanel({ prepContent, lessonId, onLessonChange }: Props) {
             .trim()
             .slice(0, len);
 
+    // 台本が長くてもこの枠の中だけがスクロールする（画面全体を縦に伸ばさない）
     return (
-        <div className="w-full md:w-[320px] shrink-0 overflow-y-auto bg-white border-r border-[#f4f3f7] p-4 space-y-4">
+        <div className="hidden md:block w-[320px] shrink-0 h-full overflow-y-auto bg-white border-r border-[#f4f3f7] p-4 space-y-4">
             <div>
                 <h2 className="text-xs font-bold text-[#6f5385] tracking-wide flex items-center gap-1.5">
                     <BookOpen size={14} /> きょうの進め方
