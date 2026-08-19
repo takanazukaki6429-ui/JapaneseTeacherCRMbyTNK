@@ -940,8 +940,10 @@ export default function LiveLessonPage() {
     // ────────────────────────────────────────────
     // UI
     // ────────────────────────────────────────────
+    // 画面の高さ = 100vh − アプリ上部の帯(73px) − 本文の余白(上下24px)。
+    // ここを緩めると、下の4ボタンが画面外に押し出される
     return (
-        <div className="flex flex-col h-[calc(100vh-theme(spacing.4))] max-w-5xl mx-auto bg-white rounded-2xl shadow-[0_8px_48px_rgba(111,83,133,0.15)] overflow-hidden border border-[#c9a8e0]/20">
+        <div className="flex flex-col h-[calc(100vh-121px)] max-w-6xl mx-auto bg-white rounded-2xl shadow-[0_8px_48px_rgba(111,83,133,0.15)] overflow-hidden border border-[#c9a8e0]/20">
 
             {/* ヘッダー */}
             <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-[#6f5385] to-[#9b77b5] text-white shrink-0">
