@@ -93,6 +93,13 @@ export default function LoginPage() {
                             <div className="bg-[#fff0f0] border border-[#f4b8b8] rounded-2xl p-4 text-sm">
                                 <p className="font-bold text-[#ba1a1a] mb-1">{error.title}</p>
                                 <p className="text-[#ba1a1a]/80">{error.message}</p>
+                                {/* 次にどうすればいいかを必ず出す。用意してあるのに表示していなかったため、
+                                    使用済みコードで詰まった先生が自力で先に進めなかった（2026-08-20 実クライアントで発生） */}
+                                {error.action && (
+                                    <p className="mt-2 pt-2 border-t border-[#f4b8b8]/60 text-[#ba1a1a] font-medium">
+                                        👉 {error.action}
+                                    </p>
+                                )}
                             </div>
                         )}
                         {message && (
