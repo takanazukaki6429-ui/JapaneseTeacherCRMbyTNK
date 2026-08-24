@@ -145,6 +145,8 @@ export default function LiveLessonPage() {
 
     // 例文・練習問題・言い換え（教科書タブから4ボタンへ移設）
     const [materialBusy, setMaterialBusy] = useState<string | null>(null);
+    // 「生徒に見せた」直後だけ出す合図
+    const [shownAt, setShownAt] = useState(0);
 
     // ── 字幕PiP state（Document Picture-in-Picture）──
     const [isPipOpen, setIsPipOpen] = useState(false);
@@ -839,6 +841,13 @@ export default function LiveLessonPage() {
         return () => { stopListening(); stopTranslationMode(); };
     }, [stopListening, stopTranslationMode]);
 
+    // 生徒に見せる（画面共有方式：Zoomでは生徒画面だけを共有する）。
+    // 台本やASTAの提案は先生の手元にとどめ、押したものだけを生徒に届ける
+    const showToStudent = (payload: { kind: 'image' | 'text'; title?: string; body?: string; img?: string }) => {
+        broadcastChannelRef.current?.postMessage({ type: 'show', ...payload, timestamp: Date.now() });
+        setShownAt(Date.now());
+    };
+
     // 即興イラスト生成（案C）。先生は追加入力もモード選択もしない。
     // 速い絵（約8秒）と丁寧な絵（約35秒）を同時に作り始め、
     // 速い方を先に見せて、丁寧な方ができたら「差し替える？」と提案する。
@@ -1030,6 +1039,11 @@ export default function LiveLessonPage() {
                     >
                         👁 生徒に見せる画面
                     </button>
+                    {shownAt > 0 && Date.now() - shownAt < 4000 && (
+                        <span className="text-[10px] bg-emerald-400 text-white px-2 py-1 rounded-full font-bold whitespace-nowrap">
+                            生徒の画面に出しました
+                        </span>
+                    )}
 
                     <button
                         onClick={finishLesson}
@@ -1200,6 +1214,12 @@ export default function LiveLessonPage() {
                                                 </span>
                                             </div>
                                             <p className="text-[13px] text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">{item.text}</p>
+                                            <button
+                                                onClick={() => showToStudent({ kind: 'text', title: item.title, body: item.text })}
+                                                className="mt-2.5 inline-flex items-center gap-1 text-[10px] font-bold text-white bg-[#6f5385] hover:bg-[#5c4470] px-2.5 py-1 rounded-full transition-colors"
+                                            >
+                                                👁 生徒に見せる
+                                            </button>
                                         </div>
                                     )}
 
@@ -1208,10 +1228,18 @@ export default function LiveLessonPage() {
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="text-[10px] font-bold text-[#6f5385]">{item.title}</span>
                                                 {item.img && (
-                                                    <a href={item.img} download="asta-illustration.png"
-                                                        className="inline-flex items-center gap-1 text-[10px] text-[#6f5385] hover:underline">
-                                                        <Download size={11} />保存
-                                                    </a>
+                                                    <span className="flex items-center gap-2">
+                                                        <button
+                                                            onClick={() => showToStudent({ kind: 'image', img: item.img })}
+                                                            className="inline-flex items-center gap-1 text-[10px] font-bold text-white bg-[#6f5385] hover:bg-[#5c4470] px-2.5 py-1 rounded-full transition-colors"
+                                                        >
+                                                            👁 生徒に見せる
+                                                        </button>
+                                                        <a href={item.img} download="asta-illustration.png"
+                                                            className="inline-flex items-center gap-1 text-[10px] text-[#6f5385] hover:underline">
+                                                            <Download size={11} />保存
+                                                        </a>
+                                                    </span>
                                                 )}
                                             </div>
                                             {!item.img && (
