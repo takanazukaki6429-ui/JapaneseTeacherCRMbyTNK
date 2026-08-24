@@ -17,6 +17,18 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 
 type Subtitle = { text: string; original: string; timestamp: number };
+
+/**
+ * AIが返す文には ** や * が混ざる。生徒にそのまま見せると読みにくいので、
+ * 記号を落として素直な文章にする（2026-08-20 実機で `**` が露出して発覚）
+ */
+function readable(md: string): string {
+    return md
+        .replace(/\*\*(.+?)\*\*/g, '$1')     // **強調** → 強調
+        .replace(/^\s*[*-]\s+/gm, '・')        // 箇条書きの記号を「・」に
+        .replace(/^#{1,6}\s*/gm, '')           // 見出し記号を落とす
+        .replace(/`/g, '');
+}
 type Shown =
     | { kind: 'image'; img: string; timestamp: number }
     | { kind: 'text'; title?: string; body: string; timestamp: number };
@@ -86,7 +98,7 @@ export default function StudentViewPage() {
                         {shown.title && (
                             <p className="text-[#6f5385] font-bold text-sm mb-4">{shown.title}</p>
                         )}
-                        <p className="text-[#1a1c1e] text-2xl leading-loose whitespace-pre-wrap">{shown.body}</p>
+                        <p className="text-[#1a1c1e] text-2xl leading-loose whitespace-pre-wrap">{readable(shown.body)}</p>
                     </div>
                 )}
 

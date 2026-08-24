@@ -70,6 +70,18 @@ declare global {
 // ────────────────────────────────────────────
 // 定数
 // ────────────────────────────────────────────
+/**
+ * AIが返す文の強調記号などを落として読める形にする。
+ * 授業中に「**」が見えると読みづらく、生徒にも見せられない
+ */
+function readable(md: string): string {
+    return md
+        .replace(/\*\*(.+?)\*\*/g, '$1')
+        .replace(/^\s*[*-]\s+/gm, '・')
+        .replace(/^#{1,6}\s*/gm, '')
+        .replace(/`/g, '');
+}
+
 const CHAR_TRIGGER = 100;   // 100文字ごとに自動分析
 const EXCHANGE_TRIGGER = 3; // 3発言ごとに自動分析
 
@@ -1165,7 +1177,7 @@ export default function LiveLessonPage() {
                                 <div key={item.id}>
                                     {item.kind === 'said' && (
                                         <div className="max-w-[80%] bg-white border border-[#f4f3f7] rounded-2xl px-3.5 py-2">
-                                            <p className="text-[13px] text-[#1a1c1e] leading-relaxed">{item.text}</p>
+                                            <p className="text-[13px] text-[#1a1c1e] leading-relaxed">{readable(item.text ?? '')}</p>
                                             <p className="text-[9px] text-[#b3adc0] mt-0.5">
                                                 {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                                             </p>
@@ -1180,13 +1192,13 @@ export default function LiveLessonPage() {
                                                     {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
-                                            <p className="text-[13px] text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">{item.text}</p>
+                                            <p className="text-[13px] text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">{readable(item.text ?? '')}</p>
                                         </div>
                                     )}
 
                                     {item.kind === 'asked' && (
                                         <div className="ml-auto max-w-[75%] bg-gradient-to-br from-[#6f5385] to-[#9b77b5] text-white rounded-2xl rounded-tr-none px-3.5 py-2">
-                                            <p className="text-[13px] leading-relaxed">{item.text}</p>
+                                            <p className="text-[13px] leading-relaxed">{readable(item.text ?? '')}</p>
                                             <p className="text-[9px] text-white/60 mt-0.5">
                                                 あなたの質問 · {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                                             </p>
@@ -1201,7 +1213,7 @@ export default function LiveLessonPage() {
                                                     {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
-                                            <p className="text-[13px] text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">{item.text}</p>
+                                            <p className="text-[13px] text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">{readable(item.text ?? '')}</p>
                                         </div>
                                     )}
 
@@ -1213,9 +1225,9 @@ export default function LiveLessonPage() {
                                                     {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
-                                            <p className="text-[13px] text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">{item.text}</p>
+                                            <p className="text-[13px] text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">{readable(item.text ?? '')}</p>
                                             <button
-                                                onClick={() => showToStudent({ kind: 'text', title: item.title, body: item.text })}
+                                                onClick={() => showToStudent({ kind: 'text', title: item.title, body: readable(item.text ?? '') })}
                                                 className="mt-2.5 inline-flex items-center gap-1 text-[10px] font-bold text-white bg-[#6f5385] hover:bg-[#5c4470] px-2.5 py-1 rounded-full transition-colors"
                                             >
                                                 👁 生徒に見せる
