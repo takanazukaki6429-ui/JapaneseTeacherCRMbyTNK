@@ -25,7 +25,9 @@ type FlowItem = {
         | 'suggest'       // ASTAからの提案（進め方）
         | 'translate-help'// ASTAからの提案（ことばの補助）
         | 'illust'        // 生成した絵（案C：速い版→丁寧版に差し替え）
-        | 'material';     // 例文・練習問題・言い換え
+        | 'material'      // 例文・練習問題・言い換え
+        | 'asked'         // 先生が手で聞いた質問（旧・手動チャット）
+        | 'answer';       // その答え
     text?: string;
     title?: string;
     img?: string;          // illust: 表示中の絵
@@ -84,7 +86,7 @@ export default function LiveLessonPage() {
     // ── 既存state ──
     const [prepContent, setPrepContent] = useState<PrepContent | null>(null);
     // タブは3つ：流れ（授業の本線）／翻訳ログ（確認用）／チャット（手で聞きたい時）
-    const [activeTab, setActiveTab] = useState<'flow' | 'translation' | 'chat'>('flow');
+    const [activeTab, setActiveTab] = useState<'flow' | 'translation'>('flow');
 
     // ── 授業の流れ（中央フィード）──
     const [flow, setFlow] = useState<FlowItem[]>([]);
@@ -572,7 +574,9 @@ export default function LiveLessonPage() {
         setMessages(prev => [...prev, userMsg]);
         setInput('');
         setIsTyping(true);
-        setActiveTab('chat');
+        setActiveTab('flow');
+        // 授業の流れに質問を積む（2026-08-20：チャットタブを廃止し流れに統合）
+        addFlow({ kind: 'asked', text: userContent });
 
         try {
             await supabase.from('lesson_chat_logs').insert({
@@ -599,6 +603,7 @@ export default function LiveLessonPage() {
             const data = await res.json();
             const aiContent = data.text;
             setMessages(prev => [...prev, { role: 'assistant', content: aiContent }]);
+            addFlow({ kind: 'answer', title: '💬 質問への答え', text: aiContent });
 
             await supabase.from('lesson_chat_logs').insert({
                 student_id: studentId,
@@ -609,6 +614,7 @@ export default function LiveLessonPage() {
         } catch (err) {
             console.error('Chat Error:', err);
             setMessages(prev => [...prev, { role: 'assistant', content: 'エラーが発生しました。もう一度お試しください。' }]);
+            addFlow({ kind: 'answer', title: '💬 質問への答え', text: '答えを作れませんでした。もう一度お試しください。' });
         } finally {
             setIsTyping(false);
         }
@@ -1040,7 +1046,7 @@ export default function LiveLessonPage() {
 
                 {/* タブ（モバイル） */}
                 <div className="md:hidden flex border-b border-[#f4f3f7]">
-                    {(['flow', 'translation', 'chat'] as const).map((tab) => (
+                    {(['flow', 'translation'] as const).map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -1057,7 +1063,6 @@ export default function LiveLessonPage() {
                                     )}
                                 </span>
                             )}
-                            {tab === 'chat' && '💬 チャット'}
                         </button>
                     ))}
                 </div>
@@ -1099,16 +1104,6 @@ export default function LiveLessonPage() {
                                     {liveTranslations.length}
                                 </span>
                             )}
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('chat')}
-                            className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${
-                                activeTab === 'chat'
-                                    ? 'text-[#6f5385] border-[#6f5385]'
-                                    : 'text-[#4b454e] border-transparent hover:text-[#1a1c1e]'
-                            }`}
-                        >
-                            💬 チャット
                         </button>
                         <div className="ml-auto flex items-center gap-2 px-3 text-xs">
                             {isAnalyzing && (
@@ -1165,6 +1160,27 @@ export default function LiveLessonPage() {
 
                                     {(item.kind === 'suggest' || item.kind === 'translate-help') && (
                                         <div className="ml-auto max-w-[88%] bg-[#fdf8ff] border-[1.5px] border-[#c9a8e0] rounded-2xl p-3.5 shadow-[0_4px_18px_rgba(111,83,133,0.10)]">
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <span className="text-[10px] font-bold text-[#6f5385]">{item.title}</span>
+                                                <span className="text-[9px] text-[#b3adc0]">
+                                                    {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                            <p className="text-[13px] text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">{item.text}</p>
+                                        </div>
+                                    )}
+
+                                    {item.kind === 'asked' && (
+                                        <div className="ml-auto max-w-[75%] bg-gradient-to-br from-[#6f5385] to-[#9b77b5] text-white rounded-2xl rounded-tr-none px-3.5 py-2">
+                                            <p className="text-[13px] leading-relaxed">{item.text}</p>
+                                            <p className="text-[9px] text-white/60 mt-0.5">
+                                                あなたの質問 · {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {item.kind === 'answer' && (
+                                        <div className="max-w-[88%] bg-white border border-[#c9a8e0]/40 rounded-2xl rounded-tl-none p-3.5 shadow-[0_4px_18px_rgba(111,83,133,0.08)]">
                                             <div className="flex items-center justify-between mb-1.5">
                                                 <span className="text-[10px] font-bold text-[#6f5385]">{item.title}</span>
                                                 <span className="text-[9px] text-[#b3adc0]">
@@ -1285,6 +1301,26 @@ export default function LiveLessonPage() {
                                     </button>
                                 ))}
                             </div>
+
+                            {/* 聞きたい時だけ使う入力欄。授業中の入力は不要だが、
+                                聞きたくなったらここで聞ける（2026-08-20 チャットタブを統合） */}
+                            <form onSubmit={handleSendMessage} className="flex items-center gap-2 mt-2.5">
+                                <input
+                                    type="text"
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    placeholder="聞きたいことがあれば（例：「〜と〜の違いは？」）"
+                                    className="flex-1 px-3.5 py-2 bg-[#faf9fd] border border-[#f4f3f7] rounded-full outline-none focus:border-[#c9a8e0] text-xs text-[#1a1c1e]"
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={!input.trim() || isTyping}
+                                    title="ASTAに聞く"
+                                    className="p-2 bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] text-white rounded-full disabled:opacity-40 transition-opacity shadow-sm shrink-0"
+                                >
+                                    {isTyping ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+                                </button>
+                            </form>
                         </div>
                     </div>
                     {/* 🌐 翻訳パネル */}
@@ -1381,62 +1417,6 @@ export default function LiveLessonPage() {
                         </div>
                     </div>
 
-                    {/* 💬 手動チャットパネル */}
-                    <div className={`flex-1 flex flex-col bg-white ${activeTab === 'chat' ? 'flex' : 'hidden'}`}>
-                        <div className="px-4 py-2 border-b border-[#f4f3f7] bg-[#faf9fd] flex justify-between items-center shrink-0">
-                            <span className="text-xs font-bold text-[#4b454e] uppercase tracking-wider flex items-center gap-1">
-                                <Sparkles size={12} className="text-[#6f5385]" /> 手動チャット
-                            </span>
-                            {messages.length > 0 && (
-                                <button onClick={() => setMessages([])} className="text-xs text-[#4b454e] hover:text-red-500 flex items-center gap-1">
-                                    <X size={12} /> Clear
-                                </button>
-                            )}
-                        </div>
-                        <div className="flex-1 overflow-y-auto p-3 space-y-3">
-                            {messages.length === 0 && (
-                                <p className="text-xs text-[#4b454e]/50 text-center py-4">「〜の例文を作って」など手動で質問できます</p>
-                            )}
-                            {messages.map((msg, i) => (
-                                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-xs ${msg.role === 'user'
-                                        ? 'bg-gradient-to-br from-[#6f5385] to-[#9b77b5] text-white rounded-tr-none'
-                                        : 'bg-[#f4f3f7] text-[#1a1c1e] rounded-tl-none'
-                                        }`}>
-                                        {msg.content}
-                                    </div>
-                                </div>
-                            ))}
-                            {isTyping && (
-                                <div className="flex justify-start">
-                                    <div className="bg-[#f4f3f7] rounded-2xl rounded-tl-none px-3 py-2 flex items-center gap-1">
-                                        {[0, 150, 300].map((d) => (
-                                            <span key={d} className="w-1.5 h-1.5 bg-[#c9a8e0] rounded-full animate-bounce" style={{ animationDelay: `${d}ms` }} />
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                            <div ref={messagesEndRef} />
-                        </div>
-                        <div className="p-3 border-t border-[#f4f3f7] bg-[#faf9fd] shrink-0">
-                            <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-                                <input
-                                    type="text"
-                                    value={input}
-                                    onChange={(e) => setInput(e.target.value)}
-                                    placeholder="AIに質問する…"
-                                    className="flex-1 px-3 py-2 bg-white border border-[#f4f3f7] rounded-full outline-none focus:border-[#c9a8e0] text-xs text-[#1a1c1e]"
-                                />
-                                <button
-                                    type="submit"
-                                    disabled={!input.trim() || isTyping}
-                                    className="p-2 bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] text-white rounded-full disabled:opacity-50 transition-opacity shadow-sm"
-                                >
-                                    <Send size={15} />
-                                </button>
-                            </form>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
