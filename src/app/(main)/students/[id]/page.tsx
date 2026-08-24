@@ -30,6 +30,7 @@ export default async function StudentDetailPage({ params }: Props) {
         <div className="space-y-5 max-w-4xl mx-auto">
             {/* Back */}
             <Link
+                    prefetch
                 href="/students"
                 className="inline-flex items-center gap-1.5 text-sm text-[#4b454e] hover:text-[#1a1c1e] transition-colors"
             >
@@ -62,6 +63,7 @@ export default async function StudentDetailPage({ params }: Props) {
                 </div>
                 <div className="flex items-center gap-2">
                     <Link
+                    prefetch
                         href={`/students/${student.id}/edit`}
                         className="p-2 text-[#4b454e] hover:text-[#6f5385] hover:bg-[#f2daff] rounded-full transition-colors"
                         title="生徒情報を編集"
@@ -75,6 +77,7 @@ export default async function StudentDetailPage({ params }: Props) {
             {/* B案 アクションボタン — フロー順 */}
             <div className="grid grid-cols-4 gap-3">
                 <Link
+                    prefetch
                     href={`/students/${student.id}/lessons/prepare`}
                     className="group flex flex-col items-center gap-2.5 p-4 bg-white rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] hover:shadow-[0_8px_40px_rgba(111,83,133,0.12)] hover:-translate-y-1 transition-all text-center"
                 >
@@ -86,6 +89,7 @@ export default async function StudentDetailPage({ params }: Props) {
                 </Link>
 
                 <Link
+                    prefetch
                     href={`/students/${student.id}/lessons/live`}
                     className="group flex flex-col items-center gap-2.5 p-4 bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] rounded-2xl shadow-[0_4px_20px_rgba(111,83,133,0.25)] hover:-translate-y-1 transition-all text-center"
                 >
@@ -97,6 +101,7 @@ export default async function StudentDetailPage({ params }: Props) {
                 </Link>
 
                 <Link
+                    prefetch
                     href={`/students/${student.id}/lessons/new`}
                     className="group flex flex-col items-center gap-2.5 p-4 bg-white rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] hover:shadow-[0_8px_40px_rgba(111,83,133,0.12)] hover:-translate-y-1 transition-all text-center"
                 >
@@ -108,6 +113,7 @@ export default async function StudentDetailPage({ params }: Props) {
                 </Link>
 
                 <Link
+                    prefetch
                     href={`/students/${student.id}/roadmap`}
                     className="group flex flex-col items-center gap-2.5 p-4 bg-white rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] hover:shadow-[0_8px_40px_rgba(111,83,133,0.12)] hover:-translate-y-1 transition-all text-center"
                 >
@@ -181,6 +187,7 @@ export default async function StudentDetailPage({ params }: Props) {
                                         初回ヒアリング済み
                                     </div>
                                     <Link
+                    prefetch
                                         href={`/students/${student.id}/initial-hearing`}
                                         className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-[#f0fdf4] text-emerald-700 text-sm font-bold rounded-xl border border-emerald-200 hover:bg-emerald-50 transition-colors"
                                     >
@@ -190,6 +197,7 @@ export default async function StudentDetailPage({ params }: Props) {
                                 </div>
                             ) : (
                                 <Link
+                    prefetch
                                     href={`/students/${student.id}/initial-hearing`}
                                     className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-gradient-to-r from-[#6f5385] to-[#c9a8e0] text-white text-sm font-bold rounded-xl hover:scale-[1.01] transition-transform"
                                 >
@@ -198,6 +206,7 @@ export default async function StudentDetailPage({ params }: Props) {
                                 </Link>
                             )}
                             <Link
+                    prefetch
                                 href={`/students/${student.id}/lessons/prepare`}
                                 className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-[#f2daff] text-[#6f5385] text-sm font-bold rounded-xl hover:bg-[#e8c8ff] transition-colors"
                             >
