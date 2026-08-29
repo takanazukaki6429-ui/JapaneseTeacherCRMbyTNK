@@ -89,11 +89,17 @@ export function GuidePanel({ prepContent, lessonId, onLessonChange }: Props) {
 
     const selected = lessons.find(l => l.id === lessonId);
 
-    // 本文の見た目を整える：画像参照と記号を落として読める文にする
+    // 本文の見た目を整える：画像参照と記号を落として読める文にする。
+    // 教材の原文は生徒向けでふりがな（漢字（かんじ））が埋まっているが、
+    // この台本を読むのは日本人の先生なので落とす（2026-08-25 かずき指摘）。
+    // 直前が漢字＋括弧内がひらがなのみ、の組だけを消すので、
+    // 練習問題の選択肢（あ）（い）や英語の併記（English）は消えない
     const preview = (md: string, len: number) =>
         md.split('\n')
             .filter(l => !l.trim().startsWith('!['))
             .join(' ')
+            .replace(/([一-龥々ヶ]+)（[ぁ-んー]+）/g, '$1')
+            .replace(/([一-龥々ヶ]+)\([ぁ-んー]+\)/g, '$1')
             .replace(/[#*|>-]/g, ' ')
             .replace(/\s+/g, ' ')
             .trim()
