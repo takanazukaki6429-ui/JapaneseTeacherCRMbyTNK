@@ -52,6 +52,14 @@ type Props = {
     onLessonChange: (id: string) => void;
 };
 
+// 生徒向け原文に埋まっているふりがな「漢字（かんじ）」を落とす。
+// 直前が漢字＋括弧内ひらがなのみの組だけが対象（選択肢（あ）や英語併記は残る）
+function stripFurigana(text: string): string {
+    return text
+        .replace(/([一-龥々ヶ]+)（[ぁ-んー]+）/g, '$1')
+        .replace(/([一-龥々ヶ]+)\([ぁ-んー]+\)/g, '$1');
+}
+
 export function GuidePanel({ prepContent, lessonId, onLessonChange }: Props) {
     const [level, setLevel] = useState('N5');
     const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -95,11 +103,11 @@ export function GuidePanel({ prepContent, lessonId, onLessonChange }: Props) {
     // 直前が漢字＋括弧内がひらがなのみ、の組だけを消すので、
     // 練習問題の選択肢（あ）（い）や英語の併記（English）は消えない
     const preview = (md: string, len: number) =>
-        md.split('\n')
-            .filter(l => !l.trim().startsWith('!['))
-            .join(' ')
-            .replace(/([一-龥々ヶ]+)（[ぁ-んー]+）/g, '$1')
-            .replace(/([一-龥々ヶ]+)\([ぁ-んー]+\)/g, '$1')
+        stripFurigana(
+            md.split('\n')
+                .filter(l => !l.trim().startsWith('!['))
+                .join(' ')
+        )
             .replace(/[#*|>-]/g, ' ')
             .replace(/\s+/g, ' ')
             .trim()
@@ -151,7 +159,7 @@ export function GuidePanel({ prepContent, lessonId, onLessonChange }: Props) {
                     <option value="">今日の課を選ぶ…</option>
                     {lessons.map(l => (
                         <option key={l.id} value={l.id}>
-                            {l.lesson_label ?? `第${l.lesson_number}課`}：{l.title.slice(0, 30)}
+                            {l.lesson_label ?? `第${l.lesson_number}課`}：{stripFurigana(l.title).slice(0, 30)}
                         </option>
                     ))}
                 </select>
