@@ -27,11 +27,14 @@ type FlowItem = {
         | 'illust'        // 生成した絵（案C：速い版→丁寧版に差し替え）
         | 'material'      // 例文・練習問題・言い換え
         | 'asked'         // 先生が手で聞いた質問（旧・手動チャット）
-        | 'answer';       // その答え
+        | 'answer'        // その答え
+        | 'textbook';     // 教科書のページ（台本のステップを開くと流れに入る）
     text?: string;
     title?: string;
+    translation?: string;  // said: 発話の母語訳（あとから届く）
     img?: string;          // illust: 表示中の絵
     imgQuality?: string;   // illust: 裏で作った丁寧版（未差し替え時のみ保持）
+    imgs?: string[];       // textbook: ページの画像
     ts: Date;
 };
 
@@ -158,8 +161,7 @@ export default function LiveLessonPage() {
 
     // 例文・練習問題・言い換え（教科書タブから4ボタンへ移設）
     const [materialBusy, setMaterialBusy] = useState<string | null>(null);
-    // 「生徒に見せた」直後だけ出す合図
-    const [shownAt, setShownAt] = useState(0);
+
 
     // ── 字幕PiP state（Document Picture-in-Picture）──
     const [isPipOpen, setIsPipOpen] = useState(false);
@@ -330,11 +332,12 @@ export default function LiveLessonPage() {
     // ────────────────────────────────────────────
     // 生徒向け翻訳（先生の日本語 → 生徒の母国語）
     // ────────────────────────────────────────────
-    const translateForStudent = useCallback((japaneseText: string) => {
+    // 発話の吹き出しに母語訳を後付けする（共有前提の1画面設計・2026-08-25）。
+    // 生徒も同じ画面を見るので、日本語の吹き出しの下に訳が届く。
+    // 原文と訳が必ず同じ吹き出しで揃うよう、吹き出し確定の単位で訳す
+    const translateSaid = useCallback((flowId: number, japaneseText: string) => {
         if (!japaneseText.trim()) return;
-        // デバウンス（直近400ms以内に新しいチャンクが来たらリセット）
-        if (translateDebounceRef.current) clearTimeout(translateDebounceRef.current);
-        translateDebounceRef.current = setTimeout(async () => {
+        (async () => {
             try {
                 const res = await fetch('/api/ai', {
                     method: 'POST',
@@ -349,7 +352,8 @@ export default function LiveLessonPage() {
                 const data = await res.json();
                 const translated = (data.text ?? '').trim();
                 if (translated) {
-                    // A案: BroadcastChannel で生徒ビューに送信（同デバイス）
+                    patchFlow(flowId, { translation: translated });
+                    // 旧・生徒ビューを開いている場合にも一応流す（互換・無害）
                     broadcastChannelRef.current?.postMessage({
                         type: 'translation',
                         text: translated,
@@ -358,8 +362,8 @@ export default function LiveLessonPage() {
                     });
                 }
             } catch { /* silent - 翻訳はベストエフォート */ }
-        }, 400);
-    }, []); // refs のみ参照するため依存なし
+        })();
+    }, [patchFlow]); // refs のみ参照するため依存は patchFlow だけ
 
     // ────────────────────────────────────────────
     // 案Y：自動分析トリガー
@@ -440,7 +444,7 @@ export default function LiveLessonPage() {
                         ...prev.slice(0, 4),
                     ]);
                     // ASTAが自分から名乗り出る：流れに提案カードとして出す
-                    addFlow({ kind: 'suggest', title: '🤖 ASTAからの提案（進め方）', text: courseText });
+                    addFlow({ kind: 'suggest', title: '💡 ヒント（進め方）', text: courseText });
                 }
 
                 // R-2: AI翻訳補助サジェスト（ことばの補助）も流れに出す
@@ -449,7 +453,7 @@ export default function LiveLessonPage() {
                         { id, text: translationText, timestamp: now },
                         ...prev.slice(0, 4),
                     ]);
-                    addFlow({ kind: 'translate-help', title: '🤖 ASTAからの提案（ことばの補助）', text: translationText });
+                    addFlow({ kind: 'translate-help', title: '💡 ことばのヒント', text: translationText });
                 }
             }
         } catch (err) {
@@ -505,18 +509,21 @@ export default function LiveLessonPage() {
                 const buf = saidBufferRef.current;
                 if (saidFlushTimerRef.current) clearTimeout(saidFlushTimerRef.current);
                 if (/[。？！?!]\s*$/.test(buf) || buf.length >= 20) {
-                    addFlow({ kind: 'said', text: buf.trim() });
+                    const id = addFlow({ kind: 'said', text: buf.trim() });
+                    translateSaid(id, buf.trim());
                     saidBufferRef.current = '';
                 } else {
                     saidFlushTimerRef.current = setTimeout(() => {
                         const rest = saidBufferRef.current.trim();
-                        if (rest) { addFlow({ kind: 'said', text: rest }); saidBufferRef.current = ''; }
+                        if (rest) {
+                            const id = addFlow({ kind: 'said', text: rest });
+                            translateSaid(id, rest);
+                            saidBufferRef.current = '';
+                        }
                     }, 2000);
                 }
 
-                // 生徒向けリアルタイム翻訳（A案: BroadcastChannel）
-                translateForStudent(newFinal);
-
+                
                 // トリガーカウント更新
                 charsSinceLastTrigger.current += newFinal.length;
                 exchangesSinceLastTrigger.current += 1;
@@ -562,7 +569,7 @@ export default function LiveLessonPage() {
         recognitionRef.current = recognition;
         recognition.start();
         setIsListening(true);
-    }, [triggerAnalysis, translateForStudent]);
+    }, [triggerAnalysis, translateSaid]);
 
     const stopListening = useCallback(() => {
         if (recognitionRef.current) {
@@ -861,13 +868,6 @@ export default function LiveLessonPage() {
         return () => { stopListening(); stopTranslationMode(); };
     }, [stopListening, stopTranslationMode]);
 
-    // 生徒に見せる（画面共有方式：Zoomでは生徒画面だけを共有する）。
-    // 台本やASTAの提案は先生の手元にとどめ、押したものだけを生徒に届ける
-    const showToStudent = (payload: { kind: 'image' | 'text'; title?: string; body?: string; img?: string }) => {
-        broadcastChannelRef.current?.postMessage({ type: 'show', ...payload, timestamp: Date.now() });
-        setShownAt(Date.now());
-    };
-
     // 即興イラスト生成（案C）。先生は追加入力もモード選択もしない。
     // 速い絵（約8秒）と丁寧な絵（約35秒）を同時に作り始め、
     // 速い方を先に見せて、丁寧な方ができたら「差し替える？」と提案する。
@@ -1051,19 +1051,7 @@ export default function LiveLessonPage() {
                         <option value="Indonesian">インドネシア語</option>
                     </select>
 
-                    {/* 提示ウィンドウ：Zoom等ではこの窓だけを共有する（台本や提案は生徒に見せない） */}
-                    <button
-                        onClick={() => window.open(`/student-view/${studentId}`, '_blank', 'width=1024,height=640,noopener')}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white font-bold rounded-full text-xs transition-all whitespace-nowrap"
-                        title="生徒に見せる専用の窓を開く。画面共有ではこの窓だけを共有する"
-                    >
-                        👁 生徒に見せる画面
-                    </button>
-                    {shownAt > 0 && Date.now() - shownAt < 4000 && (
-                        <span className="text-[10px] bg-emerald-400 text-white px-2 py-1 rounded-full font-bold whitespace-nowrap">
-                            生徒の画面に出しました
-                        </span>
-                    )}
+
 
                     <button
                         onClick={finishLesson}
@@ -1107,6 +1095,15 @@ export default function LiveLessonPage() {
                     prepContent={prepContent}
                     lessonId={selectedLessonId}
                     onLessonChange={handleLessonChange}
+                    onStepOpen={pg => {
+                        setActiveTab('flow');
+                        addFlow({
+                            kind: 'textbook',
+                            title: `📖 ${pg.lessonLabel}　${pg.stepTitle}`,
+                            text: pg.body,
+                            imgs: pg.imageUrls,
+                        });
+                    }}
                 />
 
                 {/* 右エリア：授業の流れ + 翻訳ログ + チャット */}
@@ -1184,8 +1181,11 @@ export default function LiveLessonPage() {
                             {flow.map(item => (
                                 <div key={item.id}>
                                     {item.kind === 'said' && (
-                                        <div className="max-w-[80%] bg-white border border-[#f4f3f7] rounded-2xl px-3.5 py-2">
-                                            <p className="text-[13px] text-[#1a1c1e] leading-relaxed">{readable(item.text ?? '')}</p>
+                                        <div className="max-w-[85%] bg-white border border-[#f4f3f7] rounded-2xl px-4 py-2.5">
+                                            <p className="text-lg text-[#1a1c1e] font-bold leading-relaxed">💬 {readable(item.text ?? '')}</p>
+                                            {item.translation && (
+                                                <p className="text-sm text-[#6f5385] mt-1 leading-relaxed">{item.translation}</p>
+                                            )}
                                             <p className="text-[9px] text-[#b3adc0] mt-0.5">
                                                 {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                                             </p>
@@ -1225,6 +1225,24 @@ export default function LiveLessonPage() {
                                         </div>
                                     )}
 
+                                    {item.kind === 'textbook' && (
+                                        <div className="bg-white border-2 border-[#c9a8e0]/50 rounded-2xl p-5 shadow-[0_4px_18px_rgba(111,83,133,0.10)]">
+                                            <p className="text-xs font-bold text-[#6f5385] mb-2">{item.title}</p>
+                                            {/* 教科書の原文は生徒向け（ふりがな付き）のまま、生徒も読める大きさで */}
+                                            <p className="text-base text-[#1a1c1e] leading-loose whitespace-pre-wrap">
+                                                {readable((item.text ?? '').split('\n').filter(l => !l.trim().startsWith('![')).join('\n')).trim().slice(0, 1200)}
+                                            </p>
+                                            {(item.imgs ?? []).length > 0 && (
+                                                <div className="grid grid-cols-2 gap-3 mt-4">
+                                                    {(item.imgs ?? []).map((u, i) => (
+                                                        // eslint-disable-next-line @next/next/no-img-element
+                                                        <img key={i} src={u} alt="" className="w-full rounded-xl" />
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
                                     {item.kind === 'material' && (
                                         <div className="ml-auto max-w-[88%] bg-white border border-[#c9a8e0]/40 rounded-2xl p-3.5 shadow-[0_4px_18px_rgba(111,83,133,0.08)]">
                                             <div className="flex items-center justify-between mb-1.5">
@@ -1234,12 +1252,6 @@ export default function LiveLessonPage() {
                                                 </span>
                                             </div>
                                             <p className="text-[13px] text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">{readable(item.text ?? '')}</p>
-                                            <button
-                                                onClick={() => showToStudent({ kind: 'text', title: item.title, body: readable(item.text ?? '') })}
-                                                className="mt-2.5 inline-flex items-center gap-1 text-[10px] font-bold text-white bg-[#6f5385] hover:bg-[#5c4470] px-2.5 py-1 rounded-full transition-colors"
-                                            >
-                                                👁 生徒に見せる
-                                            </button>
                                         </div>
                                     )}
 
@@ -1248,18 +1260,10 @@ export default function LiveLessonPage() {
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="text-[10px] font-bold text-[#6f5385]">{item.title}</span>
                                                 {item.img && (
-                                                    <span className="flex items-center gap-2">
-                                                        <button
-                                                            onClick={() => showToStudent({ kind: 'image', img: item.img })}
-                                                            className="inline-flex items-center gap-1 text-[10px] font-bold text-white bg-[#6f5385] hover:bg-[#5c4470] px-2.5 py-1 rounded-full transition-colors"
-                                                        >
-                                                            👁 生徒に見せる
-                                                        </button>
-                                                        <a href={item.img} download="asta-illustration.png"
-                                                            className="inline-flex items-center gap-1 text-[10px] text-[#6f5385] hover:underline">
-                                                            <Download size={11} />保存
-                                                        </a>
-                                                    </span>
+                                                    <a href={item.img} download="asta-illustration.png"
+                                                        className="inline-flex items-center gap-1 text-[10px] text-[#6f5385] hover:underline">
+                                                        <Download size={11} />保存
+                                                    </a>
                                                 )}
                                             </div>
                                             {!item.img && (
@@ -1357,7 +1361,7 @@ export default function LiveLessonPage() {
                                     type="text"
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
-                                    placeholder="聞きたいことがあれば（例：「〜と〜の違いは？」）"
+                                    placeholder="聞きたいことがあれば（画面共有中は生徒にも見えます）"
                                     className="flex-1 px-3.5 py-2 bg-[#faf9fd] border border-[#f4f3f7] rounded-full outline-none focus:border-[#c9a8e0] text-xs text-[#1a1c1e]"
                                 />
                                 <button

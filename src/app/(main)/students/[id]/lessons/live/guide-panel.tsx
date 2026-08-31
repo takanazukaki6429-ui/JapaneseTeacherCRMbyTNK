@@ -9,7 +9,7 @@
  * - 中：今日の課を選ぶ → その課の流れがステップとして並ぶ
  * - ステップを押すと中身がその場で開く（別画面に飛ばない）
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { BookOpen, ExternalLink, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
@@ -52,6 +52,8 @@ type Props = {
     prepContent: PrepContent | null;
     lessonId: string;
     onLessonChange: (id: string) => void;
+    /** ステップを開いたとき、教科書ページを授業の流れに入れる（共有前提の1画面設計） */
+    onStepOpen: (page: { lessonLabel: string; stepTitle: string; body: string; imageUrls: string[] }) => void;
 };
 
 // 生徒向け原文に埋まっているふりがな「漢字（かんじ）」を落とす。
@@ -62,17 +64,8 @@ function stripFurigana(text: string): string {
         .replace(/([一-龥々ヶ]+)\([ぁ-んー]+\)/g, '$1');
 }
 
-export function GuidePanel({ studentId, prepContent, lessonId, onLessonChange }: Props) {
+export function GuidePanel({ prepContent, lessonId, onLessonChange, onStepOpen }: Props) {
     const [level, setLevel] = useState('N5');
-    // 生徒画面（電子教科書）への同期。ステップを開くと同じ場所が生徒側でもめくれる。
-    // 生徒画面はログイン無しで開くため、教科書の中身は認証済みのこちら側から送る
-    const channelRef = useRef<BroadcastChannel | null>(null);
-    useEffect(() => {
-        if (!studentId || typeof window === 'undefined') return;
-        const ch = new BroadcastChannel(`asta-live-${studentId}`);
-        channelRef.current = ch;
-        return () => { ch.close(); channelRef.current = null; };
-    }, [studentId]);
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [sections, setSections] = useState<Section[]>([]);
     const [openStep, setOpenStep] = useState<number | null>(null);
@@ -134,10 +127,12 @@ export function GuidePanel({ studentId, prepContent, lessonId, onLessonChange }:
                 <p className="text-[10px] text-[#9a93a5] mt-0.5">次に何をやるかはここを見る</p>
             </div>
 
-            {/* 準備データ（あれば最初にやること） */}
+            {/* 準備データ：攻略メモなので折りたたみ。開くと画面共有中は生徒にも見える */}
             {prepContent && (
-                <div className="bg-[#f2daff]/50 rounded-2xl p-3 space-y-2">
-                    <p className="text-[10px] font-bold text-[#6f5385]">最初にやる（前回のつづき）</p>
+                <details className="bg-[#f2daff]/50 rounded-2xl p-3 space-y-2">
+                    <summary className="text-[10px] font-bold text-[#6f5385] cursor-pointer select-none">
+                        授業前のメモ（押すと開く・画面共有中は生徒にも見えます）
+                    </summary>
                     {prepContent.review_quiz?.slice(0, 2).map((q, i) => (
                         <div key={i} className="text-xs">
                             <p className="font-bold text-[#1a1c1e]">Q. {q.question}</p>
@@ -150,7 +145,7 @@ export function GuidePanel({ studentId, prepContent, lessonId, onLessonChange }:
                             {prepContent.intro_topic.slice(0, 80)}
                         </p>
                     )}
-                </div>
+                </details>
             )}
 
             {/* 課の選択 */}
@@ -203,7 +198,7 @@ export function GuidePanel({ studentId, prepContent, lessonId, onLessonChange }:
                             onClick={() => {
                                 const next = openStep === i ? null : i;
                                 setOpenStep(next);
-                                // 開いたステップを生徒の電子教科書にも表示する
+                                // 開いたステップは教科書ページとして授業の流れにも入る
                                 if (next !== null) {
                                     const sec = sections[i];
                                     const lesson = lessons.find(l => l.id === lessonId);
@@ -211,13 +206,11 @@ export function GuidePanel({ studentId, prepContent, lessonId, onLessonChange }:
                                         ? `${lesson.jlpt_level}/${lesson.lesson_number}${lesson.lesson_sub ? `-${lesson.lesson_sub}` : ''}`
                                         : '';
                                     const base = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${MASTER_MATERIAL_BUCKET}/${lessonPath}`;
-                                    channelRef.current?.postMessage({
-                                        type: 'page',
+                                    onStepOpen({
                                         lessonLabel: lesson ? `${lesson.lesson_label ?? `第${lesson.lesson_number}課`}` : '',
                                         stepTitle: SECTION_LABELS[sec.section_type],
                                         body: sec.content_md,
                                         imageUrls: (sec.images ?? []).slice(0, 4).map(f => `${base}/${f}`),
-                                        timestamp: Date.now(),
                                     });
                                 }
                             }}
