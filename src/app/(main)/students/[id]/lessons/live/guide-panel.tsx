@@ -9,12 +9,13 @@
  * - 中：今日の課を選ぶ → その課の流れがステップとして並ぶ
  * - ステップを押すと中身がその場で開く（別画面に飛ばない）
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { BookOpen, ExternalLink, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import {
     SECTION_LABELS,
+    MASTER_MATERIAL_BUCKET,
     type SectionType,
 } from '@/types/master-material';
 
@@ -31,6 +32,7 @@ type Section = {
     section_type: SectionType;
     section_order: number;
     content_md: string;
+    images: string[] | null;
 };
 
 type KeyPoint = { question: string; answer: string };
@@ -60,8 +62,17 @@ function stripFurigana(text: string): string {
         .replace(/([一-龥々ヶ]+)\([ぁ-んー]+\)/g, '$1');
 }
 
-export function GuidePanel({ prepContent, lessonId, onLessonChange }: Props) {
+export function GuidePanel({ studentId, prepContent, lessonId, onLessonChange }: Props) {
     const [level, setLevel] = useState('N5');
+    // 生徒画面（電子教科書）への同期。ステップを開くと同じ場所が生徒側でもめくれる。
+    // 生徒画面はログイン無しで開くため、教科書の中身は認証済みのこちら側から送る
+    const channelRef = useRef<BroadcastChannel | null>(null);
+    useEffect(() => {
+        if (!studentId || typeof window === 'undefined') return;
+        const ch = new BroadcastChannel(`asta-live-${studentId}`);
+        channelRef.current = ch;
+        return () => { ch.close(); channelRef.current = null; };
+    }, [studentId]);
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [sections, setSections] = useState<Section[]>([]);
     const [openStep, setOpenStep] = useState<number | null>(null);
@@ -85,7 +96,7 @@ export function GuidePanel({ prepContent, lessonId, onLessonChange }: Props) {
         const supabase = createClient();
         supabase
             .from('master_material_sections')
-            .select('section_type, section_order, content_md')
+            .select('section_type, section_order, content_md, images')
             .eq('master_material_id', lessonId)
             .order('section_order')
             .then(({ data }) => {
@@ -189,7 +200,27 @@ export function GuidePanel({ prepContent, lessonId, onLessonChange }: Props) {
                 {sections.map((s, i) => (
                     <li key={i}>
                         <button
-                            onClick={() => setOpenStep(openStep === i ? null : i)}
+                            onClick={() => {
+                                const next = openStep === i ? null : i;
+                                setOpenStep(next);
+                                // 開いたステップを生徒の電子教科書にも表示する
+                                if (next !== null) {
+                                    const sec = sections[i];
+                                    const lesson = lessons.find(l => l.id === lessonId);
+                                    const lessonPath = lesson
+                                        ? `${lesson.jlpt_level}/${lesson.lesson_number}${lesson.lesson_sub ? `-${lesson.lesson_sub}` : ''}`
+                                        : '';
+                                    const base = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${MASTER_MATERIAL_BUCKET}/${lessonPath}`;
+                                    channelRef.current?.postMessage({
+                                        type: 'page',
+                                        lessonLabel: lesson ? `${lesson.lesson_label ?? `第${lesson.lesson_number}課`}` : '',
+                                        stepTitle: SECTION_LABELS[sec.section_type],
+                                        body: sec.content_md,
+                                        imageUrls: (sec.images ?? []).slice(0, 4).map(f => `${base}/${f}`),
+                                        timestamp: Date.now(),
+                                    });
+                                }
+                            }}
                             className={`w-full text-left rounded-xl px-3 py-2 transition-colors ${openStep === i
                                 ? 'bg-[#f2daff] text-[#6f5385]'
                                 : 'hover:bg-[#faf9fd] text-[#1a1c1e]'

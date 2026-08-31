@@ -82,8 +82,8 @@ function readable(md: string): string {
         .replace(/`/g, '');
 }
 
-const CHAR_TRIGGER = 100;   // 100文字ごとに自動分析
-const EXCHANGE_TRIGGER = 3; // 3発言ごとに自動分析
+const CHAR_TRIGGER = 50;    // 50文字ごとに自動分析（体感が遅い指摘で100→50・2026-08-25）
+const EXCHANGE_TRIGGER = 2; // 2発言ごとに自動分析（同上 3→2）
 
 // ────────────────────────────────────────────
 // コンポーネント
@@ -105,6 +105,7 @@ export default function LiveLessonPage() {
     const flowIdRef = useRef(0);
     const flowEndRef = useRef<HTMLDivElement>(null);
     const saidBufferRef = useRef('');   // 発話を文の切れ目まで貯めるバッファ
+    const saidFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const addFlow = useCallback((item: Omit<FlowItem, 'id' | 'ts'>) => {
         flowIdRef.current += 1;
         const id = flowIdRef.current;
@@ -498,12 +499,19 @@ export default function LiveLessonPage() {
                 setTranscript(updated);
 
                 // 授業の流れに発話を積む。細切れを避けるため、
-                // 文の切れ目（。？！）か40字たまったところで1つの吹き出しにする
+                // 文の切れ目（。？！）か20字、または2秒の間が空いたら1つの吹き出しにする
+                // （初版は40字で「なかなか出ない」体感だった＝かずき指摘 2026-08-25）
                 saidBufferRef.current += newFinal;
                 const buf = saidBufferRef.current;
-                if (/[。？！?!]\s*$/.test(buf) || buf.length >= 40) {
+                if (saidFlushTimerRef.current) clearTimeout(saidFlushTimerRef.current);
+                if (/[。？！?!]\s*$/.test(buf) || buf.length >= 20) {
                     addFlow({ kind: 'said', text: buf.trim() });
                     saidBufferRef.current = '';
+                } else {
+                    saidFlushTimerRef.current = setTimeout(() => {
+                        const rest = saidBufferRef.current.trim();
+                        if (rest) { addFlow({ kind: 'said', text: rest }); saidBufferRef.current = ''; }
+                    }, 2000);
                 }
 
                 // 生徒向けリアルタイム翻訳（A案: BroadcastChannel）
