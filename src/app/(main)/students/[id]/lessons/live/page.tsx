@@ -187,7 +187,6 @@ export default function LiveLessonPage() {
         const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
         const isMobile = /Mobi|Android/i.test(navigator.userAgent);
         setIsChromeDesktop(isChrome && !isMobile);
-        // Document PiP サポート判定（Chrome 116+）
     }, []);
 
     // BroadcastChannel（生徒ビューとの同デバイス通信）
