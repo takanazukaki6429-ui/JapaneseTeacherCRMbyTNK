@@ -1060,13 +1060,15 @@ export default function LiveLessonPage() {
 
                     <button
                         onClick={() => setToolsOut(v => !v)}
-                        title={toolsOut ? '先生の道具をしまって、生徒と見る画面にする' : '先生の道具を出す'}
+                        title={toolsOut
+                            ? '生徒と見る画面にする。Zoomで画面共有するときはこの状態で'
+                            : '先生の道具を出して、準備の画面に戻る'}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all whitespace-nowrap ${toolsOut
                             ? 'bg-white/20 hover:bg-white/30 text-white'
                             : 'bg-emerald-400 text-white'
                             }`}
                     >
-                        🧰 {toolsOut ? '道具をしまう' : '道具を出す'}
+                        {toolsOut ? '🖥 共有モード' : '🛠 準備モード'}
                     </button>
 
                     <button
