@@ -5,7 +5,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
     ArrowLeft, Send,
-    Save, Sparkles, X, Mic, Loader2, Zap, PictureInPicture2, Download
+    Save, Sparkles, X, Mic, Loader2, Zap, Download
 } from 'lucide-react';
 import { GuidePanel } from './guide-panel';
 
@@ -28,7 +28,9 @@ type FlowItem = {
         | 'material'      // 例文・練習問題・言い換え
         | 'asked'         // 先生が手で聞いた質問（旧・手動チャット）
         | 'answer'        // その答え
-        | 'textbook';     // 教科書のページ（台本のステップを開くと流れに入る）
+        | 'textbook'      // 教科書のページ（台本のステップを開くと流れに入る）
+        | 'student-said'  // 生徒の発話（画面共有の音声→日本語訳）
+        | 'notice';       // 運用のお知らせ（上限で停止・音声なし共有 など）
     text?: string;
     title?: string;
     translation?: string;  // said: 発話の母語訳（あとから届く）
@@ -56,17 +58,10 @@ interface SpeechRecognitionInstance extends EventTarget {
     onerror: ((e: SpeechRecognitionErrorEvent) => void) | null;
     onend: (() => void) | null;
 }
-// Document Picture-in-Picture API（Chrome 116+）
-interface DocumentPictureInPictureAPI extends EventTarget {
-    requestWindow(options?: { width?: number; height?: number }): Promise<Window>;
-    readonly window: Window | null;
-}
-
 declare global {
     interface Window {
         SpeechRecognition?: new () => SpeechRecognitionInstance;
         webkitSpeechRecognition?: new () => SpeechRecognitionInstance;
-        documentPictureInPicture?: DocumentPictureInPictureAPI;
     }
 }
 
@@ -100,8 +95,6 @@ export default function LiveLessonPage() {
 
     // ── 既存state ──
     const [prepContent, setPrepContent] = useState<PrepContent | null>(null);
-    // タブは3つ：流れ（授業の本線）／翻訳ログ（確認用）／チャット（手で聞きたい時）
-    const [activeTab, setActiveTab] = useState<'flow' | 'translation'>('flow');
 
     // ── 授業の流れ（中央フィード）──
     const [flow, setFlow] = useState<FlowItem[]>([]);
@@ -136,14 +129,11 @@ export default function LiveLessonPage() {
     const [micError, setMicError] = useState<string | null>(null);
 
     // ── 翻訳モード state ──
-    type LiveTranslation = { id: number; original: string; japanese: string; timestamp: Date };
     const [isTranslationMode, setIsTranslationMode] = useState(false);
-    const [liveTranslations, setLiveTranslations] = useState<LiveTranslation[]>([]);
     const [aiTranslationSuggestions, setAiTranslationSuggestions] = useState<AutoSuggestion[]>([]);
     const [isChromeDesktop, setIsChromeDesktop] = useState(false);
     const displayStreamRef = useRef<MediaStream | null>(null);
     const translationRecorderRef = useRef<MediaRecorder | null>(null);
-    const translationCounterRef = useRef(0);
     const translationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // ── 即興イラスト生成（機能B-2）──
@@ -167,11 +157,6 @@ export default function LiveLessonPage() {
     // どちらの状態でも全部見えて安全な設計なので、押し忘れても事故にならない
     const [toolsOut, setToolsOut] = useState(true);
 
-
-    // ── 字幕PiP state（Document Picture-in-Picture）──
-    const [isPipOpen, setIsPipOpen] = useState(false);
-    const [isPipSupported, setIsPipSupported] = useState(false);
-    const pipWindowRef = useRef<Window | null>(null);
 
     // ── 生徒向け翻訳（先生 → 生徒方向）──
     const [studentNativeLanguage, setStudentNativeLanguage] = useState('English');
@@ -203,7 +188,6 @@ export default function LiveLessonPage() {
         const isMobile = /Mobi|Android/i.test(navigator.userAgent);
         setIsChromeDesktop(isChrome && !isMobile);
         // Document PiP サポート判定（Chrome 116+）
-        setIsPipSupported('documentPictureInPicture' in window);
     }, []);
 
     // BroadcastChannel（生徒ビューとの同デバイス通信）
@@ -327,7 +311,7 @@ export default function LiveLessonPage() {
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages, activeTab]);
+    }, [messages]);
 
     // 授業の流れ：新しいカードが増えたら一番下まで送る
     useEffect(() => {
@@ -608,7 +592,6 @@ export default function LiveLessonPage() {
         setMessages(prev => [...prev, userMsg]);
         setInput('');
         setIsTyping(true);
-        setActiveTab('flow');
         // 授業の流れに質問を積む（2026-08-20：チャットタブを廃止し流れに統合）
         addFlow({ kind: 'asked', text: userContent });
 
@@ -665,14 +648,7 @@ export default function LiveLessonPage() {
             const audioTrack = stream.getAudioTracks()[0];
             if (!audioTrack) {
                 stream.getTracks().forEach(t => t.stop());
-                translationCounterRef.current += 1;
-                setLiveTranslations(prev => [{
-                    id: translationCounterRef.current,
-                    original: '',
-                    japanese: '⚠️ 共有に音声が含まれていません。共有画面で「Chromeタブ」を選び、下の「タブの音声も共有」にチェックを入れてから、生徒の声が流れるタブ（Preply等）を選んでください。',
-                    timestamp: new Date(),
-                }, ...prev.slice(0, 9)]);
-                setActiveTab('translation');
+                addFlow({ kind: 'notice', text: '⚠️ 共有に音声が含まれていません。共有画面で「Chromeタブ」を選び、下の「タブの音声も共有」にチェックを入れてから、生徒の声が流れるタブ（Zoom等）を選んでください。' });
                 return;
             }
 
@@ -695,25 +671,14 @@ export default function LiveLessonPage() {
                     if (res.status === 429) {
                         // 利用上限到達 → 2.5秒ごとの再送を止めるため翻訳モードごと停止（課金暴走の栓）
                         stopTranslationMode();
-                        translationCounterRef.current += 1;
-                        setLiveTranslations(prev => [{
-                            id: translationCounterRef.current,
-                            original: '',
-                            japanese: '⚠️ 翻訳の利用量が上限に達したため自動停止しました。1時間ほど置いてから再度お試しください。',
-                            timestamp: new Date(),
-                        }, ...prev.slice(0, 9)]);
+                        addFlow({ kind: 'notice', text: '⚠️ 翻訳の利用量が上限に達したため自動停止しました。1時間ほど置いてから再度お試しください。' });
                         return;
                     }
                     const data = await res.json();
                     if (data.japanese?.trim()) {
-                        translationCounterRef.current += 1;
-                        setLiveTranslations(prev => [{
-                            id: translationCounterRef.current,
-                            original: data.original || '',
-                            japanese: data.japanese,
-                            timestamp: new Date(),
-                        }, ...prev.slice(0, 9)]);
-                        setActiveTab('translation');
+                        // 生徒の発話は流れに直接出す（2026-09-03 かずき指示。
+                        // 以前は翻訳ログタブの中に隠れていて、開かないと見えなかった）
+                        addFlow({ kind: 'student-said', text: data.japanese, translation: data.original || '' });
                     }
                 } catch (err) { console.error('Translation chunk error:', err); }
             };
@@ -738,20 +703,13 @@ export default function LiveLessonPage() {
             };
             startChunkRecorder();
             setIsTranslationMode(true);
-            setActiveTab('translation');
 
             audioTrack.onended = () => stopTranslationMode();
 
             // 閉じ忘れ対策：連続90分で自動停止（STT課金が一晩中続く事故を防ぐ）
             translationTimerRef.current = setTimeout(() => {
                 stopTranslationMode();
-                translationCounterRef.current += 1;
-                setLiveTranslations(prev => [{
-                    id: translationCounterRef.current,
-                    original: '',
-                    japanese: '⏰ 連続90分が経過したため翻訳を自動停止しました。続ける場合はもう一度「翻訳」をONにしてください。',
-                    timestamp: new Date(),
-                }, ...prev.slice(0, 9)]);
+                addFlow({ kind: 'notice', text: '⏰ 連続90分が経過したため翻訳を自動停止しました。続ける場合はもう一度「翻訳を始める」を押してください。' });
             }, 90 * 60 * 1000);
         } catch (err) {
             // ユーザーがキャンセル or 権限拒否 → コンソールエラーを出さない
@@ -774,99 +732,6 @@ export default function LiveLessonPage() {
         setIsTranslationMode(false);
     }, []);
 
-    // ── Document PiP（字幕フローティングウィンドウ）──
-    const openSubtitlePip = useCallback(async () => {
-        if (!window.documentPictureInPicture) return;
-        try {
-            const pip = await window.documentPictureInPicture.requestWindow({ width: 640, height: 160 });
-            pipWindowRef.current = pip;
-
-            // ベーススタイル
-            const style = pip.document.createElement('style');
-            style.textContent = `
-                * { box-sizing: border-box; margin: 0; padding: 0; }
-                body {
-                    background: #111;
-                    color: #fff;
-                    font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    height: 100vh;
-                    padding: 16px 20px;
-                    overflow: hidden;
-                }
-                #pip-jp {
-                    font-size: 30px;
-                    font-weight: bold;
-                    line-height: 1.3;
-                    color: #fff;
-                    word-break: break-all;
-                }
-                #pip-orig {
-                    font-size: 13px;
-                    color: rgba(255,255,255,0.55);
-                    margin-top: 6px;
-                    font-style: italic;
-                    word-break: break-all;
-                }
-                #pip-waiting {
-                    font-size: 16px;
-                    color: rgba(255,255,255,0.4);
-                }
-            `;
-            pip.document.head.appendChild(style);
-
-            const jpEl = pip.document.createElement('p');
-            jpEl.id = 'pip-jp';
-            jpEl.style.display = 'none';
-
-            const origEl = pip.document.createElement('p');
-            origEl.id = 'pip-orig';
-
-            const waitEl = pip.document.createElement('p');
-            waitEl.id = 'pip-waiting';
-            waitEl.textContent = '🎙 生徒の発話を待っています…';
-
-            pip.document.body.appendChild(waitEl);
-            pip.document.body.appendChild(jpEl);
-            pip.document.body.appendChild(origEl);
-
-            pip.addEventListener('pagehide', () => {
-                setIsPipOpen(false);
-                pipWindowRef.current = null;
-            });
-
-            setIsPipOpen(true);
-        } catch (err) {
-            if (err instanceof DOMException && err.name === 'NotAllowedError') return;
-            console.error('PiP open error:', err);
-        }
-    }, []);
-
-    const closeSubtitlePip = useCallback(() => {
-        pipWindowRef.current?.close();
-        pipWindowRef.current = null;
-        setIsPipOpen(false);
-    }, []);
-
-    // 新しい翻訳が届いたらPiPウィンドウを更新
-    useEffect(() => {
-        if (!pipWindowRef.current || liveTranslations.length === 0) return;
-        const latest = liveTranslations[0];
-        const doc = pipWindowRef.current.document;
-        const waitEl = doc.getElementById('pip-waiting');
-        const jpEl = doc.getElementById('pip-jp');
-        const origEl = doc.getElementById('pip-orig');
-        if (waitEl) waitEl.style.display = 'none';
-        if (jpEl) { jpEl.style.display = 'block'; jpEl.textContent = latest.japanese; }
-        if (origEl) origEl.textContent = latest.original || '';
-    }, [liveTranslations]);
-
-    // アンマウント時にPiPも閉じる
-    useEffect(() => {
-        return () => { closeSubtitlePip(); };
-    }, [closeSubtitlePip]);
 
     // アンマウント時にクリーンアップ（stopTranslationMode宣言の後に配置）
     useEffect(() => {
@@ -898,7 +763,6 @@ export default function LiveLessonPage() {
         const run = ++illustRunRef.current;
         setIllustBusy(true);
         setIllustError('');
-        setActiveTab('flow');
         // まず流れに「描いています…」のカードを置き、速い版・丁寧版の両方がそこへ届く
         const itemId = addFlow({ kind: 'illust', title: '🎨 絵を描いています…（約10秒）', img: '' });
 
@@ -944,7 +808,6 @@ export default function LiveLessonPage() {
         }
         setMaterialBusy(mode);
         setIllustError('');
-        setActiveTab('flow');
         try {
             const res = await fetch('/api/materials/improvise', {
                 method: 'POST',
@@ -1022,21 +885,6 @@ export default function LiveLessonPage() {
                         </button>
                     )}
 
-                    {/* 字幕の小窓（共有画面に浮かべて生徒に見せる） */}
-                    {isPipSupported && (
-                        <button
-                            onClick={isPipOpen ? closeSubtitlePip : openSubtitlePip}
-                            title={isPipOpen ? '字幕の小窓を閉じる' : '字幕を小窓で浮かべる（共有画面にのせて生徒に見せる）'}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all whitespace-nowrap ${isPipOpen
-                                ? 'bg-emerald-500 text-white'
-                                : 'bg-white/20 hover:bg-white/30 text-white'
-                                }`}
-                        >
-                            <PictureInPicture2 size={14} />
-                            {isPipOpen ? '字幕を閉じる' : '字幕を出す'}
-                        </button>
-                    )}
-
                     {/* 生徒の母国語（生徒の画面に出す翻訳の言語） */}
                     <select
                         value={studentNativeLanguage}
@@ -1085,28 +933,6 @@ export default function LiveLessonPage() {
             <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
 
                 {/* タブ（モバイル） */}
-                <div className="md:hidden flex border-b border-[#f4f3f7]">
-                    {(['flow', 'translation'] as const).map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`flex-1 py-2.5 text-[10px] font-bold relative ${activeTab === tab ? 'text-[#6f5385] border-b-2 border-[#6f5385]' : 'text-[#4b454e]'}`}
-                        >
-                            {tab === 'flow' && '📋 授業の流れ'}
-                            {tab === 'translation' && (
-                                <span className="flex items-center justify-center gap-0.5">
-                                    🌐翻訳ログ
-                                    {liveTranslations.length > 0 && (
-                                        <span className="bg-[#655a6f] text-white text-[9px] rounded-full w-3.5 h-3.5 flex items-center justify-center ml-0.5">
-                                            {liveTranslations.length}
-                                        </span>
-                                    )}
-                                </span>
-                            )}
-                        </button>
-                    ))}
-                </div>
-
                 {/* 左パネル：きょうの進め方（台本） */}
                 <GuidePanel
                     studentId={studentId}
@@ -1115,7 +941,6 @@ export default function LiveLessonPage() {
                     lessonId={selectedLessonId}
                     onLessonChange={handleLessonChange}
                     onStepOpen={pg => {
-                        setActiveTab('flow');
                         addFlow({
                             kind: 'textbook',
                             title: `📖 ${pg.lessonLabel}　${pg.stepTitle}`,
@@ -1128,45 +953,9 @@ export default function LiveLessonPage() {
                 {/* 右エリア：授業の流れ + 翻訳ログ + チャット */}
                 <div className="flex-1 flex flex-col overflow-hidden">
 
-                    {/* デスクトップ用サブタブバー（道具をしまったら消える） */}
-                    <div className={`${toolsOut ? 'hidden md:flex' : 'hidden'} items-center border-b border-[#f4f3f7] bg-white shrink-0`}>
-                        <button
-                            onClick={() => setActiveTab('flow')}
-                            className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${
-                                activeTab === 'flow'
-                                    ? 'text-[#6f5385] border-[#6f5385]'
-                                    : 'text-[#4b454e] border-transparent hover:text-[#1a1c1e]'
-                            }`}
-                        >
-                            📋 授業の流れ
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('translation')}
-                            className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${
-                                activeTab === 'translation'
-                                    ? 'text-[#655a6f] border-[#655a6f]'
-                                    : 'text-[#4b454e] border-transparent hover:text-[#1a1c1e]'
-                            }`}
-                        >
-                            🌐 翻訳ログ
-                            {liveTranslations.length > 0 && (
-                                <span className="bg-[#655a6f] text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center">
-                                    {liveTranslations.length}
-                                </span>
-                            )}
-                        </button>
-                        <div className="ml-auto flex items-center gap-2 px-3 text-xs">
-                            {isAnalyzing && (
-                                <span className="flex items-center gap-1 text-[#6f5385]">
-                                    <Loader2 size={12} className="animate-spin" />
-                                    ASTAが考えています…
-                                </span>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* 📋 授業の流れ（会話とASTAの提案・生成物が時系列で並ぶ） */}
-                    <div className={`flex-1 flex flex-col overflow-hidden ${activeTab === 'flow' ? 'flex' : 'hidden'}`}>
+                    {/* 📋 授業の流れ（会話とASTAの提案・生成物が時系列で並ぶ）。
+                        タブは廃止（2026-09-03 かずき決定：翻訳ログを流れに統合してタブが1つになったため） */}
+                    <div className="flex-1 flex flex-col overflow-hidden">
                         {micError && (
                             <div className="mx-4 mt-3 p-3 bg-red-50 border border-red-200 rounded-2xl shrink-0 flex items-start gap-2">
                                 <span className="text-red-500 shrink-0 mt-0.5">⚠️</span>
@@ -1208,6 +997,24 @@ export default function LiveLessonPage() {
                                             <p className="text-[9px] text-[#b3adc0] mt-0.5">
                                                 {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                                             </p>
+                                        </div>
+                                    )}
+
+                                    {item.kind === 'student-said' && (
+                                        <div className="max-w-[85%] bg-[#eef7f3] border border-[#bfe3d2] rounded-2xl px-4 py-2.5">
+                                            <p className={`${toolsOut ? 'text-lg' : 'text-2xl'} text-[#1a1c1e] font-bold leading-relaxed`}>🗣 {item.text}</p>
+                                            {item.translation && (
+                                                <p className={`${toolsOut ? 'text-sm' : 'text-lg'} text-[#4e7a66] mt-1 leading-relaxed`}>{item.translation}</p>
+                                            )}
+                                            <p className="text-[9px] text-[#9ec4b0] mt-0.5">
+                                                生徒 · {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {item.kind === 'notice' && (
+                                        <div className="mx-auto max-w-[92%] bg-[#fdf6e7] border border-[#ecd9a8] rounded-xl px-4 py-2 text-xs text-[#8a6d1f] leading-relaxed">
+                                            {item.text}
                                         </div>
                                     )}
 
@@ -1394,99 +1201,6 @@ export default function LiveLessonPage() {
                                     {isTyping ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
                                 </button>
                             </form>
-                        </div>
-                    </div>
-                    {/* 🌐 翻訳パネル */}
-                    <div className={`flex-1 flex flex-col overflow-hidden ${activeTab === 'translation' ? 'flex' : 'hidden'}`}>
-                        {/* Chrome限定バナー（常時表示） */}
-                        <div className={`px-4 py-2 shrink-0 border-b border-[#f4f3f7] flex items-center gap-2 text-xs font-medium ${isChromeDesktop ? 'bg-[#f2daff] text-[#6f5385]' : 'bg-[#fff0f0] text-[#ba1a1a]'}`}>
-                            {isChromeDesktop
-                                ? '✓ Chrome Desktop — 翻訳機能が使用可能です'
-                                : '⚠️ 音声翻訳はChrome Desktop専用です。AI補助は全ブラウザで利用可能。'}
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                            {/* AI翻訳補助セクション（R-2：常時表示・全ブラウザ対応） */}
-                            {aiTranslationSuggestions.length > 0 && (
-                                <div className="space-y-2">
-                                    <p className="text-[10px] font-bold text-[#6f5385] uppercase tracking-wider flex items-center gap-1">
-                                        <Sparkles size={11} /> AI翻訳補助
-                                    </p>
-                                    {aiTranslationSuggestions.map((s) => (
-                                        <div key={s.id} className="bg-[#f2daff]/60 border border-[#c9a8e0]/40 rounded-2xl p-3">
-                                            <div className="flex items-center justify-between mb-1.5">
-                                                <span className="text-[10px] font-bold text-[#6f5385]">💡 補助 #{s.id}</span>
-                                                <span className="text-[10px] text-[#4b454e]">{s.timestamp.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-                                            </div>
-                                            <p className="text-xs text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">{s.text}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* 音声翻訳セクション（Chrome Desktop 限定） */}
-                            {liveTranslations.length > 0 && (
-                                <div className="space-y-2">
-                                    <p className="text-[10px] font-bold text-[#655a6f] uppercase tracking-wider flex items-center gap-1">
-                                        <Zap size={11} /> 音声翻訳（リアルタイム）
-                                    </p>
-                                    {liveTranslations.map((t) => (
-                                        <div key={t.id} className="bg-white border border-[#c9a8e0]/30 rounded-2xl p-4 shadow-[0_0_20px_rgba(111,83,133,0.06)]">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <span className="text-[10px] font-bold text-[#655a6f] uppercase tracking-wide">🌐 翻訳 #{t.id}</span>
-                                                <span className="text-[10px] text-[#4b454e]">{t.timestamp.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-                                            </div>
-                                            <p className="text-sm font-bold text-[#1a1c1e] leading-relaxed">{t.japanese}</p>
-                                            {t.original && <p className="text-xs text-[#4b454e]/60 italic mt-1">{t.original}</p>}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* 字幕PiPの案内（翻訳が届いている場合のみ） */}
-                            {liveTranslations.length > 0 && isPipSupported && !isPipOpen && (
-                                <button
-                                    onClick={openSubtitlePip}
-                                    className="w-full flex items-center gap-2 px-3 py-2.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-700 font-bold hover:bg-emerald-100 transition-colors"
-                                >
-                                    <PictureInPicture2 size={14} />
-                                    Preplyの上に字幕を浮かせる（字幕PiPを起動）
-                                </button>
-                            )}
-
-                            {/* 空状態：何も表示がない場合 */}
-                            {aiTranslationSuggestions.length === 0 && liveTranslations.length === 0 && (
-                                <div className="h-full flex flex-col items-center justify-center py-12 gap-3">
-                                    {!isTranslationMode ? (
-                                        <>
-                                            <div className="w-12 h-12 rounded-full bg-[#f2daff] flex items-center justify-center">
-                                                <Zap size={22} className="text-[#6f5385]" />
-                                            </div>
-                                            <p className="text-sm font-bold text-[#1a1c1e]">翻訳補助タブ</p>
-                                            <div className="text-xs text-[#4b454e] text-center space-y-1 leading-relaxed">
-                                                <p>💡 <span className="font-bold">AI補助</span>: 録音中に自動で文法・語彙の翻訳ヒントを表示</p>
-                                                {isChromeDesktop && (
-                                                    <p>🎤 <span className="font-bold">音声翻訳</span>: ヘッダーの「翻訳ON」で生徒音声をリアルタイム翻訳</p>
-                                                )}
-                                                {isPipSupported && (
-                                                    <p>📺 <span className="font-bold">字幕PiP</span>: 翻訳をPreplyの上に浮かせて表示</p>
-                                                )}
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div className="w-12 h-12 rounded-full bg-[#c9a8e0]/30 flex items-center justify-center animate-pulse">
-                                                <Zap size={22} className="text-[#6f5385]" />
-                                            </div>
-                                            <p className="text-sm font-bold text-[#1a1c1e]">翻訳モード起動中</p>
-                                            <p className="text-xs text-[#4b454e]">生徒が話すと約3〜4秒後に翻訳が表示されます</p>
-                                            {isPipSupported && (
-                                                <p className="text-xs text-[#4b454e]">翻訳が届いたら「字幕PiP」でPreplyの上に浮かせられます</p>
-                                            )}
-                                        </>
-                                    )}
-                                </div>
-                            )}
                         </div>
                     </div>
 
