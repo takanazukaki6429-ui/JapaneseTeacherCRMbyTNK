@@ -162,6 +162,11 @@ export default function LiveLessonPage() {
     // 例文・練習問題・言い換え（教科書タブから4ボタンへ移設）
     const [materialBusy, setMaterialBusy] = useState<string | null>(null);
 
+    // 道具を出す/しまう（2026-09-02 かずき提案のワンクリック切替）。
+    // しまう＝生徒と見る配分（先生の道具を最小化・文字を大きく）。
+    // どちらの状態でも全部見えて安全な設計なので、押し忘れても事故にならない
+    const [toolsOut, setToolsOut] = useState(true);
+
 
     // ── 字幕PiP state（Document Picture-in-Picture）──
     const [isPipOpen, setIsPipOpen] = useState(false);
@@ -1054,6 +1059,17 @@ export default function LiveLessonPage() {
 
 
                     <button
+                        onClick={() => setToolsOut(v => !v)}
+                        title={toolsOut ? '先生の道具をしまって、生徒と見る画面にする' : '先生の道具を出す'}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all whitespace-nowrap ${toolsOut
+                            ? 'bg-white/20 hover:bg-white/30 text-white'
+                            : 'bg-emerald-400 text-white'
+                            }`}
+                    >
+                        🧰 {toolsOut ? '道具をしまう' : '道具を出す'}
+                    </button>
+
+                    <button
                         onClick={finishLesson}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-[#6f5385] font-bold rounded-full hover:bg-[#f2daff] transition-colors text-xs shadow-sm whitespace-nowrap ml-2"
                     >
@@ -1092,6 +1108,7 @@ export default function LiveLessonPage() {
                 {/* 左パネル：きょうの進め方（台本） */}
                 <GuidePanel
                     studentId={studentId}
+                    collapsed={!toolsOut}
                     prepContent={prepContent}
                     lessonId={selectedLessonId}
                     onLessonChange={handleLessonChange}
@@ -1109,8 +1126,8 @@ export default function LiveLessonPage() {
                 {/* 右エリア：授業の流れ + 翻訳ログ + チャット */}
                 <div className="flex-1 flex flex-col overflow-hidden">
 
-                    {/* デスクトップ用サブタブバー */}
-                    <div className="hidden md:flex items-center border-b border-[#f4f3f7] bg-white shrink-0">
+                    {/* デスクトップ用サブタブバー（道具をしまったら消える） */}
+                    <div className={`${toolsOut ? 'hidden md:flex' : 'hidden'} items-center border-b border-[#f4f3f7] bg-white shrink-0`}>
                         <button
                             onClick={() => setActiveTab('flow')}
                             className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${
@@ -1182,9 +1199,9 @@ export default function LiveLessonPage() {
                                 <div key={item.id}>
                                     {item.kind === 'said' && (
                                         <div className="max-w-[85%] bg-white border border-[#f4f3f7] rounded-2xl px-4 py-2.5">
-                                            <p className="text-lg text-[#1a1c1e] font-bold leading-relaxed">💬 {readable(item.text ?? '')}</p>
+                                            <p className={`${toolsOut ? 'text-lg' : 'text-2xl'} text-[#1a1c1e] font-bold leading-relaxed`}>💬 {readable(item.text ?? '')}</p>
                                             {item.translation && (
-                                                <p className="text-sm text-[#6f5385] mt-1 leading-relaxed">{item.translation}</p>
+                                                <p className={`${toolsOut ? 'text-sm' : 'text-lg'} text-[#6f5385] mt-1 leading-relaxed`}>{item.translation}</p>
                                             )}
                                             <p className="text-[9px] text-[#b3adc0] mt-0.5">
                                                 {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
@@ -1229,7 +1246,7 @@ export default function LiveLessonPage() {
                                         <div className="bg-white border-2 border-[#c9a8e0]/50 rounded-2xl p-5 shadow-[0_4px_18px_rgba(111,83,133,0.10)]">
                                             <p className="text-xs font-bold text-[#6f5385] mb-2">{item.title}</p>
                                             {/* 教科書の原文は生徒向け（ふりがな付き）のまま、生徒も読める大きさで */}
-                                            <p className="text-base text-[#1a1c1e] leading-loose whitespace-pre-wrap">
+                                            <p className={`${toolsOut ? 'text-base' : 'text-xl'} text-[#1a1c1e] leading-loose whitespace-pre-wrap`}>
                                                 {readable((item.text ?? '').split('\n').filter(l => !l.trim().startsWith('![')).join('\n')).trim().slice(0, 1200)}
                                             </p>
                                             {(item.imgs ?? []).length > 0 && (
@@ -1312,30 +1329,32 @@ export default function LiveLessonPage() {
                             <div ref={flowEndRef} />
                         </div>
 
-                        {/* 下部：自分から頼む4ボタン（入力は不要） */}
-                        <div className="border-t border-[#f4f3f7] bg-white px-4 py-3 shrink-0">
+                        {/* 下部：自分から頼む4ボタン（道具をしまうと細いアイコンバーに） */}
+                        <div className={`border-t border-[#f4f3f7] bg-white shrink-0 ${toolsOut ? 'px-4 py-3' : 'px-4 py-1.5'}`}>
                             {illustError && (
                                 <p className="text-[11px] text-[#ba1a1a] bg-[#fff0f0] border border-[#f4b8b8] rounded-xl px-3 py-1.5 mb-2">
                                     {illustError}
                                 </p>
                             )}
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="text-[10px] text-[#9a93a5]">
-                                    <b className="text-[#6f5385]">🤖 自動アシスト：ON</b>　困った場面はASTAが自分から提案します
-                                </span>
-                                <span className="text-[10px] text-[#9a93a5]">自分から頼む時はこのボタン（入力不要）</span>
-                            </div>
+                            {toolsOut && (
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-[10px] text-[#9a93a5]">
+                                        <b className="text-[#6f5385]">🤖 自動アシスト：ON</b>　困った場面はASTAが自分から提案します
+                                    </span>
+                                    <span className="text-[10px] text-[#9a93a5]">自分から頼む時はこのボタン（入力不要）</span>
+                                </div>
+                            )}
                             <div className="grid grid-cols-4 gap-2">
                                 <button
                                     onClick={generateIllustration}
                                     disabled={illustBusy}
                                     title="いまの会話と課に合う絵を約10秒で作る。文字まできれいな版も自動で用意"
-                                    className="flex flex-col items-center py-2.5 px-1 bg-gradient-to-br from-[#6f5385] to-[#a07cc0] text-white rounded-xl text-xs font-bold disabled:opacity-50 transition-opacity"
+                                    className={`flex flex-col items-center px-1 bg-gradient-to-br from-[#6f5385] to-[#a07cc0] text-white rounded-xl text-xs font-bold disabled:opacity-50 transition-opacity ${toolsOut ? 'py-2.5' : 'py-1.5'}`}
                                 >
                                     <span className="flex items-center gap-1">
                                         {illustBusy ? <Loader2 size={12} className="animate-spin" /> : '🎨'} 絵で見せる
                                     </span>
-                                    <span className="text-[9px] font-normal opacity-85 mt-0.5">いまの内容を1枚の絵に</span>
+                                    {toolsOut && <span className="text-[9px] font-normal opacity-85 mt-0.5">いまの内容を1枚の絵に</span>}
                                 </button>
                                 {(Object.keys(MATERIAL_MODES) as (keyof typeof MATERIAL_MODES)[]).map(m => (
                                     <button
@@ -1343,20 +1362,20 @@ export default function LiveLessonPage() {
                                         onClick={() => makeMaterial(m)}
                                         disabled={materialBusy !== null}
                                         title={MATERIAL_MODES[m].hint}
-                                        className="flex flex-col items-center py-2.5 px-1 bg-gradient-to-br from-[#6f5385] to-[#a07cc0] text-white rounded-xl text-xs font-bold disabled:opacity-50 transition-opacity"
+                                        className={`flex flex-col items-center px-1 bg-gradient-to-br from-[#6f5385] to-[#a07cc0] text-white rounded-xl text-xs font-bold disabled:opacity-50 transition-opacity ${toolsOut ? 'py-2.5' : 'py-1.5'}`}
                                     >
                                         <span className="flex items-center gap-1">
                                             {materialBusy === m ? <Loader2 size={12} className="animate-spin" /> : null}
                                             {MATERIAL_MODES[m].label}
                                         </span>
-                                        <span className="text-[9px] font-normal opacity-85 mt-0.5">{MATERIAL_MODES[m].hint}</span>
+                                        {toolsOut && <span className="text-[9px] font-normal opacity-85 mt-0.5">{MATERIAL_MODES[m].hint}</span>}
                                     </button>
                                 ))}
                             </div>
 
                             {/* 聞きたい時だけ使う入力欄。授業中の入力は不要だが、
                                 聞きたくなったらここで聞ける（2026-08-20 チャットタブを統合） */}
-                            <form onSubmit={handleSendMessage} className="flex items-center gap-2 mt-2.5">
+                            <form onSubmit={handleSendMessage} className={`${toolsOut ? 'flex' : 'hidden'} items-center gap-2 mt-2.5`}>
                                 <input
                                     type="text"
                                     value={input}

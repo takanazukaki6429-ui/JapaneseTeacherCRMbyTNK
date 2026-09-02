@@ -49,6 +49,8 @@ const GUIDE_TYPES: SectionType[] = [
 
 type Props = {
     studentId: string;
+    /** 道具をしまった状態：細い帯になり、押すと一時的に開ける */
+    collapsed?: boolean;
     prepContent: PrepContent | null;
     lessonId: string;
     onLessonChange: (id: string) => void;
@@ -64,8 +66,10 @@ function stripFurigana(text: string): string {
         .replace(/([一-龥々ヶ]+)\([ぁ-んー]+\)/g, '$1');
 }
 
-export function GuidePanel({ prepContent, lessonId, onLessonChange, onStepOpen }: Props) {
+export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonChange, onStepOpen }: Props) {
     const [level, setLevel] = useState('N5');
+    const [peek, setPeek] = useState(false);   // しまった状態で一時的に開く
+    const isNarrow = collapsed && !peek;
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [sections, setSections] = useState<Section[]>([]);
     const [openStep, setOpenStep] = useState<number | null>(null);
@@ -118,8 +122,24 @@ export function GuidePanel({ prepContent, lessonId, onLessonChange, onStepOpen }
             .slice(0, len);
 
     // 台本が長くてもこの枠の中だけがスクロールする（画面全体を縦に伸ばさない）
+    if (isNarrow) {
+        // 道具をしまった状態：縦書きの細い帯。押すと一時的に開く
+        return (
+            <button
+                onClick={() => setPeek(true)}
+                title="台本をひらく"
+                className="hidden md:flex flex-col items-center gap-2 w-9 shrink-0 h-full bg-white border-r border-[#f4f3f7] pt-4 text-[#6f5385] hover:bg-[#faf9fd] transition-colors"
+            >
+                <BookOpen size={16} />
+                <span className="text-[10px] font-bold" style={{ writingMode: 'vertical-rl' }}>きょうの進め方</span>
+            </button>
+        );
+    }
     return (
-        <div className="hidden md:block w-[320px] shrink-0 h-full overflow-y-auto bg-white border-r border-[#f4f3f7] p-4 space-y-4">
+        <div
+            className="hidden md:block w-[320px] shrink-0 h-full overflow-y-auto bg-white border-r border-[#f4f3f7] p-4 space-y-4"
+            onMouseLeave={() => { if (collapsed) setPeek(false); }}
+        >
             <div>
                 <h2 className="text-xs font-bold text-[#6f5385] tracking-wide flex items-center gap-1.5">
                     <BookOpen size={14} /> きょうの進め方
