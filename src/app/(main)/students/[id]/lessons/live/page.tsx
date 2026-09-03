@@ -160,6 +160,7 @@ export default function LiveLessonPage() {
 
     // ── 生徒向け翻訳（先生 → 生徒方向）──
     const [studentNativeLanguage, setStudentNativeLanguage] = useState('English');
+    const [studentName, setStudentName] = useState('');   // 吹き出しの話し手表示に使う
     const studentNativeLangRef = useRef('English');
     const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
     const translateDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -223,6 +224,7 @@ export default function LiveLessonPage() {
                     .limit(3);
 
                 if (!student) return;
+                setStudentName(student.name ?? '');
 
                 // 国籍 → 言語の自動設定
                 const nationalityToLang: Record<string, string> = {
@@ -987,9 +989,11 @@ export default function LiveLessonPage() {
 
                             {flow.map(item => (
                                 <div key={item.id}>
+                                    {/* 誰の言葉かを名前で示す：先生は左・生徒は右（共有画面では「自分＝右」の慣習が通じないため名前を主にする） */}
                                     {item.kind === 'said' && (
-                                        <div className="max-w-[85%] bg-white border border-[#f4f3f7] rounded-2xl px-4 py-2.5">
-                                            <p className={`${toolsOut ? 'text-lg' : 'text-2xl'} text-[#1a1c1e] font-bold leading-relaxed`}>💬 {readable(item.text ?? '')}</p>
+                                        <div className="w-fit max-w-[85%] bg-white border border-[#f4f3f7] rounded-2xl rounded-tl-md px-4 py-2.5">
+                                            <p className="text-[11px] font-bold text-[#6f5385] mb-0.5">💬 先生</p>
+                                            <p className={`${toolsOut ? 'text-lg' : 'text-2xl'} text-[#1a1c1e] font-bold leading-relaxed`}>{readable(item.text ?? '')}</p>
                                             {item.translation && (
                                                 <p className={`${toolsOut ? 'text-sm' : 'text-lg'} text-[#6f5385] mt-1 leading-relaxed`}>{item.translation}</p>
                                             )}
@@ -1000,13 +1004,14 @@ export default function LiveLessonPage() {
                                     )}
 
                                     {item.kind === 'student-said' && (
-                                        <div className="max-w-[85%] bg-[#eef7f3] border border-[#bfe3d2] rounded-2xl px-4 py-2.5">
-                                            <p className={`${toolsOut ? 'text-lg' : 'text-2xl'} text-[#1a1c1e] font-bold leading-relaxed`}>🗣 {item.text}</p>
+                                        <div className="w-fit max-w-[85%] ml-auto bg-[#eef7f3] border border-[#bfe3d2] rounded-2xl rounded-tr-md px-4 py-2.5">
+                                            <p className="text-[11px] font-bold text-[#4e7a66] mb-0.5">🗣 {studentName ? `${studentName}さん` : '生徒'}</p>
+                                            <p className={`${toolsOut ? 'text-lg' : 'text-2xl'} text-[#1a1c1e] font-bold leading-relaxed`}>{item.text}</p>
                                             {item.translation && (
                                                 <p className={`${toolsOut ? 'text-sm' : 'text-lg'} text-[#4e7a66] mt-1 leading-relaxed`}>{item.translation}</p>
                                             )}
                                             <p className="text-[9px] text-[#9ec4b0] mt-0.5">
-                                                生徒 · {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                                                {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                                             </p>
                                         </div>
                                     )}
