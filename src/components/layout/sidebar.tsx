@@ -78,6 +78,7 @@ export function Sidebar() {
                         const active = isActive(item.href);
                         return (
                             <Link
+                                prefetch
                                 key={item.href}
                                 href={item.href}
                                 onClick={() => setIsMobileOpen(false)}
@@ -107,6 +108,7 @@ export function Sidebar() {
                             { href: '/admin/invite-codes', name: '招待コード', Icon: KeyRound },
                         ].map(({ href, name, Icon }) => (
                             <Link
+                                prefetch
                                 key={href}
                                 href={href}
                                 onClick={() => setIsMobileOpen(false)}

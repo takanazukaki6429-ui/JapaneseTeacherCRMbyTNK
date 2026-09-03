@@ -36,6 +36,7 @@ export default async function StudentsPage() {
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold tracking-tight text-[#1a1c1e]">生徒</h1>
                 <Link
+                    prefetch
                     href="/students/new"
                     className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] text-white text-sm font-bold rounded-full hover:scale-[1.02] transition-transform shadow-[0_4px_20px_rgba(111,83,133,0.25)]"
                 >
@@ -52,6 +53,7 @@ export default async function StudentsPage() {
                         「新規生徒登録」から最初の生徒を追加しましょう。
                     </p>
                     <Link
+                    prefetch
                         href="/students/new"
                         className="inline-flex items-center gap-2 px-4 py-2 bg-[#f2daff] text-[#6f5385] text-sm font-bold rounded-xl hover:bg-[#e8c8ff] transition-colors"
                     >
@@ -62,6 +64,7 @@ export default async function StudentsPage() {
                 <div className="space-y-2">
                     {students.map((student) => (
                         <Link
+                    prefetch
                             key={student.id}
                             href={`/students/${student.id}`}
                             className="group flex items-center gap-4 p-5 bg-white rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] hover:shadow-[0_8px_40px_rgba(111,83,133,0.12)] hover:-translate-y-0.5 transition-all"

@@ -4,11 +4,10 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
-    ArrowLeft, Send, MessageCircle, BookOpen, CheckCircle,
-    Save, Sparkles, X, Mic, MicOff, Loader2, Zap, PictureInPicture2, ImagePlus, Download
+    ArrowLeft, Send,
+    Save, Sparkles, X, Mic, Loader2, Zap, Download
 } from 'lucide-react';
-import Link from 'next/link';
-import { TextbookPanel } from './textbook-panel';
+import { GuidePanel } from './guide-panel';
 
 // ────────────────────────────────────────────
 // 型定義
@@ -17,6 +16,29 @@ type KeyPoint = { question: string; answer: string };
 type PrepContent = { review_quiz: KeyPoint[]; intro_topic: string; advice: string };
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 type AutoSuggestion = { id: number; text: string; timestamp: Date };
+
+// 授業の流れ（中央フィード）。会話とASTAの提案・生成物が時系列で1本に並ぶ
+// （UI改修 第二段階・2026-08-16。設計方針「道具箱から助手へ」）
+type FlowItem = {
+    id: number;
+    kind: 'said'          // 先生・生徒の発話（文字起こし）
+        | 'suggest'       // ASTAからの提案（進め方）
+        | 'translate-help'// ASTAからの提案（ことばの補助）
+        | 'illust'        // 生成した絵（案C：速い版→丁寧版に差し替え）
+        | 'material'      // 例文・練習問題・言い換え
+        | 'asked'         // 先生が手で聞いた質問（旧・手動チャット）
+        | 'answer'        // その答え
+        | 'textbook'      // 教科書のページ（台本のステップを開くと流れに入る）
+        | 'student-said'  // 生徒の発話（画面共有の音声→日本語訳）
+        | 'notice';       // 運用のお知らせ（上限で停止・音声なし共有 など）
+    text?: string;
+    title?: string;
+    translation?: string;  // said: 発話の母語訳（あとから届く）
+    img?: string;          // illust: 表示中の絵
+    imgQuality?: string;   // illust: 裏で作った丁寧版（未差し替え時のみ保持）
+    imgs?: string[];       // textbook: ページの画像
+    ts: Date;
+};
 
 // Web Speech API の型宣言
 interface SpeechRecognitionEvent extends Event {
@@ -36,25 +58,30 @@ interface SpeechRecognitionInstance extends EventTarget {
     onerror: ((e: SpeechRecognitionErrorEvent) => void) | null;
     onend: (() => void) | null;
 }
-// Document Picture-in-Picture API（Chrome 116+）
-interface DocumentPictureInPictureAPI extends EventTarget {
-    requestWindow(options?: { width?: number; height?: number }): Promise<Window>;
-    readonly window: Window | null;
-}
-
 declare global {
     interface Window {
         SpeechRecognition?: new () => SpeechRecognitionInstance;
         webkitSpeechRecognition?: new () => SpeechRecognitionInstance;
-        documentPictureInPicture?: DocumentPictureInPictureAPI;
     }
 }
 
 // ────────────────────────────────────────────
 // 定数
 // ────────────────────────────────────────────
-const CHAR_TRIGGER = 100;   // 100文字ごとに自動分析
-const EXCHANGE_TRIGGER = 3; // 3発言ごとに自動分析
+/**
+ * AIが返す文の強調記号などを落として読める形にする。
+ * 授業中に「**」が見えると読みづらく、生徒にも見せられない
+ */
+function readable(md: string): string {
+    return md
+        .replace(/\*\*(.+?)\*\*/g, '$1')
+        .replace(/^\s*[*-]\s+/gm, '・')
+        .replace(/^#{1,6}\s*/gm, '')
+        .replace(/`/g, '');
+}
+
+const CHAR_TRIGGER = 50;    // 50文字ごとに自動分析（体感が遅い指摘で100→50・2026-08-25）
+const EXCHANGE_TRIGGER = 2; // 2発言ごとに自動分析（同上 3→2）
 
 // ────────────────────────────────────────────
 // コンポーネント
@@ -68,7 +95,22 @@ export default function LiveLessonPage() {
 
     // ── 既存state ──
     const [prepContent, setPrepContent] = useState<PrepContent | null>(null);
-    const [activeTab, setActiveTab] = useState<'prep' | 'course' | 'translation' | 'chat' | 'textbook' | 'illust'>('prep');
+
+    // ── 授業の流れ（中央フィード）──
+    const [flow, setFlow] = useState<FlowItem[]>([]);
+    const flowIdRef = useRef(0);
+    const flowEndRef = useRef<HTMLDivElement>(null);
+    const saidBufferRef = useRef('');   // 発話を文の切れ目まで貯めるバッファ
+    const saidFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const addFlow = useCallback((item: Omit<FlowItem, 'id' | 'ts'>) => {
+        flowIdRef.current += 1;
+        const id = flowIdRef.current;
+        setFlow(prev => [...prev.slice(-79), { ...item, id, ts: new Date() }]);
+        return id;
+    }, []);
+    const patchFlow = useCallback((id: number, patch: Partial<FlowItem>) => {
+        setFlow(prev => prev.map(it => (it.id === id ? { ...it, ...patch } : it)));
+    }, []);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
@@ -87,14 +129,11 @@ export default function LiveLessonPage() {
     const [micError, setMicError] = useState<string | null>(null);
 
     // ── 翻訳モード state ──
-    type LiveTranslation = { id: number; original: string; japanese: string; timestamp: Date };
     const [isTranslationMode, setIsTranslationMode] = useState(false);
-    const [liveTranslations, setLiveTranslations] = useState<LiveTranslation[]>([]);
     const [aiTranslationSuggestions, setAiTranslationSuggestions] = useState<AutoSuggestion[]>([]);
     const [isChromeDesktop, setIsChromeDesktop] = useState(false);
     const displayStreamRef = useRef<MediaStream | null>(null);
     const translationRecorderRef = useRef<MediaRecorder | null>(null);
-    const translationCounterRef = useRef(0);
     const translationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // ── 即興イラスト生成（機能B-2）──
@@ -103,15 +142,21 @@ export default function LiveLessonPage() {
     // 教科書タブで選んだ課。ヘッダーのイラスト生成でも使う
     const [selectedLessonId, setSelectedLessonId] = useState('');
     const handleLessonChange = useCallback((id: string) => setSelectedLessonId(id), []);
-    const [illustMode, setIllustMode] = useState<'fast' | 'quality' | null>(null);
-    const [illustUrl, setIllustUrl] = useState('');
-    const [illustSec, setIllustSec] = useState(0);
+    // イラストは案C（2026-08-16 かずき決定）：1ボタンで速い絵を先に出し、
+    // 裏で丁寧な絵も作って「差し替える？」と提案する。先生はモードを選ばない。
+    // 結果は「授業の流れ」のカードとして出す（第二段階でタブを廃止）
+    const [illustBusy, setIllustBusy] = useState(false);
     const [illustError, setIllustError] = useState('');
+    const illustRunRef = useRef(0);                     // 連打時に古い結果を捨てるための世代番号
 
-    // ── 字幕PiP state（Document Picture-in-Picture）──
-    const [isPipOpen, setIsPipOpen] = useState(false);
-    const [isPipSupported, setIsPipSupported] = useState(false);
-    const pipWindowRef = useRef<Window | null>(null);
+    // 例文・練習問題・言い換え（教科書タブから4ボタンへ移設）
+    const [materialBusy, setMaterialBusy] = useState<string | null>(null);
+
+    // 道具を出す/しまう（2026-09-02 かずき提案のワンクリック切替）。
+    // しまう＝生徒と見る配分（先生の道具を最小化・文字を大きく）。
+    // どちらの状態でも全部見えて安全な設計なので、押し忘れても事故にならない
+    const [toolsOut, setToolsOut] = useState(true);
+
 
     // ── 生徒向け翻訳（先生 → 生徒方向）──
     const [studentNativeLanguage, setStudentNativeLanguage] = useState('English');
@@ -142,8 +187,6 @@ export default function LiveLessonPage() {
         const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
         const isMobile = /Mobi|Android/i.test(navigator.userAgent);
         setIsChromeDesktop(isChrome && !isMobile);
-        // Document PiP サポート判定（Chrome 116+）
-        setIsPipSupported('documentPictureInPicture' in window);
     }, []);
 
     // BroadcastChannel（生徒ビューとの同デバイス通信）
@@ -267,16 +310,22 @@ export default function LiveLessonPage() {
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages, activeTab]);
+    }, [messages]);
+
+    // 授業の流れ：新しいカードが増えたら一番下まで送る
+    useEffect(() => {
+        flowEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [flow]);
 
     // ────────────────────────────────────────────
     // 生徒向け翻訳（先生の日本語 → 生徒の母国語）
     // ────────────────────────────────────────────
-    const translateForStudent = useCallback((japaneseText: string) => {
+    // 発話の吹き出しに母語訳を後付けする（共有前提の1画面設計・2026-08-25）。
+    // 生徒も同じ画面を見るので、日本語の吹き出しの下に訳が届く。
+    // 原文と訳が必ず同じ吹き出しで揃うよう、吹き出し確定の単位で訳す
+    const translateSaid = useCallback((flowId: number, japaneseText: string) => {
         if (!japaneseText.trim()) return;
-        // デバウンス（直近400ms以内に新しいチャンクが来たらリセット）
-        if (translateDebounceRef.current) clearTimeout(translateDebounceRef.current);
-        translateDebounceRef.current = setTimeout(async () => {
+        (async () => {
             try {
                 const res = await fetch('/api/ai', {
                     method: 'POST',
@@ -291,7 +340,8 @@ export default function LiveLessonPage() {
                 const data = await res.json();
                 const translated = (data.text ?? '').trim();
                 if (translated) {
-                    // A案: BroadcastChannel で生徒ビューに送信（同デバイス）
+                    patchFlow(flowId, { translation: translated });
+                    // 旧・生徒ビューを開いている場合にも一応流す（互換・無害）
                     broadcastChannelRef.current?.postMessage({
                         type: 'translation',
                         text: translated,
@@ -300,8 +350,8 @@ export default function LiveLessonPage() {
                     });
                 }
             } catch { /* silent - 翻訳はベストエフォート */ }
-        }, 400);
-    }, []); // refs のみ参照するため依存なし
+        })();
+    }, [patchFlow]); // refs のみ参照するため依存は patchFlow だけ
 
     // ────────────────────────────────────────────
     // 案Y：自動分析トリガー
@@ -311,8 +361,6 @@ export default function LiveLessonPage() {
 
         setIsAnalyzing(true);
         setStreamingText('');
-        // モバイル：分析開始時に進め方タブへ自動切替（streaming表示のため）
-        setActiveTab(prev => prev === 'prep' ? 'course' : prev);
 
         let accumulated = '';
 
@@ -383,15 +431,17 @@ export default function LiveLessonPage() {
                         { id, text: courseText, timestamp: now },
                         ...prev.slice(0, 4),
                     ]);
-                    setActiveTab('course');
+                    // ASTAが自分から名乗り出る：流れに提案カードとして出す
+                    addFlow({ kind: 'suggest', title: '💡 ヒント（進め方）', text: courseText });
                 }
 
-                // R-2: AI翻訳補助サジェストを翻訳タブに表示
+                // R-2: AI翻訳補助サジェスト（ことばの補助）も流れに出す
                 if (translationText && !translationText.includes('翻訳補助の出番なし')) {
                     setAiTranslationSuggestions(prev => [
                         { id, text: translationText, timestamp: now },
                         ...prev.slice(0, 4),
                     ]);
+                    addFlow({ kind: 'translate-help', title: '💡 ことばのヒント', text: translationText });
                 }
             }
         } catch (err) {
@@ -402,7 +452,7 @@ export default function LiveLessonPage() {
             charsSinceLastTrigger.current = 0;
             exchangesSinceLastTrigger.current = 0;
         }
-    }, [isAnalyzing, studentContext, prepContent]);
+    }, [isAnalyzing, studentContext, prepContent, addFlow]);
 
     // ────────────────────────────────────────────
     // 案Y：音声認識 開始 / 停止
@@ -440,9 +490,28 @@ export default function LiveLessonPage() {
                 transcriptRef.current = updated;
                 setTranscript(updated);
 
-                // 生徒向けリアルタイム翻訳（A案: BroadcastChannel）
-                translateForStudent(newFinal);
+                // 授業の流れに発話を積む。細切れを避けるため、
+                // 文の切れ目（。？！）か20字、または2秒の間が空いたら1つの吹き出しにする
+                // （初版は40字で「なかなか出ない」体感だった＝かずき指摘 2026-08-25）
+                saidBufferRef.current += newFinal;
+                const buf = saidBufferRef.current;
+                if (saidFlushTimerRef.current) clearTimeout(saidFlushTimerRef.current);
+                if (/[。？！?!]\s*$/.test(buf) || buf.length >= 20) {
+                    const id = addFlow({ kind: 'said', text: buf.trim() });
+                    translateSaid(id, buf.trim());
+                    saidBufferRef.current = '';
+                } else {
+                    saidFlushTimerRef.current = setTimeout(() => {
+                        const rest = saidBufferRef.current.trim();
+                        if (rest) {
+                            const id = addFlow({ kind: 'said', text: rest });
+                            translateSaid(id, rest);
+                            saidBufferRef.current = '';
+                        }
+                    }, 2000);
+                }
 
+                
                 // トリガーカウント更新
                 charsSinceLastTrigger.current += newFinal.length;
                 exchangesSinceLastTrigger.current += 1;
@@ -488,7 +557,7 @@ export default function LiveLessonPage() {
         recognitionRef.current = recognition;
         recognition.start();
         setIsListening(true);
-    }, [triggerAnalysis, translateForStudent]);
+    }, [triggerAnalysis, translateSaid]);
 
     const stopListening = useCallback(() => {
         if (recognitionRef.current) {
@@ -522,7 +591,8 @@ export default function LiveLessonPage() {
         setMessages(prev => [...prev, userMsg]);
         setInput('');
         setIsTyping(true);
-        setActiveTab('chat');
+        // 授業の流れに質問を積む（2026-08-20：チャットタブを廃止し流れに統合）
+        addFlow({ kind: 'asked', text: userContent });
 
         try {
             await supabase.from('lesson_chat_logs').insert({
@@ -549,6 +619,7 @@ export default function LiveLessonPage() {
             const data = await res.json();
             const aiContent = data.text;
             setMessages(prev => [...prev, { role: 'assistant', content: aiContent }]);
+            addFlow({ kind: 'answer', title: '💬 質問への答え', text: aiContent });
 
             await supabase.from('lesson_chat_logs').insert({
                 student_id: studentId,
@@ -559,6 +630,7 @@ export default function LiveLessonPage() {
         } catch (err) {
             console.error('Chat Error:', err);
             setMessages(prev => [...prev, { role: 'assistant', content: 'エラーが発生しました。もう一度お試しください。' }]);
+            addFlow({ kind: 'answer', title: '💬 質問への答え', text: '答えを作れませんでした。もう一度お試しください。' });
         } finally {
             setIsTyping(false);
         }
@@ -575,14 +647,7 @@ export default function LiveLessonPage() {
             const audioTrack = stream.getAudioTracks()[0];
             if (!audioTrack) {
                 stream.getTracks().forEach(t => t.stop());
-                translationCounterRef.current += 1;
-                setLiveTranslations(prev => [{
-                    id: translationCounterRef.current,
-                    original: '',
-                    japanese: '⚠️ 共有に音声が含まれていません。共有画面で「Chromeタブ」を選び、下の「タブの音声も共有」にチェックを入れてから、生徒の声が流れるタブ（Preply等）を選んでください。',
-                    timestamp: new Date(),
-                }, ...prev.slice(0, 9)]);
-                setActiveTab('translation');
+                addFlow({ kind: 'notice', text: '⚠️ 共有に音声が含まれていません。共有画面で「Chromeタブ」を選び、下の「タブの音声も共有」にチェックを入れてから、生徒の声が流れるタブ（Zoom等）を選んでください。' });
                 return;
             }
 
@@ -605,25 +670,14 @@ export default function LiveLessonPage() {
                     if (res.status === 429) {
                         // 利用上限到達 → 2.5秒ごとの再送を止めるため翻訳モードごと停止（課金暴走の栓）
                         stopTranslationMode();
-                        translationCounterRef.current += 1;
-                        setLiveTranslations(prev => [{
-                            id: translationCounterRef.current,
-                            original: '',
-                            japanese: '⚠️ 翻訳の利用量が上限に達したため自動停止しました。1時間ほど置いてから再度お試しください。',
-                            timestamp: new Date(),
-                        }, ...prev.slice(0, 9)]);
+                        addFlow({ kind: 'notice', text: '⚠️ 翻訳の利用量が上限に達したため自動停止しました。1時間ほど置いてから再度お試しください。' });
                         return;
                     }
                     const data = await res.json();
                     if (data.japanese?.trim()) {
-                        translationCounterRef.current += 1;
-                        setLiveTranslations(prev => [{
-                            id: translationCounterRef.current,
-                            original: data.original || '',
-                            japanese: data.japanese,
-                            timestamp: new Date(),
-                        }, ...prev.slice(0, 9)]);
-                        setActiveTab('translation');
+                        // 生徒の発話は流れに直接出す（2026-09-03 かずき指示。
+                        // 以前は翻訳ログタブの中に隠れていて、開かないと見えなかった）
+                        addFlow({ kind: 'student-said', text: data.japanese, translation: data.original || '' });
                     }
                 } catch (err) { console.error('Translation chunk error:', err); }
             };
@@ -648,20 +702,13 @@ export default function LiveLessonPage() {
             };
             startChunkRecorder();
             setIsTranslationMode(true);
-            setActiveTab('translation');
 
             audioTrack.onended = () => stopTranslationMode();
 
             // 閉じ忘れ対策：連続90分で自動停止（STT課金が一晩中続く事故を防ぐ）
             translationTimerRef.current = setTimeout(() => {
                 stopTranslationMode();
-                translationCounterRef.current += 1;
-                setLiveTranslations(prev => [{
-                    id: translationCounterRef.current,
-                    original: '',
-                    japanese: '⏰ 連続90分が経過したため翻訳を自動停止しました。続ける場合はもう一度「翻訳」をONにしてください。',
-                    timestamp: new Date(),
-                }, ...prev.slice(0, 9)]);
+                addFlow({ kind: 'notice', text: '⏰ 連続90分が経過したため翻訳を自動停止しました。続ける場合はもう一度「翻訳を始める」を押してください。' });
             }, 90 * 60 * 1000);
         } catch (err) {
             // ユーザーがキャンセル or 権限拒否 → コンソールエラーを出さない
@@ -684,135 +731,98 @@ export default function LiveLessonPage() {
         setIsTranslationMode(false);
     }, []);
 
-    // ── Document PiP（字幕フローティングウィンドウ）──
-    const openSubtitlePip = useCallback(async () => {
-        if (!window.documentPictureInPicture) return;
-        try {
-            const pip = await window.documentPictureInPicture.requestWindow({ width: 640, height: 160 });
-            pipWindowRef.current = pip;
-
-            // ベーススタイル
-            const style = pip.document.createElement('style');
-            style.textContent = `
-                * { box-sizing: border-box; margin: 0; padding: 0; }
-                body {
-                    background: #111;
-                    color: #fff;
-                    font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    height: 100vh;
-                    padding: 16px 20px;
-                    overflow: hidden;
-                }
-                #pip-jp {
-                    font-size: 30px;
-                    font-weight: bold;
-                    line-height: 1.3;
-                    color: #fff;
-                    word-break: break-all;
-                }
-                #pip-orig {
-                    font-size: 13px;
-                    color: rgba(255,255,255,0.55);
-                    margin-top: 6px;
-                    font-style: italic;
-                    word-break: break-all;
-                }
-                #pip-waiting {
-                    font-size: 16px;
-                    color: rgba(255,255,255,0.4);
-                }
-            `;
-            pip.document.head.appendChild(style);
-
-            const jpEl = pip.document.createElement('p');
-            jpEl.id = 'pip-jp';
-            jpEl.style.display = 'none';
-
-            const origEl = pip.document.createElement('p');
-            origEl.id = 'pip-orig';
-
-            const waitEl = pip.document.createElement('p');
-            waitEl.id = 'pip-waiting';
-            waitEl.textContent = '🎙 生徒の発話を待っています…';
-
-            pip.document.body.appendChild(waitEl);
-            pip.document.body.appendChild(jpEl);
-            pip.document.body.appendChild(origEl);
-
-            pip.addEventListener('pagehide', () => {
-                setIsPipOpen(false);
-                pipWindowRef.current = null;
-            });
-
-            setIsPipOpen(true);
-        } catch (err) {
-            if (err instanceof DOMException && err.name === 'NotAllowedError') return;
-            console.error('PiP open error:', err);
-        }
-    }, []);
-
-    const closeSubtitlePip = useCallback(() => {
-        pipWindowRef.current?.close();
-        pipWindowRef.current = null;
-        setIsPipOpen(false);
-    }, []);
-
-    // 新しい翻訳が届いたらPiPウィンドウを更新
-    useEffect(() => {
-        if (!pipWindowRef.current || liveTranslations.length === 0) return;
-        const latest = liveTranslations[0];
-        const doc = pipWindowRef.current.document;
-        const waitEl = doc.getElementById('pip-waiting');
-        const jpEl = doc.getElementById('pip-jp');
-        const origEl = doc.getElementById('pip-orig');
-        if (waitEl) waitEl.style.display = 'none';
-        if (jpEl) { jpEl.style.display = 'block'; jpEl.textContent = latest.japanese; }
-        if (origEl) origEl.textContent = latest.original || '';
-    }, [liveTranslations]);
-
-    // アンマウント時にPiPも閉じる
-    useEffect(() => {
-        return () => { closeSubtitlePip(); };
-    }, [closeSubtitlePip]);
 
     // アンマウント時にクリーンアップ（stopTranslationMode宣言の後に配置）
     useEffect(() => {
         return () => { stopListening(); stopTranslationMode(); };
     }, [stopListening, stopTranslationMode]);
 
-    // 即興イラスト生成。先生は追加入力をしない。
-    // 今の会話（直近500字）と生徒の情報から場面を起こす
-    const generateIllustration = async (mode: 'fast' | 'quality') => {
-        setIllustMode(mode);
+    // 即興イラスト生成（案C）。先生は追加入力もモード選択もしない。
+    // 速い絵（約8秒）と丁寧な絵（約35秒）を同時に作り始め、
+    // 速い方を先に見せて、丁寧な方ができたら「差し替える？」と提案する。
+    // 速い方は日本語の誤字が出ることがある（実機で確認済み）ための二段構え
+    const requestIllust = async (mode: 'fast' | 'quality') => {
+        const res = await fetch('/api/materials/illustrate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                studentId,
+                mode,
+                masterMaterialId: selectedLessonId || undefined,
+                transcript: transcriptRef.current.slice(-500),
+                nativeLanguage: studentNativeLangRef.current,
+            }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? 'イラストの生成に失敗しました。');
+        return data as { dataUrl: string; elapsedMs?: number };
+    };
+
+    const generateIllustration = async () => {
+        const run = ++illustRunRef.current;
+        setIllustBusy(true);
         setIllustError('');
-        setIllustUrl('');
-        setActiveTab('illust');
+        // まず流れに「描いています…」のカードを置き、速い版・丁寧版の両方がそこへ届く
+        const itemId = addFlow({ kind: 'illust', title: '🎨 絵を描いています…（約10秒）', img: '' });
+
+        // 丁寧版は裏で静かに走らせる。失敗しても速い版があるので黙って諦める
+        requestIllust('quality')
+            .then(d => {
+                if (illustRunRef.current !== run) return;
+                // 万一こちらが先に完成したら（速い版の失敗時）そのまま本編として出す
+                setFlow(prev => prev.map(it => {
+                    if (it.id !== itemId) return it;
+                    return it.img
+                        ? { ...it, imgQuality: d.dataUrl }
+                        : { ...it, img: d.dataUrl, title: '🎨 できた絵' };
+                }));
+            })
+            .catch(() => { /* 速い版で続行 */ });
+
         try {
-            const res = await fetch('/api/materials/illustrate', {
+            const d = await requestIllust('fast');
+            if (illustRunRef.current !== run) return;
+            patchFlow(itemId, { img: d.dataUrl, title: `🎨 できた絵（${Math.round((d.elapsedMs ?? 0) / 1000)}秒）` });
+        } catch (e) {
+            if (illustRunRef.current === run) {
+                setFlow(prev => prev.filter(it => it.id !== itemId || !!it.img));
+                setIllustError(e instanceof Error ? e.message : 'イラストの生成に失敗しました。');
+            }
+        } finally {
+            if (illustRunRef.current === run) setIllustBusy(false);
+        }
+    };
+
+    // 例文・練習問題・やさしい言い換えをその場で作る（教科書の課＋生徒情報から）
+    const MATERIAL_MODES = {
+        examples: { label: '✏️ 例文', hint: 'この課×生徒に合う場面で5つ' },
+        exercises: { label: '📝 練習問題', hint: 'いまの文法で3問' },
+        explain: { label: '💡 やさしく言い換え', hint: '説明が伝わらない時に' },
+    } as const;
+
+    const makeMaterial = async (mode: keyof typeof MATERIAL_MODES) => {
+        if (!selectedLessonId) {
+            setIllustError('左の「きょうの進め方」で課を選ぶと、例文・問題・言い換えが作れます。');
+            return;
+        }
+        setMaterialBusy(mode);
+        setIllustError('');
+        try {
+            const res = await fetch('/api/materials/improvise', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    studentId,
-                    mode,
-                    masterMaterialId: selectedLessonId || undefined,
-                    transcript: transcriptRef.current.slice(-500),
-                    nativeLanguage: studentNativeLangRef.current,
-                }),
+                body: JSON.stringify({ masterMaterialId: selectedLessonId, mode, studentId, note: '' }),
             });
             const data = await res.json();
             if (!res.ok) {
-                setIllustError(data.error ?? 'イラストの生成に失敗しました。');
+                setIllustError(data.error ?? '生成に失敗しました。');
                 return;
             }
-            setIllustUrl(data.dataUrl);
-            setIllustSec(Math.round((data.elapsedMs ?? 0) / 1000));
+            addFlow({ kind: 'material', title: MATERIAL_MODES[mode].label, text: data.text ?? '' });
         } catch {
             setIllustError('通信に失敗しました。もう一度お試しください。');
         } finally {
-            setIllustMode(null);
+            setMaterialBusy(null);
         }
     };
 
@@ -832,120 +842,88 @@ export default function LiveLessonPage() {
     // ────────────────────────────────────────────
     // UI
     // ────────────────────────────────────────────
+    // 画面の高さ = 100vh − アプリ上部の帯(73px) − 本文の余白(上下24px)。
+    // ここを緩めると、下の4ボタンが画面外に押し出される
     return (
-        <div className="flex flex-col h-[calc(100vh-theme(spacing.4))] max-w-5xl mx-auto bg-white rounded-2xl shadow-[0_8px_48px_rgba(111,83,133,0.15)] overflow-hidden border border-[#c9a8e0]/20">
+        <div className="flex flex-col h-[calc(100vh-121px)] max-w-6xl mx-auto bg-white rounded-2xl shadow-[0_8px_48px_rgba(111,83,133,0.15)] overflow-hidden border border-[#c9a8e0]/20">
 
             {/* ヘッダー */}
             <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-[#6f5385] to-[#9b77b5] text-white shrink-0">
-                <div className="flex items-center gap-3">
-                    <button onClick={() => router.back()} className="p-1.5 hover:bg-white/20 rounded-full transition-colors">
+                <div className="flex items-center gap-3 min-w-0">
+                    <button onClick={() => router.back()} className="p-1.5 hover:bg-white/20 rounded-full transition-colors shrink-0">
                         <ArrowLeft size={18} />
                     </button>
-                    <h1 className="font-bold text-base flex items-center gap-2">
-                        LIVE カンペモード
-                        <span className="text-[10px] bg-red-500 px-2 py-0.5 rounded-full animate-pulse font-bold">ON AIR</span>
-                    </h1>
+                    <h1 className="font-bold text-base whitespace-nowrap">授業中</h1>
+
+                    {/* 状態はこの信号1つに集約。押すと録音の一時停止/再開 */}
+                    <button
+                        onClick={isListening ? stopListening : startListening}
+                        title={isListening ? '押すと録音を一時停止' : '押すと録音を再開'}
+                        className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 hover:bg-white/25 transition-all text-xs font-bold whitespace-nowrap"
+                    >
+                        <span className={`w-2.5 h-2.5 rounded-full ${isListening ? 'bg-red-400 animate-pulse' : 'bg-white/50'}`} />
+                        {isListening ? '録音中' : '一時停止中'}
+                        {isTranslationMode && (
+                            <span className="border-l border-white/40 pl-2 font-medium opacity-90">生徒の画面に翻訳を表示中</span>
+                        )}
+                    </button>
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <button
-                        onClick={isListening ? stopListening : startListening}
-                        title={isListening ? '録音を一時停止' : '録音を再開'}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all ${isListening
-                            ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
-                            : 'bg-white/30 hover:bg-white/40 text-white border border-white/40'
-                            }`}
-                    >
-                        {isListening ? <MicOff size={14} /> : <Mic size={14} />}
-                        {isListening ? '録音中' : '録音再開'}
-                    </button>
-
                     {isChromeDesktop && (
                         <button
                             onClick={isTranslationMode ? stopTranslationMode : startTranslationMode}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all ${isTranslationMode
-                                ? 'bg-[#c9a8e0] text-white animate-pulse'
+                            title={isTranslationMode ? '翻訳を止める' : '画面共有の音声から翻訳を始める'}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all whitespace-nowrap ${isTranslationMode
+                                ? 'bg-[#c9a8e0] text-white'
                                 : 'bg-white/20 hover:bg-white/30 text-white'
                                 }`}
                         >
                             <Zap size={14} />
-                            {isTranslationMode ? '翻訳中' : '翻訳ON'}
+                            {isTranslationMode ? '翻訳を止める' : '翻訳を始める'}
                         </button>
                     )}
 
-                    {/* 字幕PiP（Document PiP・Chrome 116+） */}
-                    {isPipSupported && (
-                        <button
-                            onClick={isPipOpen ? closeSubtitlePip : openSubtitlePip}
-                            title={isPipOpen ? '字幕PiPを閉じる' : '字幕をフローティングウィンドウで表示（翻訳ONと組み合わせて使用）'}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all ${isPipOpen
-                                ? 'bg-emerald-500 text-white'
-                                : 'bg-white/20 hover:bg-white/30 text-white'
-                                }`}
-                        >
-                            <PictureInPicture2 size={14} />
-                            {isPipOpen ? 'PiP中' : '字幕PiP'}
-                        </button>
-                    )}
-
-                    {/* 即興イラスト：授業中どのタブからでも押せる */}
-                    <button
-                        onClick={() => generateIllustration('fast')}
-                        disabled={illustMode !== null}
-                        title="今の会話に合うイラストを約10秒で作る"
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white font-bold rounded-full text-xs transition-all disabled:opacity-50"
-                    >
-                        {illustMode === 'fast'
-                            ? <Loader2 size={14} className="animate-spin" />
-                            : <ImagePlus size={14} />}
-                        絵を描く
-                    </button>
-                    <button
-                        onClick={() => generateIllustration('quality')}
-                        disabled={illustMode !== null}
-                        title="文字までしっかり作る。約30〜40秒かかる"
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white font-bold rounded-full text-xs transition-all disabled:opacity-50"
-                    >
-                        {illustMode === 'quality'
-                            ? <Loader2 size={14} className="animate-spin" />
-                            : <ImagePlus size={14} />}
-                        絵（きれい）
-                    </button>
-
-                    {/* 言語セレクタ */}
+                    {/* 生徒の母国語（生徒の画面に出す翻訳の言語） */}
                     <select
                         value={studentNativeLanguage}
                         onChange={e => setStudentNativeLanguage(e.target.value)}
                         className="text-xs bg-white/20 hover:bg-white/30 text-white border-0 rounded-full px-2 py-1.5 font-bold cursor-pointer outline-none"
-                        title="生徒の母国語"
+                        title="生徒の母国語（翻訳して見せる言語）"
                     >
-                        <option value="English">🇺🇸 EN</option>
-                        <option value="Spanish">🇪🇸 ES</option>
-                        <option value="Portuguese">🇧🇷 PT</option>
-                        <option value="Korean">🇰🇷 KO</option>
-                        <option value="Chinese">🇨🇳 ZH</option>
-                        <option value="French">🇫🇷 FR</option>
-                        <option value="German">🇩🇪 DE</option>
-                        <option value="Thai">🇹🇭 TH</option>
-                        <option value="Vietnamese">🇻🇳 VI</option>
-                        <option value="Indonesian">🇮🇩 ID</option>
+                        <option value="English">英語</option>
+                        <option value="Spanish">スペイン語</option>
+                        <option value="Portuguese">ポルトガル語</option>
+                        <option value="Korean">韓国語</option>
+                        <option value="Chinese">中国語</option>
+                        <option value="French">フランス語</option>
+                        <option value="German">ドイツ語</option>
+                        <option value="Thai">タイ語</option>
+                        <option value="Vietnamese">ベトナム語</option>
+                        <option value="Indonesian">インドネシア語</option>
                     </select>
 
-                    {/* 生徒ビュー（A案: 画面共有用） */}
+
+
                     <button
-                        onClick={() => window.open(`/student-view/${studentId}`, '_blank', 'width=1024,height=640,noopener')}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white font-bold rounded-full text-xs transition-all"
-                        title="生徒に見せる翻訳ビューを開く"
+                        onClick={() => setToolsOut(v => !v)}
+                        title={toolsOut
+                            ? '生徒と見る画面にする。Zoomで画面共有するときはこの状態で'
+                            : '先生の道具を出して、準備の画面に戻る'}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all whitespace-nowrap ${toolsOut
+                            ? 'bg-white/20 hover:bg-white/30 text-white'
+                            : 'bg-emerald-400 text-white'
+                            }`}
                     >
-                        👁 生徒ビュー
+                        {toolsOut ? '🖥 共有モード' : '🛠 準備モード'}
                     </button>
 
                     <button
                         onClick={finishLesson}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-[#6f5385] font-bold rounded-full hover:bg-[#f2daff] transition-colors text-xs shadow-sm"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-[#6f5385] font-bold rounded-full hover:bg-[#f2daff] transition-colors text-xs shadow-sm whitespace-nowrap ml-2"
                     >
                         <Save size={14} />
-                        終了・記録
+                        授業を終える
                     </button>
                 </div>
             </div>
@@ -954,174 +932,34 @@ export default function LiveLessonPage() {
             <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
 
                 {/* タブ（モバイル） */}
-                <div className="md:hidden flex border-b border-[#f4f3f7]">
-                    {(['prep', 'course', 'translation', 'textbook', 'illust', 'chat'] as const).map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`flex-1 py-2.5 text-[10px] font-bold relative ${activeTab === tab ? 'text-[#6f5385] border-b-2 border-[#6f5385]' : 'text-[#4b454e]'}`}
-                        >
-                            {tab === 'prep' && '準備'}
-                            {tab === 'course' && (
-                                <span className="flex items-center justify-center gap-0.5">
-                                    🎯進め方
-                                    {courseSuggestions.length > 0 && (
-                                        <span className="bg-[#6f5385] text-white text-[9px] rounded-full w-3.5 h-3.5 flex items-center justify-center ml-0.5">
-                                            {courseSuggestions.length}
-                                        </span>
-                                    )}
-                                </span>
-                            )}
-                            {tab === 'translation' && (
-                                <span className="flex items-center justify-center gap-0.5">
-                                    🌐翻訳
-                                    {(liveTranslations.length + aiTranslationSuggestions.length) > 0 && (
-                                        <span className="bg-[#655a6f] text-white text-[9px] rounded-full w-3.5 h-3.5 flex items-center justify-center ml-0.5">
-                                            {liveTranslations.length + aiTranslationSuggestions.length}
-                                        </span>
-                                    )}
-                                </span>
-                            )}
-                            {tab === 'textbook' && '📖教科書'}
-                            {tab === 'illust' && '🎨イラスト'}
-                            {tab === 'chat' && 'チャット'}
-                        </button>
-                    ))}
-                </div>
+                {/* 左パネル：きょうの進め方（台本） */}
+                <GuidePanel
+                    studentId={studentId}
+                    collapsed={!toolsOut}
+                    prepContent={prepContent}
+                    lessonId={selectedLessonId}
+                    onLessonChange={handleLessonChange}
+                    onStepOpen={pg => {
+                        addFlow({
+                            kind: 'textbook',
+                            title: `📖 ${pg.lessonLabel}　${pg.stepTitle}`,
+                            text: pg.body,
+                            imgs: pg.imageUrls,
+                        });
+                    }}
+                />
 
-                {/* 左パネル：準備メモ */}
-                <div className={`w-full md:w-1/3 overflow-y-auto p-4 bg-[#faf9fd] border-r border-[#f4f3f7] ${activeTab !== 'prep' ? 'hidden md:block' : ''}`}>
-                    {prepContent ? (
-                        <div className="space-y-3">
-                            <div className="bg-white p-4 rounded-2xl shadow-[0_0_20px_rgba(111,83,133,0.06)]">
-                                <h2 className="font-bold text-[#1a1c1e] mb-3 flex items-center gap-2 text-sm">
-                                    <CheckCircle size={15} className="text-[#6f5385]" />
-                                    復習クイズ
-                                </h2>
-                                <ul className="space-y-2">
-                                    {prepContent.review_quiz.map((q, i) => (
-                                        <li key={i} className="text-xs">
-                                            <p className="font-bold text-[#1a1c1e] mb-0.5">Q. {q.question}</p>
-                                            <p className="text-[#4b454e] pl-3 border-l-2 border-[#c9a8e0]">A. {q.answer}</p>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                            <div className="bg-white p-4 rounded-2xl shadow-[0_0_20px_rgba(111,83,133,0.06)]">
-                                <h2 className="font-bold text-[#1a1c1e] mb-2 flex items-center gap-2 text-sm">
-                                    <MessageCircle size={15} className="text-[#655a6f]" />
-                                    導入トーク
-                                </h2>
-                                <p className="text-xs text-[#4b454e] whitespace-pre-wrap leading-relaxed">{prepContent.intro_topic}</p>
-                            </div>
-                            <div className="bg-[#f2daff] p-3 rounded-2xl">
-                                <h2 className="font-bold text-[#6f5385] mb-1 text-xs uppercase tracking-wide">Advice</h2>
-                                <p className="text-xs text-[#4b454e] italic">{prepContent.advice}</p>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-[#4b454e]">
-                            <BookOpen size={36} className="mb-3 opacity-30" />
-                            <p className="text-sm">準備データがありません</p>
-                            <Link href={`/students/${studentId}/lessons/prepare`} className="text-[#6f5385] underline mt-2 text-xs">
-                                準備ページへ
-                            </Link>
-                        </div>
-                    )}
-                </div>
+                {/* 右エリア：授業の流れ + 翻訳ログ + チャット */}
+                <div className="flex-1 flex flex-col overflow-hidden">
 
-                {/* 右エリア：AIサジェスト + チャット */}
-                <div className={`flex-1 flex flex-col overflow-hidden ${activeTab === 'prep' ? 'hidden md:flex' : 'flex'}`}>
-
-                    {/* デスクトップ用サブタブバー */}
-                    <div className="hidden md:flex items-center border-b border-[#f4f3f7] bg-white shrink-0">
-                        <button
-                            onClick={() => setActiveTab('course')}
-                            className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${
-                                activeTab === 'course' || activeTab === 'prep'
-                                    ? 'text-[#6f5385] border-[#6f5385]'
-                                    : 'text-[#4b454e] border-transparent hover:text-[#1a1c1e]'
-                            }`}
-                        >
-                            🎯 進め方
-                            {courseSuggestions.length > 0 && (
-                                <span className="bg-[#6f5385] text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center">
-                                    {courseSuggestions.length}
-                                </span>
-                            )}
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('translation')}
-                            className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${
-                                activeTab === 'translation'
-                                    ? 'text-[#655a6f] border-[#655a6f]'
-                                    : 'text-[#4b454e] border-transparent hover:text-[#1a1c1e]'
-                            }`}
-                        >
-                            🌐 翻訳
-                            {(liveTranslations.length + aiTranslationSuggestions.length) > 0 && (
-                                <span className="bg-[#655a6f] text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center">
-                                    {liveTranslations.length + aiTranslationSuggestions.length}
-                                </span>
-                            )}
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('textbook')}
-                            className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${
-                                activeTab === 'textbook'
-                                    ? 'text-[#6f5385] border-[#6f5385]'
-                                    : 'text-[#4b454e] border-transparent hover:text-[#1a1c1e]'
-                            }`}
-                        >
-                            📖 教科書
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('illust')}
-                            className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${
-                                activeTab === 'illust'
-                                    ? 'text-[#6f5385] border-[#6f5385]'
-                                    : 'text-[#4b454e] border-transparent hover:text-[#1a1c1e]'
-                            }`}
-                        >
-                            🎨 イラスト
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('chat')}
-                            className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold border-b-2 transition-colors ${
-                                activeTab === 'chat'
-                                    ? 'text-[#6f5385] border-[#6f5385]'
-                                    : 'text-[#4b454e] border-transparent hover:text-[#1a1c1e]'
-                            }`}
-                        >
-                            💬 チャット
-                        </button>
-                        <div className="ml-auto flex items-center gap-2 px-3 text-xs">
-                            {isListening && (
-                                <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full animate-pulse flex items-center gap-1">
-                                    <Mic size={10} /> 自動録音中
-                                </span>
-                            )}
-                            {!isListening && hasAutoStarted.current && (
-                                <span className="text-[10px] bg-[#f4f3f7] text-[#4b454e] px-2 py-0.5 rounded-full flex items-center gap-1">
-                                    <MicOff size={10} /> 録音停止中
-                                </span>
-                            )}
-                            {isAnalyzing && (
-                                <span className="flex items-center gap-1 text-[#6f5385]">
-                                    <Loader2 size={12} className="animate-spin" />
-                                    分析中…
-                                </span>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* 🎯 課の進め方パネル */}
-                    <div className={`flex-1 flex flex-col overflow-hidden ${activeTab === 'course' || activeTab === 'prep' ? 'flex' : 'hidden'}`}>
+                    {/* 📋 授業の流れ（会話とASTAの提案・生成物が時系列で並ぶ）。
+                        タブは廃止（2026-09-03 かずき決定：翻訳ログを流れに統合してタブが1つになったため） */}
+                    <div className="flex-1 flex flex-col overflow-hidden">
                         {micError && (
                             <div className="mx-4 mt-3 p-3 bg-red-50 border border-red-200 rounded-2xl shrink-0 flex items-start gap-2">
                                 <span className="text-red-500 shrink-0 mt-0.5">⚠️</span>
                                 <div>
-                                    <p className="text-xs font-bold text-red-700 mb-0.5">マイクアクセスエラー</p>
+                                    <p className="text-xs font-bold text-red-700 mb-0.5">マイクが使えません</p>
                                     <p className="text-xs text-red-600">{micError}</p>
                                     <button
                                         onClick={startListening}
@@ -1132,265 +970,239 @@ export default function LiveLessonPage() {
                                 </div>
                             </div>
                         )}
-                        {isListening && (
-                            <div className="px-4 pt-2 pb-1 bg-[#faf9fd] border-b border-[#f4f3f7] shrink-0">
-                                <p className="text-[11px] text-[#4b454e] leading-relaxed line-clamp-2">
-                                    {interimText
-                                        ? <span className="italic">{interimText}</span>
-                                        : <span className="text-[#4b454e]/40">話しているとAIが認識します…</span>
-                                    }
-                                </p>
-                            </div>
-                        )}
-                        {(isAnalyzing || streamingText) && (
-                            <div className="mx-4 mt-3 p-3 bg-[#f2daff] border border-[#c9a8e0]/40 rounded-2xl shrink-0">
-                                <p className="text-xs font-bold text-[#6f5385] mb-1 flex items-center gap-1">
-                                    <Sparkles size={12} /> AIが分析しています…
-                                </p>
-                                <p className="text-sm text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">
-                                    {streamingText}
-                                    {isAnalyzing && <span className="animate-pulse">▋</span>}
-                                </p>
-                            </div>
-                        )}
+
                         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                            {courseSuggestions.length === 0 && !isListening && (
-                                <div className="h-full flex flex-col items-center justify-center text-[#4b454e] py-12">
-                                    <Mic size={36} className="mb-3 opacity-20" />
-                                    <p className="text-sm font-medium">生徒情報を読み込み中…</p>
-                                    <p className="text-xs mt-1 text-[#4b454e]/60">準備完了後、自動で録音を開始します</p>
+                            {flow.length === 0 && (
+                                <div className="h-full flex flex-col items-center justify-center text-center py-12 gap-2">
+                                    <Mic size={32} className={isListening ? 'text-[#6f5385] animate-pulse' : 'opacity-20'} />
+                                    <p className="text-sm font-bold text-[#1a1c1e]">
+                                        {isListening ? '聞いています' : '生徒情報を読み込み中…'}
+                                    </p>
+                                    <p className="text-xs text-[#4b454e] max-w-xs leading-relaxed">
+                                        授業の会話がここに流れます。困った場面ではASTAが自分から提案を出します。
+                                        自分から頼みたい時は下のボタンを押してください。
+                                    </p>
                                 </div>
                             )}
-                            {courseSuggestions.length === 0 && isListening && !isAnalyzing && (
-                                <div className="h-full flex flex-col items-center justify-center py-12">
-                                    <Mic size={36} className="mb-3 text-[#6f5385] animate-pulse" />
-                                    <p className="text-sm font-medium text-[#1a1c1e]">自動録音中…</p>
-                                    <p className="text-xs mt-1 text-[#4b454e]">{CHAR_TRIGGER}文字 または {EXCHANGE_TRIGGER}発言でAIが自動分析します</p>
-                                </div>
-                            )}
-                            {courseSuggestions.map((s) => (
-                                <div key={s.id} className="bg-white border border-[#c9a8e0]/30 rounded-2xl p-3 shadow-[0_0_20px_rgba(111,83,133,0.06)]">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-[10px] font-bold text-[#6f5385] uppercase tracking-wide">🎯 進め方 #{s.id}</span>
-                                        <span className="text-[10px] text-[#4b454e]">{s.timestamp.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-                                    </div>
-                                    <p className="text-sm text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">{s.text}</p>
+
+                            {flow.map(item => (
+                                <div key={item.id}>
+                                    {item.kind === 'said' && (
+                                        <div className="max-w-[85%] bg-white border border-[#f4f3f7] rounded-2xl px-4 py-2.5">
+                                            <p className={`${toolsOut ? 'text-lg' : 'text-2xl'} text-[#1a1c1e] font-bold leading-relaxed`}>💬 {readable(item.text ?? '')}</p>
+                                            {item.translation && (
+                                                <p className={`${toolsOut ? 'text-sm' : 'text-lg'} text-[#6f5385] mt-1 leading-relaxed`}>{item.translation}</p>
+                                            )}
+                                            <p className="text-[9px] text-[#b3adc0] mt-0.5">
+                                                {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {item.kind === 'student-said' && (
+                                        <div className="max-w-[85%] bg-[#eef7f3] border border-[#bfe3d2] rounded-2xl px-4 py-2.5">
+                                            <p className={`${toolsOut ? 'text-lg' : 'text-2xl'} text-[#1a1c1e] font-bold leading-relaxed`}>🗣 {item.text}</p>
+                                            {item.translation && (
+                                                <p className={`${toolsOut ? 'text-sm' : 'text-lg'} text-[#4e7a66] mt-1 leading-relaxed`}>{item.translation}</p>
+                                            )}
+                                            <p className="text-[9px] text-[#9ec4b0] mt-0.5">
+                                                生徒 · {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {item.kind === 'notice' && (
+                                        <div className="mx-auto max-w-[92%] bg-[#fdf6e7] border border-[#ecd9a8] rounded-xl px-4 py-2 text-xs text-[#8a6d1f] leading-relaxed">
+                                            {item.text}
+                                        </div>
+                                    )}
+
+                                    {(item.kind === 'suggest' || item.kind === 'translate-help') && (
+                                        <div className="ml-auto max-w-[88%] bg-[#fdf8ff] border-[1.5px] border-[#c9a8e0] rounded-2xl p-3.5 shadow-[0_4px_18px_rgba(111,83,133,0.10)]">
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <span className="text-[10px] font-bold text-[#6f5385]">{item.title}</span>
+                                                <span className="text-[9px] text-[#b3adc0]">
+                                                    {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                            <p className="text-[13px] text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">{readable(item.text ?? '')}</p>
+                                        </div>
+                                    )}
+
+                                    {item.kind === 'asked' && (
+                                        <div className="ml-auto max-w-[75%] bg-gradient-to-br from-[#6f5385] to-[#9b77b5] text-white rounded-2xl rounded-tr-none px-3.5 py-2">
+                                            <p className="text-[13px] leading-relaxed">{readable(item.text ?? '')}</p>
+                                            <p className="text-[9px] text-white/60 mt-0.5">
+                                                あなたの質問 · {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {item.kind === 'answer' && (
+                                        <div className="max-w-[88%] bg-white border border-[#c9a8e0]/40 rounded-2xl rounded-tl-none p-3.5 shadow-[0_4px_18px_rgba(111,83,133,0.08)]">
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <span className="text-[10px] font-bold text-[#6f5385]">{item.title}</span>
+                                                <span className="text-[9px] text-[#b3adc0]">
+                                                    {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                            <p className="text-[13px] text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">{readable(item.text ?? '')}</p>
+                                        </div>
+                                    )}
+
+                                    {item.kind === 'textbook' && (
+                                        <div className="bg-white border-2 border-[#c9a8e0]/50 rounded-2xl p-5 shadow-[0_4px_18px_rgba(111,83,133,0.10)]">
+                                            <p className="text-xs font-bold text-[#6f5385] mb-2">{item.title}</p>
+                                            {/* 教科書の原文は生徒向け（ふりがな付き）のまま、生徒も読める大きさで */}
+                                            <p className={`${toolsOut ? 'text-base' : 'text-xl'} text-[#1a1c1e] leading-loose whitespace-pre-wrap`}>
+                                                {readable((item.text ?? '').split('\n').filter(l => !l.trim().startsWith('![')).join('\n')).trim().slice(0, 1200)}
+                                            </p>
+                                            {(item.imgs ?? []).length > 0 && (
+                                                <div className="grid grid-cols-2 gap-3 mt-4">
+                                                    {(item.imgs ?? []).map((u, i) => (
+                                                        // eslint-disable-next-line @next/next/no-img-element
+                                                        <img key={i} src={u} alt="" className="w-full rounded-xl" />
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {item.kind === 'material' && (
+                                        <div className="ml-auto max-w-[88%] bg-white border border-[#c9a8e0]/40 rounded-2xl p-3.5 shadow-[0_4px_18px_rgba(111,83,133,0.08)]">
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <span className="text-[10px] font-bold text-[#6f5385]">{item.title}</span>
+                                                <span className="text-[9px] text-[#b3adc0]">
+                                                    {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                            <p className="text-[13px] text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">{readable(item.text ?? '')}</p>
+                                        </div>
+                                    )}
+
+                                    {item.kind === 'illust' && (
+                                        <div className="ml-auto max-w-[88%] bg-white border border-[#c9a8e0]/40 rounded-2xl p-3 shadow-[0_4px_18px_rgba(111,83,133,0.08)]">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-[10px] font-bold text-[#6f5385]">{item.title}</span>
+                                                {item.img && (
+                                                    <a href={item.img} download="asta-illustration.png"
+                                                        className="inline-flex items-center gap-1 text-[10px] text-[#6f5385] hover:underline">
+                                                        <Download size={11} />保存
+                                                    </a>
+                                                )}
+                                            </div>
+                                            {!item.img && (
+                                                <div className="flex items-center gap-2 py-4 justify-center text-[#6f5385]">
+                                                    <Loader2 size={16} className="animate-spin" />
+                                                    <span className="text-xs">授業を続けながらお待ちください</span>
+                                                </div>
+                                            )}
+                                            {item.img && (
+                                                // eslint-disable-next-line @next/next/no-img-element
+                                                <img src={item.img} alt="生成したイラスト" className="w-full rounded-xl" />
+                                            )}
+                                            {/* 案C：丁寧版ができたら差し替えを提案 */}
+                                            {item.img && item.imgQuality && (
+                                                <button
+                                                    onClick={() => patchFlow(item.id, { img: item.imgQuality, imgQuality: undefined })}
+                                                    className="w-full mt-2 text-left text-[11px] bg-[#fdf6e7] border border-[#ecd9a8] text-[#8a6d1f] rounded-xl px-3 py-2 hover:bg-[#fbefd2] transition-colors"
+                                                >
+                                                    🖌 <b className="text-[#6f5385]">文字まできれいな版</b>ができました → 押すと差し替えます
+                                                </button>
+                                            )}
+                                            {item.img && !item.imgQuality && item.title?.includes('できた絵') && (
+                                                <p className="text-[10px] text-[#4b454e] mt-2">
+                                                    ※ AIが作った画像です。文字が正しいか目で確かめてから生徒さんに見せてください。
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             ))}
-                        </div>
-                    </div>
 
-                    {/* 🌐 翻訳パネル */}
-                    <div className={`flex-1 flex flex-col overflow-hidden ${activeTab === 'translation' ? 'flex' : 'hidden'}`}>
-                        {/* Chrome限定バナー（常時表示） */}
-                        <div className={`px-4 py-2 shrink-0 border-b border-[#f4f3f7] flex items-center gap-2 text-xs font-medium ${isChromeDesktop ? 'bg-[#f2daff] text-[#6f5385]' : 'bg-[#fff0f0] text-[#ba1a1a]'}`}>
-                            {isChromeDesktop
-                                ? '✓ Chrome Desktop — 翻訳機能が使用可能です'
-                                : '⚠️ 音声翻訳はChrome Desktop専用です。AI補助は全ブラウザで利用可能。'}
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                            {/* AI翻訳補助セクション（R-2：常時表示・全ブラウザ対応） */}
-                            {aiTranslationSuggestions.length > 0 && (
-                                <div className="space-y-2">
-                                    <p className="text-[10px] font-bold text-[#6f5385] uppercase tracking-wider flex items-center gap-1">
-                                        <Sparkles size={11} /> AI翻訳補助
+                            {/* 認識途中の文字（うすく表示） */}
+                            {interimText && (
+                                <p className="text-[12px] text-[#b3adc0] italic px-1">{interimText}…</p>
+                            )}
+                            {(isAnalyzing || streamingText) && (
+                                <div className="ml-auto max-w-[88%] bg-[#fdf8ff] border border-[#c9a8e0]/50 rounded-2xl p-3">
+                                    <p className="text-[10px] font-bold text-[#6f5385] mb-1 flex items-center gap-1">
+                                        <Sparkles size={11} /> ASTAが考えています…
                                     </p>
-                                    {aiTranslationSuggestions.map((s) => (
-                                        <div key={s.id} className="bg-[#f2daff]/60 border border-[#c9a8e0]/40 rounded-2xl p-3">
-                                            <div className="flex items-center justify-between mb-1.5">
-                                                <span className="text-[10px] font-bold text-[#6f5385]">💡 補助 #{s.id}</span>
-                                                <span className="text-[10px] text-[#4b454e]">{s.timestamp.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-                                            </div>
-                                            <p className="text-xs text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">{s.text}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* 音声翻訳セクション（Chrome Desktop 限定） */}
-                            {liveTranslations.length > 0 && (
-                                <div className="space-y-2">
-                                    <p className="text-[10px] font-bold text-[#655a6f] uppercase tracking-wider flex items-center gap-1">
-                                        <Zap size={11} /> 音声翻訳（リアルタイム）
-                                    </p>
-                                    {liveTranslations.map((t) => (
-                                        <div key={t.id} className="bg-white border border-[#c9a8e0]/30 rounded-2xl p-4 shadow-[0_0_20px_rgba(111,83,133,0.06)]">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <span className="text-[10px] font-bold text-[#655a6f] uppercase tracking-wide">🌐 翻訳 #{t.id}</span>
-                                                <span className="text-[10px] text-[#4b454e]">{t.timestamp.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-                                            </div>
-                                            <p className="text-sm font-bold text-[#1a1c1e] leading-relaxed">{t.japanese}</p>
-                                            {t.original && <p className="text-xs text-[#4b454e]/60 italic mt-1">{t.original}</p>}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* 字幕PiPの案内（翻訳が届いている場合のみ） */}
-                            {liveTranslations.length > 0 && isPipSupported && !isPipOpen && (
-                                <button
-                                    onClick={openSubtitlePip}
-                                    className="w-full flex items-center gap-2 px-3 py-2.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-700 font-bold hover:bg-emerald-100 transition-colors"
-                                >
-                                    <PictureInPicture2 size={14} />
-                                    Preplyの上に字幕を浮かせる（字幕PiPを起動）
-                                </button>
-                            )}
-
-                            {/* 空状態：何も表示がない場合 */}
-                            {aiTranslationSuggestions.length === 0 && liveTranslations.length === 0 && (
-                                <div className="h-full flex flex-col items-center justify-center py-12 gap-3">
-                                    {!isTranslationMode ? (
-                                        <>
-                                            <div className="w-12 h-12 rounded-full bg-[#f2daff] flex items-center justify-center">
-                                                <Zap size={22} className="text-[#6f5385]" />
-                                            </div>
-                                            <p className="text-sm font-bold text-[#1a1c1e]">翻訳補助タブ</p>
-                                            <div className="text-xs text-[#4b454e] text-center space-y-1 leading-relaxed">
-                                                <p>💡 <span className="font-bold">AI補助</span>: 録音中に自動で文法・語彙の翻訳ヒントを表示</p>
-                                                {isChromeDesktop && (
-                                                    <p>🎤 <span className="font-bold">音声翻訳</span>: ヘッダーの「翻訳ON」で生徒音声をリアルタイム翻訳</p>
-                                                )}
-                                                {isPipSupported && (
-                                                    <p>📺 <span className="font-bold">字幕PiP</span>: 翻訳をPreplyの上に浮かせて表示</p>
-                                                )}
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div className="w-12 h-12 rounded-full bg-[#c9a8e0]/30 flex items-center justify-center animate-pulse">
-                                                <Zap size={22} className="text-[#6f5385]" />
-                                            </div>
-                                            <p className="text-sm font-bold text-[#1a1c1e]">翻訳モード起動中</p>
-                                            <p className="text-xs text-[#4b454e]">生徒が話すと約3〜4秒後に翻訳が表示されます</p>
-                                            {isPipSupported && (
-                                                <p className="text-xs text-[#4b454e]">翻訳が届いたら「字幕PiP」でPreplyの上に浮かせられます</p>
-                                            )}
-                                        </>
+                                    {streamingText && (
+                                        <p className="text-xs text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">{streamingText}</p>
                                     )}
                                 </div>
                             )}
+                            <div ref={flowEndRef} />
                         </div>
-                    </div>
 
-                    {/* 📖 教科書パネル（機能B: 授業中の即興生成） */}
-                    <div className={`flex-1 flex flex-col overflow-hidden ${activeTab === 'textbook' ? 'flex' : 'hidden'}`}>
-                        <TextbookPanel studentId={studentId} lessonId={selectedLessonId} onLessonChange={handleLessonChange} />
-                    </div>
-
-                    {/* 🎨 イラストパネル（ヘッダーのボタンで生成した結果） */}
-                    <div className={`flex-1 flex flex-col overflow-hidden ${activeTab === 'illust' ? 'flex' : 'hidden'}`}>
-                        <div className="flex-1 overflow-y-auto p-4">
+                        {/* 下部：自分から頼む4ボタン（道具をしまうと細いアイコンバーに） */}
+                        <div className={`border-t border-[#f4f3f7] bg-white shrink-0 ${toolsOut ? 'px-4 py-3' : 'px-4 py-1.5'}`}>
                             {illustError && (
-                                <div className="p-3 bg-[#fff0f0] border border-[#f4b8b8] rounded-2xl text-xs text-[#ba1a1a] mb-3">
+                                <p className="text-[11px] text-[#ba1a1a] bg-[#fff0f0] border border-[#f4b8b8] rounded-xl px-3 py-1.5 mb-2">
                                     {illustError}
+                                </p>
+                            )}
+                            {toolsOut && (
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-[10px] text-[#9a93a5]">
+                                        <b className="text-[#6f5385]">🤖 自動アシスト：ON</b>　困った場面はASTAが自分から提案します
+                                    </span>
+                                    <span className="text-[10px] text-[#9a93a5]">自分から頼む時はこのボタン（入力不要）</span>
                                 </div>
                             )}
-
-                            {illustMode && (
-                                <div className="h-full flex flex-col items-center justify-center py-10 gap-3">
-                                    <Loader2 size={28} className="animate-spin text-[#6f5385]" />
-                                    <p className="text-sm font-bold text-[#1a1c1e]">イラストを描いています…</p>
-                                    <p className="text-xs text-[#4b454e]">
-                                        {illustMode === 'fast' ? '約10秒' : '約30〜40秒'}かかります。授業を続けながらお待ちください。
-                                    </p>
-                                </div>
-                            )}
-
-                            {!illustMode && illustUrl && (
-                                <div className="bg-white border border-[#c9a8e0]/30 rounded-2xl p-3 shadow-[0_0_20px_rgba(111,83,133,0.06)]">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-[10px] font-bold text-[#6f5385]">🎨 生成したイラスト（{illustSec}秒）</span>
-                                        <a
-                                            href={illustUrl}
-                                            download="asta-illustration.png"
-                                            className="inline-flex items-center gap-1 text-[10px] text-[#6f5385] hover:underline"
-                                        >
-                                            <Download size={11} />保存
-                                        </a>
-                                    </div>
-                                    {/* 生成画像は data URL のため next/image ではなく素の img で表示する */}
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={illustUrl} alt="生成したイラスト" className="w-full rounded-xl" />
-                                    <p className="text-[10px] text-[#4b454e] mt-2 leading-relaxed">
-                                        ※ AIが作った画像です。文字が正しいか目で確かめてから生徒さんに見せてください。
-                                    </p>
-                                </div>
-                            )}
-
-                            {!illustMode && !illustUrl && !illustError && (
-                                <div className="h-full flex flex-col items-center justify-center py-10 text-center gap-2">
-                                    <div className="w-12 h-12 rounded-full bg-[#f2daff] flex items-center justify-center">
-                                        <ImagePlus size={22} className="text-[#6f5385]" />
-                                    </div>
-                                    <p className="text-sm font-bold text-[#1a1c1e]">その場で絵を描く</p>
-                                    <p className="text-xs text-[#4b454e] leading-relaxed max-w-xs">
-                                        画面上の「絵を描く」を押すと、いま話している内容と
-                                        生徒さんに合わせたイラストをその場で作ります。
-                                        急ぐときは「絵を描く」、しっかり作りたいときは「絵（きれい）」を。
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* 💬 手動チャットパネル */}
-                    <div className={`flex-1 flex flex-col bg-white ${activeTab === 'chat' ? 'flex' : 'hidden'}`}>
-                        <div className="px-4 py-2 border-b border-[#f4f3f7] bg-[#faf9fd] flex justify-between items-center shrink-0">
-                            <span className="text-xs font-bold text-[#4b454e] uppercase tracking-wider flex items-center gap-1">
-                                <Sparkles size={12} className="text-[#6f5385]" /> 手動チャット
-                            </span>
-                            {messages.length > 0 && (
-                                <button onClick={() => setMessages([])} className="text-xs text-[#4b454e] hover:text-red-500 flex items-center gap-1">
-                                    <X size={12} /> Clear
+                            <div className="grid grid-cols-4 gap-2">
+                                <button
+                                    onClick={generateIllustration}
+                                    disabled={illustBusy}
+                                    title="いまの会話と課に合う絵を約10秒で作る。文字まできれいな版も自動で用意"
+                                    className={`flex flex-col items-center px-1 bg-gradient-to-br from-[#6f5385] to-[#a07cc0] text-white rounded-xl text-xs font-bold disabled:opacity-50 transition-opacity ${toolsOut ? 'py-2.5' : 'py-1.5'}`}
+                                >
+                                    <span className="flex items-center gap-1">
+                                        {illustBusy ? <Loader2 size={12} className="animate-spin" /> : '🎨'} 絵で見せる
+                                    </span>
+                                    {toolsOut && <span className="text-[9px] font-normal opacity-85 mt-0.5">いまの内容を1枚の絵に</span>}
                                 </button>
-                            )}
-                        </div>
-                        <div className="flex-1 overflow-y-auto p-3 space-y-3">
-                            {messages.length === 0 && (
-                                <p className="text-xs text-[#4b454e]/50 text-center py-4">「〜の例文を作って」など手動で質問できます</p>
-                            )}
-                            {messages.map((msg, i) => (
-                                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-xs ${msg.role === 'user'
-                                        ? 'bg-gradient-to-br from-[#6f5385] to-[#9b77b5] text-white rounded-tr-none'
-                                        : 'bg-[#f4f3f7] text-[#1a1c1e] rounded-tl-none'
-                                        }`}>
-                                        {msg.content}
-                                    </div>
-                                </div>
-                            ))}
-                            {isTyping && (
-                                <div className="flex justify-start">
-                                    <div className="bg-[#f4f3f7] rounded-2xl rounded-tl-none px-3 py-2 flex items-center gap-1">
-                                        {[0, 150, 300].map((d) => (
-                                            <span key={d} className="w-1.5 h-1.5 bg-[#c9a8e0] rounded-full animate-bounce" style={{ animationDelay: `${d}ms` }} />
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                            <div ref={messagesEndRef} />
-                        </div>
-                        <div className="p-3 border-t border-[#f4f3f7] bg-[#faf9fd] shrink-0">
-                            <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+                                {(Object.keys(MATERIAL_MODES) as (keyof typeof MATERIAL_MODES)[]).map(m => (
+                                    <button
+                                        key={m}
+                                        onClick={() => makeMaterial(m)}
+                                        disabled={materialBusy !== null}
+                                        title={MATERIAL_MODES[m].hint}
+                                        className={`flex flex-col items-center px-1 bg-gradient-to-br from-[#6f5385] to-[#a07cc0] text-white rounded-xl text-xs font-bold disabled:opacity-50 transition-opacity ${toolsOut ? 'py-2.5' : 'py-1.5'}`}
+                                    >
+                                        <span className="flex items-center gap-1">
+                                            {materialBusy === m ? <Loader2 size={12} className="animate-spin" /> : null}
+                                            {MATERIAL_MODES[m].label}
+                                        </span>
+                                        {toolsOut && <span className="text-[9px] font-normal opacity-85 mt-0.5">{MATERIAL_MODES[m].hint}</span>}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* 聞きたい時だけ使う入力欄。授業中の入力は不要だが、
+                                聞きたくなったらここで聞ける（2026-08-20 チャットタブを統合） */}
+                            <form onSubmit={handleSendMessage} className={`${toolsOut ? 'flex' : 'hidden'} items-center gap-2 mt-2.5`}>
                                 <input
                                     type="text"
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
-                                    placeholder="AIに質問する…"
-                                    className="flex-1 px-3 py-2 bg-white border border-[#f4f3f7] rounded-full outline-none focus:border-[#c9a8e0] text-xs text-[#1a1c1e]"
+                                    placeholder="聞きたいことがあれば（画面共有中は生徒にも見えます）"
+                                    className="flex-1 px-3.5 py-2 bg-[#faf9fd] border border-[#f4f3f7] rounded-full outline-none focus:border-[#c9a8e0] text-xs text-[#1a1c1e]"
                                 />
                                 <button
                                     type="submit"
                                     disabled={!input.trim() || isTyping}
-                                    className="p-2 bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] text-white rounded-full disabled:opacity-50 transition-opacity shadow-sm"
+                                    title="ASTAに聞く"
+                                    className="p-2 bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] text-white rounded-full disabled:opacity-40 transition-opacity shadow-sm shrink-0"
                                 >
-                                    <Send size={15} />
+                                    {isTyping ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
                                 </button>
                             </form>
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>
