@@ -20,17 +20,22 @@ const HOURLY_LIMIT = 60;
 
 type Mode = 'exercises' | 'examples' | 'explain';
 
+// 「いま授業で話していること」（直近の会話）が付いてくる時は、それに寄せる。
+// 2026-09-06 まではこの3つは会話を一切見ず、課と生徒情報だけから作っていた（かずき指摘）
 const MODE_INSTRUCTION: Record<Mode, string> = {
     exercises: `この課の文法・語彙を使った【追加の練習問題】を3問作ってください。
+・直近の会話で生徒がつまずいた点があれば、そこを狙った問題にする
 ・問題文と解答をセットで出す
 ・生徒がその場で口頭で答えられる長さにする
 ・難易度はこの課のレベルに合わせる`,
     examples: `この課の文法を使った【例文】を5つ作ってください。
+・直近の会話に出た話題があれば、その場面を使う
 ・生徒の目標や興味に合う場面を選ぶ
 ・日本語の例文＋やさしい意味の説明をセットにする
 ・ふりがなは難しい漢字にだけ付ける`,
-    explain: `この課の文法を、生徒が「わからない」と言ったときのために
-【別の言い方でやさしく説明】してください。
+    explain: `【別の言い方でやさしく説明】してください。
+・直近の会話があれば、先生がいま説明していたこと・生徒が分からなかった点を言い換える（課の文法一般の説明ではなく）
+・直近の会話がなければ、この課の文法を説明する
 ・教科書の説明とは違う切り口にする
 ・身近なたとえを1つ入れる
 ・先生がそのまま口に出して使える文章にする`,
@@ -50,6 +55,8 @@ export async function POST(req: NextRequest) {
         const mode = String(body.mode || '') as Mode;
         const studentId = body.studentId ? String(body.studentId) : null;
         const note = String(body.note || '').slice(0, 200);   // 先生の追加指示（任意）
+        // いま授業で話していること（直近の会話。「先生：」「生徒：」の行。末尾優先で800字まで）
+        const transcript = String(body.transcript || '').slice(-800);
 
         if (!masterMaterialId || !MODE_INSTRUCTION[mode]) {
             return NextResponse.json({ error: '課と生成内容を指定してください' }, { status: 400 });
@@ -150,6 +157,7 @@ ${lessonContext || '（本文なし）'}
 
 ${vocabList ? `【この課の語彙】\n${vocabList}\n` : ''}
 ${studentContext ? `【生徒の情報】\n${studentContext}\n` : ''}
+${transcript ? `【いま授業で話していること（直近の会話。「先生：」「生徒：」）】\n${transcript}\n` : ''}
 ${note ? `【先生からの追加指示】\n${note}\n` : ''}
 【依頼】
 ${MODE_INSTRUCTION[mode]}

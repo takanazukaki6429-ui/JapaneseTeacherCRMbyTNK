@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
         const sceneHint = String(body.sceneHint || '').slice(0, 200);
         // ライブ授業のヘッダーから押せるようにするため、課の指定は必須にしない。
         // 課が無いときは直近の会話から場面を起こす
-        const transcript = String(body.transcript || '').slice(-500);
+        const transcript = String(body.transcript || '').slice(-800);   // 先生＋生徒の直近の会話（2026-09-06）
 
         if (!masterMaterialId && !transcript && !sceneHint) {
             return NextResponse.json(

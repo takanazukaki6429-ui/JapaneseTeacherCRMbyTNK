@@ -4,8 +4,8 @@ import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
-// 翻訳モードは2.5秒チャンクで叩かれる特殊ルート。
-// 正常利用（連続75分）で約1800回/時になるため、上限はその水準に設定。
+// 翻訳モードは発話の切れ目ごとに叩かれる特殊ルート（2026-09-06 までは2.5秒固定）。
+// 上限は旧方式の水準（連続75分で約1800回/時）を据え置く。切れ目方式では回数は減るので余裕側。
 // これを超える＝複数タブ・閉じ忘れ・外部からの濫用とみなして遮断する。
 const TRANSCRIBE_HOURLY_LIMIT = 1800;
 
@@ -13,9 +13,11 @@ const TRANSCRIBE_HOURLY_LIMIT = 1800;
  * v1.0 工程表 Week2: リアルタイム翻訳（Streaming STT 疑似ストリーミング = A'案）
  *
  * アーキテクチャ:
- *   クライアントが 2.5秒チャンクで音声を POST（生徒の母国語名も同送）
- *     → Google Cloud STT v2 で文字起こし（生徒の母国語 + en-US の2言語検出）
- *     → Google Cloud Translation v2 で日本語訳
+ *   クライアントが発話の切れ目ごと（0.7秒の間・最長12秒）に音声を POST
+ *   （生徒の母国語名と、直前の発話が文の途中なら その原文＝文脈 も同送）
+ *     → Google Cloud STT v2 で文字起こし（生徒の母国語 + en-US の2言語検出・句読点つき）
+ *     → 文脈があれば前後をつなげてから Google Cloud Translation v2 で日本語訳
+ *       （画面側は前の吹き出しを結合訳で差し替える。2026-09-06 かずき決定 A＋B案）
  *
  * Gemini フォールバックは 2026-07-12 に廃止。
  * 音声が不明瞭なとき実在しない会話を捏造することが実運用で確認されたため、
@@ -42,27 +44,49 @@ const LANGUAGE_TO_STT_CODE: Record<string, string> = {
     Indonesian: 'id-ID',
 };
 
-type TranscribeResult = { original: string; japanese: string };
+type TranscribeResult = { original: string; japanese: string; merged: boolean };
 
 /**
- * Google Cloud STT v2 + Translation で文字起こし＋翻訳
+ * 1切れの音声を Google Cloud STT v2 で文字起こしする。
+ * 句読点つきで認識する（文の終わりが分かると、結合の判定と翻訳の質が上がる）。
+ * 言語によっては句読点が未対応の可能性があるため（未実測）、
+ * 「引数が不正」(code 3) で断られた時だけ句読点なしで1回やり直す。
  */
-async function transcribeWithGoogle(audioBytes: Buffer, studentLanguage: string): Promise<TranscribeResult> {
+async function recognizeChunk(audioBytes: Buffer, languageCodes: string[]) {
     const speech = getSpeechClient();
     const projectId = getProjectId();
+    const request = {
+        recognizer: `projects/${projectId}/locations/global/recognizers/_`,
+        content: audioBytes.toString('base64'),
+    };
+    const config = {
+        autoDecodingConfig: {},               // webm/opus を自動判定
+        languageCodes,
+        model: 'latest_short',                // 短い発話向け（1切れ最長12秒）
+    };
+    try {
+        const [res] = await speech.recognize({
+            ...request,
+            config: { ...config, features: { enableAutomaticPunctuation: true } },
+        });
+        return res;
+    } catch (err) {
+        if ((err as { code?: number }).code !== 3) throw err;
+        console.warn('[transcribe] punctuation rejected, retrying without it:', err instanceof Error ? err.message : err);
+        const [res] = await speech.recognize({ ...request, config });
+        return res;
+    }
+}
 
+/**
+ * Google Cloud STT v2 + Translation で文字起こし＋翻訳。
+ * context（直前の発話の原文）があれば、つなげた文章として翻訳する（B案の結合）
+ */
+async function transcribeWithGoogle(audioBytes: Buffer, studentLanguage: string, context: string): Promise<TranscribeResult> {
     const studentCode = LANGUAGE_TO_STT_CODE[studentLanguage] || 'en-US';
     const languageCodes = Array.from(new Set([studentCode, 'en-US']));
 
-    const [sttResponse] = await speech.recognize({
-        recognizer: `projects/${projectId}/locations/global/recognizers/_`,
-        config: {
-            autoDecodingConfig: {},               // webm/opus を自動判定
-            languageCodes,
-            model: 'latest_short',                // 短い発話向け（チャンク方式に最適）
-        },
-        content: audioBytes.toString('base64'),
-    });
+    const sttResponse = await recognizeChunk(audioBytes, languageCodes);
 
     // 認識結果を連結
     const original = (sttResponse.results || [])
@@ -71,19 +95,23 @@ async function transcribeWithGoogle(audioBytes: Buffer, studentLanguage: string)
         .trim();
 
     if (!original) {
-        return { original: '', japanese: '' };
+        return { original: '', japanese: '', merged: false };
     }
+
+    // 直前の発話が文の途中で終わっていた場合、画面側がその原文を文脈として送ってくる。
+    // 前後をつなげた文章として翻訳し、画面側は前の吹き出しを差し替える
+    const merged = context ? `${context} ${original}` : original;
 
     // 検出言語が日本語ならそのまま、それ以外は日本語訳
     const detectedLang = sttResponse.results?.[0]?.languageCode || '';
     if (detectedLang.startsWith('ja')) {
-        return { original, japanese: original };
+        return { original: merged, japanese: merged, merged: !!context };
     }
 
     const translate = getTranslateClient();
-    const [translated] = await translate.translate(original, 'ja');
+    const [translated] = await translate.translate(merged, 'ja');
 
-    return { original, japanese: translated };
+    return { original: merged, japanese: translated, merged: !!context };
 }
 
 export async function POST(req: NextRequest) {
@@ -115,6 +143,8 @@ export async function POST(req: NextRequest) {
         const formData = await req.formData();
         const audioBlob = formData.get('audio') as Blob;
         const studentLanguage = String(formData.get('language') || 'English');
+        // 直前の生徒発話の原文（文の途中で終わっていた時だけ画面側が付ける）。長さは抑える
+        const context = String(formData.get('context') || '').trim().slice(0, 400);
 
         if (!audioBlob || audioBlob.size < 500) {
             return NextResponse.json({ original: '', japanese: '' });
@@ -132,7 +162,7 @@ export async function POST(req: NextRequest) {
         const audioBuffer = Buffer.from(arrayBuffer);
 
         // 使用ログ記録（非同期・ノンブロッキング）
-        // token_usage には音声バイト数を記録（チャンクは2.5秒固定なので行数×2.5秒で利用時間を集計できる）
+        // token_usage には音声バイト数を記録（1切れの長さは可変なので、利用時間はバイト数から概算する）
         const logUsage = (engine: string) => {
             supabase.from('ai_usage_log').insert({
                 user_id: user.id,
@@ -142,7 +172,7 @@ export async function POST(req: NextRequest) {
             }).then(() => {}, console.error);
         };
 
-        const result = await transcribeWithGoogle(audioBuffer, studentLanguage);
+        const result = await transcribeWithGoogle(audioBuffer, studentLanguage, context);
         logUsage('google-stt');
         return NextResponse.json({ ...result, engine: 'google-stt' });
 

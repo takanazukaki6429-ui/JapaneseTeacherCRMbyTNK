@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { SpeechSegmenter, rmsOf } from '@/lib/speech-segmenter';
 import {
     ArrowLeft, Send,
     Save, Sparkles, X, Mic, Loader2, Zap, Download
@@ -98,6 +99,7 @@ export default function LiveLessonPage() {
 
     // ── 授業の流れ（中央フィード）──
     const [flow, setFlow] = useState<FlowItem[]>([]);
+    const flowRef = useRef<FlowItem[]>([]);   // ボタン処理から最新の流れを読むための写し
     const flowIdRef = useRef(0);
     const flowEndRef = useRef<HTMLDivElement>(null);
     const saidBufferRef = useRef('');   // 発話を文の切れ目まで貯めるバッファ
@@ -110,6 +112,29 @@ export default function LiveLessonPage() {
     }, []);
     const patchFlow = useCallback((id: number, patch: Partial<FlowItem>) => {
         setFlow(prev => prev.map(it => (it.id === id ? { ...it, ...patch } : it)));
+    }, []);
+    useEffect(() => { flowRef.current = flow; }, [flow]);
+
+    // 4ボタン（絵・例文・練習問題・言い換え）に渡す「いま授業で話していること」。
+    // 先生の言葉だけでなく生徒の言葉も、誰が言ったか付きで渡す（2026-09-06 かずき決定）。
+    // それまでは「絵で見せる」だけが先生の言葉を使い、他の3つは会話を一切見ていなかった
+    const recentConversation = useCallback((limit = 700) => {
+        const lines: string[] = [];
+        for (const it of flowRef.current) {
+            if (it.kind === 'said' && it.text) {
+                lines.push(`先生：${it.text}`);
+            } else if (it.kind === 'student-said' && it.text) {
+                const orig = it.translation && it.translation !== it.text ? `（原文: ${it.translation}）` : '';
+                lines.push(`生徒：${it.text}${orig}`);
+            }
+        }
+        const pending = saidBufferRef.current.trim();   // まだ吹き出しになっていない先生の言葉
+        if (pending) lines.push(`先生：${pending}`);
+        const all = lines.join('\n');
+        if (all.length <= limit) return all;
+        const tail = all.slice(-limit);                 // 末尾（直近）を優先
+        const nl = tail.indexOf('\n');
+        return nl >= 0 ? tail.slice(nl + 1) : tail;
     }, []);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
@@ -135,6 +160,13 @@ export default function LiveLessonPage() {
     const displayStreamRef = useRef<MediaStream | null>(null);
     const translationRecorderRef = useRef<MediaRecorder | null>(null);
     const translationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // 生徒音声を「文の切れ目」で区切るための道具（2026-09-06 かずき決定 A案）
+    const audioCtxRef = useRef<AudioContext | null>(null);
+    const vadTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const cutRecorderRef = useRef<((send: boolean) => void) | null>(null);
+    const sendChainRef = useRef<Promise<void>>(Promise.resolve());
+    // 直前の生徒発話（文の途中で終わっていれば、次の発話とつなげて翻訳し直す＝B案）
+    const lastStudentRef = useRef<{ id: number; original: string; at: number } | null>(null);
 
     // ── 即興イラスト生成（機能B-2）──
     // 授業中どのタブを見ていても押せるよう、ヘッダーに置く。
@@ -661,48 +693,102 @@ export default function LiveLessonPage() {
                 ? 'audio/webm;codecs=opus'
                 : 'audio/webm';
 
-            const handleChunk = async (e: BlobEvent) => {
-                if (e.data.size < 500) return;
+            // 1切れの音声を送る。直前の生徒発話が文の途中で終わっていれば、その原文を
+            // 「文脈」として同送し、返ってきた結合訳で前の吹き出しを差し替える（B案）
+            const sendChunk = async (blob: Blob) => {
+                const prev = lastStudentRef.current;
+                const canMerge = !!prev
+                    && Date.now() - prev.at < 8000
+                    && !/[.!?。！？]\s*$/.test(prev.original)
+                    && prev.original.length < 300;
                 const formData = new FormData();
-                formData.append('audio', e.data, 'chunk.webm');
+                formData.append('audio', blob, 'chunk.webm');
                 // 生徒の母国語をSTTの検出対象に使う（母国語+en-USの2言語検出）
                 formData.append('language', studentNativeLangRef.current);
+                formData.append('context', canMerge && prev ? prev.original : '');
                 try {
                     const res = await fetch('/api/ai/transcribe', { method: 'POST', body: formData });
                     if (res.status === 429) {
-                        // 利用上限到達 → 2.5秒ごとの再送を止めるため翻訳モードごと停止（課金暴走の栓）
+                        // 利用上限到達 → 再送を止めるため翻訳モードごと停止（課金暴走の栓）
                         stopTranslationMode();
                         addFlow({ kind: 'notice', text: '⚠️ 翻訳の利用量が上限に達したため自動停止しました。1時間ほど置いてから再度お試しください。' });
                         return;
                     }
                     const data = await res.json();
-                    if (data.japanese?.trim()) {
-                        // 生徒の発話は流れに直接出す（2026-09-03 かずき指示。
-                        // 以前は翻訳ログタブの中に隠れていて、開かないと見えなかった）
-                        addFlow({ kind: 'student-said', text: data.japanese, translation: data.original || '' });
+                    const japanese = String(data.japanese ?? '').trim();
+                    const original = String(data.original ?? '').trim();
+                    if (!japanese) return;
+                    // 生徒が日本語で話した時は原文＝訳なので、同じ文を2回出さない
+                    const translation = original && original !== japanese ? original : '';
+                    if (canMerge && prev && data.merged) {
+                        patchFlow(prev.id, { text: japanese, translation });
+                        lastStudentRef.current = { id: prev.id, original, at: Date.now() };
+                    } else {
+                        // 生徒の発話は流れに直接出す（2026-09-03 かずき指示）
+                        const id = addFlow({ kind: 'student-said', text: japanese, translation });
+                        lastStudentRef.current = { id, original, at: Date.now() };
                     }
                 } catch (err) { console.error('Translation chunk error:', err); }
             };
 
-            // 2.5秒ごとに MediaRecorder を作り直す（ローリング方式）。
-            // start(2500) の連続録音だと2個目以降のチャンクにコンテナヘッダが無く、
-            // Google STT が「supported encoding ではない」と拒否する（2026-07-20 分割実験で実証）。
-            // 毎回 stop→新規起動することで、全チャンクがヘッダ付きの完全な webm になる。
-            const startChunkRecorder = () => {
+            // 録音は「文の切れ目」で区切る（2026-09-06 かずき決定 A案。それまでは2.5秒固定で
+            // 文の途中で切れ、文字起こしも翻訳も文脈を失っていた）。
+            // 毎回 stop→新規起動する方式は維持する：連続録音を途中で分けると2個目以降に
+            // コンテナヘッダが無く Google STT が拒否するため（2026-07-20 分割実験で実証）。
+            const startSegmentRecorder = () => {
                 if (!displayStreamRef.current) return;
                 const recorder = new MediaRecorder(displayStreamRef.current, { mimeType });
                 translationRecorderRef.current = recorder;
-                recorder.ondataavailable = handleChunk;
+                let shouldSend = false;
+                cutRecorderRef.current = (send: boolean) => {
+                    shouldSend = send;
+                    if (recorder.state === 'recording') recorder.stop();
+                };
+                recorder.ondataavailable = (e: BlobEvent) => {
+                    if (!shouldSend || e.data.size < 500) return;
+                    // 順番を守って1つずつ送る（結合の判定が直前の結果に依存するため）
+                    sendChainRef.current = sendChainRef.current.then(() => sendChunk(e.data)).catch(() => {});
+                };
                 recorder.onstop = () => {
                     // stopTranslationMode 経由の停止（ref がnull化 or 差し替え済み）なら再起動しない
-                    if (translationRecorderRef.current === recorder) startChunkRecorder();
+                    if (translationRecorderRef.current === recorder) startSegmentRecorder();
                 };
                 recorder.start();
-                setTimeout(() => {
-                    if (recorder.state === 'recording') recorder.stop();
-                }, 2500);
             };
-            startChunkRecorder();
+
+            // 音量を50msごとに測って判定器に渡し、区切りの指示が出たら録音を止める
+            const audioCtx = new AudioContext();
+            audioCtxRef.current = audioCtx;
+            const source = audioCtx.createMediaStreamSource(new MediaStream([audioTrack]));
+            const analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 2048;
+            source.connect(analyser);
+            const samples = new Float32Array(analyser.fftSize);
+            const segmenter = new SpeechSegmenter(performance.now());
+            let fallbackLastCut = performance.now();
+            vadTimerRef.current = setInterval(() => {
+                const now = performance.now();
+                if (audioCtx.state !== 'running') {
+                    // 音量が測れない間（音声処理が始まっていない）は、旧方式に近い4秒区切りで送る。
+                    // 無言で何も出ないより安全。通常は最初の数十msだけここを通る
+                    void audioCtx.resume().catch(() => {});
+                    if (now - fallbackLastCut >= 4000) {
+                        cutRecorderRef.current?.(true);
+                        fallbackLastCut = now;
+                        segmenter.reset(now);
+                    }
+                    return;
+                }
+                analyser.getFloatTimeDomainData(samples);
+                const action = segmenter.push(rmsOf(samples), now);
+                if (action) {
+                    cutRecorderRef.current?.(action === 'send');
+                    segmenter.reset(now);
+                    fallbackLastCut = now;
+                }
+            }, 50);
+
+            startSegmentRecorder();
             setIsTranslationMode(true);
 
             audioTrack.onended = () => stopTranslationMode();
@@ -724,10 +810,21 @@ export default function LiveLessonPage() {
             clearTimeout(translationTimerRef.current);
             translationTimerRef.current = null;
         }
-        // 先に ref を null 化してから stop する（ローリング方式の onstop 再起動を防ぐ）
+        if (vadTimerRef.current) {
+            clearInterval(vadTimerRef.current);
+            vadTimerRef.current = null;
+        }
+        // 先に ref を null 化してから stop する（onstop による再起動を防ぐ）。
+        // 録音中の最後の1切れは送ってから止める（話しかけの途中で止めても最後まで出る）
         const recorder = translationRecorderRef.current;
         translationRecorderRef.current = null;
-        if (recorder && recorder.state === 'recording') recorder.stop();
+        const cut = cutRecorderRef.current;
+        cutRecorderRef.current = null;
+        if (cut) cut(true);
+        else if (recorder && recorder.state === 'recording') recorder.stop();
+        audioCtxRef.current?.close().catch(() => {});
+        audioCtxRef.current = null;
+        lastStudentRef.current = null;
         displayStreamRef.current?.getTracks().forEach(t => t.stop());
         displayStreamRef.current = null;
         setIsTranslationMode(false);
@@ -751,7 +848,7 @@ export default function LiveLessonPage() {
                 studentId,
                 mode,
                 masterMaterialId: selectedLessonId || undefined,
-                transcript: transcriptRef.current.slice(-500),
+                transcript: recentConversation(),   // 先生＋生徒の直近の会話（2026-09-06）
                 nativeLanguage: studentNativeLangRef.current,
             }),
         });
@@ -813,7 +910,7 @@ export default function LiveLessonPage() {
             const res = await fetch('/api/materials/improvise', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ masterMaterialId: selectedLessonId, mode, studentId, note: '' }),
+                body: JSON.stringify({ masterMaterialId: selectedLessonId, mode, studentId, note: '', transcript: recentConversation() }),
             });
             const data = await res.json();
             if (!res.ok) {
