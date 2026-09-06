@@ -15,7 +15,7 @@ const TRANSCRIBE_HOURLY_LIMIT = 1800;
  * アーキテクチャ:
  *   クライアントが発話の切れ目ごと（0.7秒の間・最長12秒）に音声を POST
  *   （生徒の母国語名と、直前の発話が文の途中なら その原文＝文脈 も同送）
- *     → Google Cloud STT v2 で文字起こし（生徒の母国語 + en-US の2言語検出・句読点つき）
+ *     → Google Cloud STT v2 で文字起こし（生徒の母国語 + en-US + ja-JP の3言語検出・句読点つき）
  *     → 文脈があれば前後をつなげてから Google Cloud Translation v2 で日本語訳
  *       （画面側は前の吹き出しを結合訳で差し替える。2026-09-06 かずき決定 A＋B案）
  *
@@ -29,8 +29,10 @@ const TRANSCRIBE_HOURLY_LIMIT = 1800;
  */
 
 // 生徒の母国語名（live画面の言語セレクタと同じ値）→ STT言語コード。
-// latest_short × global は同時検出3言語まで（2026-07-12実測）のため、
-// 「生徒の母国語 + en-US」の最大2言語に絞る。全ペア実測で成功確認済み。
+// latest_short × global は同時検出3言語まで（2026-07-12実測）。
+// 聞く言語は「生徒の母国語 + en-US + ja-JP」の3つ（上限ちょうど）。
+// 日本語は 2026-09-06 に追加：それまで日本語が対象外で、生徒が日本語で話すと
+// 拾えないか英語として誤認していた（かずき指摘）。母国語+英語の全ペアは実測済み
 const LANGUAGE_TO_STT_CODE: Record<string, string> = {
     English: 'en-US',
     Spanish: 'es-ES',
@@ -84,7 +86,7 @@ async function recognizeChunk(audioBytes: Buffer, languageCodes: string[]) {
  */
 async function transcribeWithGoogle(audioBytes: Buffer, studentLanguage: string, context: string): Promise<TranscribeResult> {
     const studentCode = LANGUAGE_TO_STT_CODE[studentLanguage] || 'en-US';
-    const languageCodes = Array.from(new Set([studentCode, 'en-US']));
+    const languageCodes = Array.from(new Set([studentCode, 'en-US', 'ja-JP']));
 
     const sttResponse = await recognizeChunk(audioBytes, languageCodes);
 

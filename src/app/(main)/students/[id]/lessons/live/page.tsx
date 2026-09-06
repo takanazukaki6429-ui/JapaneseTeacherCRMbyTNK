@@ -790,6 +790,9 @@ export default function LiveLessonPage() {
 
             startSegmentRecorder();
             setIsTranslationMode(true);
+            // ヘッドホン推奨の案内（2026-09-06 かずき決定・運用案内）。スピーカー再生だと生徒の声を
+            // 先生のマイクが拾い、「先生」の吹き出しとして出る（経路はかずきの実機で確認中）
+            addFlow({ kind: 'notice', text: '🎧 ヘッドホン推奨：スピーカーで聞くと、生徒の声を先生のマイクが拾って「先生」の吹き出しに混ざることがあります。' });
 
             audioTrack.onended = () => stopTranslationMode();
 
