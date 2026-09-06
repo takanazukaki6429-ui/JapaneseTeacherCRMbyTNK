@@ -15,7 +15,8 @@ const TRANSCRIBE_HOURLY_LIMIT = 1800;
  * アーキテクチャ:
  *   クライアントが発話の切れ目ごと（0.7秒の間・最長12秒）に音声を POST
  *   （生徒の母国語名と、直前の発話が文の途中なら その原文＝文脈 も同送）
- *     → Google Cloud STT v2 で文字起こし（生徒の母国語 + en-US + ja-JP の3言語検出・句読点つき）
+ *     → Google Cloud STT v2 の Chirp 3 で文字起こし（言語は自動判定・句読点つき。
+ *        失敗時は旧設定 latest_short＝母国語 + en-US + ja-JP の3言語指定でやり直す）
  *     → 文脈があれば前後をつなげてから Google Cloud Translation v2 で日本語訳
  *       （画面側は前の吹き出しを結合訳で差し替える。2026-09-06 かずき決定 A＋B案）
  *
@@ -48,23 +49,41 @@ const LANGUAGE_TO_STT_CODE: Record<string, string> = {
 
 type TranscribeResult = { original: string; japanese: string; merged: boolean };
 
+// 認識モデル（2026-09-06 かずき決定「い」）。既定は新世代の Chirp 3：
+//  - 言語を「自動判定」に任せられる（母国語・英語・日本語の3言語制限が消える）
+//  - 同じ音声18文の比較で、意味が変わる聞き間違いが 5件→0件、英語の単語誤り率 5.0%→1.4%
+//    （読み上げ音声での検証。詳細＝ my-company/03/strategy/検証_音声認識モデル比較_2026-09-06.md）
+//  - 料金は同じ枠。応答時間もほぼ同じ（約1.5〜1.8秒）
+// Vercel の環境変数 STT_MODEL=latest_short で旧設定に戻せる（コード変更なし）
+const STT_MODEL: 'chirp_3' | 'latest_short' = process.env.STT_MODEL === 'latest_short' ? 'latest_short' : 'chirp_3';
+const CHIRP_LOCATION = 'us';   // Chirp 3 は global では使えず、us / eu などの複数リージョンで提供
+
+// Chirp 3 は日本語を「すみ ませ ん 、 駅 は」のように語ごとの空白つきで返す（比較検証で確認）。
+// 日本語の文字に接する空白だけ落とす（英単語どうしの空白は残る）
+const CJK = '[\u3000-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uff00-\uffef]';
+const CJK_SPACING = new RegExp(`(?<=${CJK})\\s+|\\s+(?=${CJK})`, 'g');
+function tidyJapaneseSpacing(text: string): string {
+    return text.replace(CJK_SPACING, '');
+}
+
 /**
- * 1切れの音声を Google Cloud STT v2 で文字起こしする。
+ * 1切れの音声を Google Cloud STT v2 で文字起こしする（モデル指定）。
  * 句読点つきで認識する（文の終わりが分かると、結合の判定と翻訳の質が上がる）。
  * 言語によっては句読点が未対応の可能性があるため（未実測）、
  * 「引数が不正」(code 3) で断られた時だけ句読点なしで1回やり直す。
  */
-async function recognizeChunk(audioBytes: Buffer, languageCodes: string[]) {
-    const speech = getSpeechClient();
+async function runRecognize(model: 'chirp_3' | 'latest_short', audioBytes: Buffer, languageCodes: string[]) {
+    const location = model === 'chirp_3' ? CHIRP_LOCATION : 'global';
+    const speech = getSpeechClient(location);
     const projectId = getProjectId();
     const request = {
-        recognizer: `projects/${projectId}/locations/global/recognizers/_`,
+        recognizer: `projects/${projectId}/locations/${location}/recognizers/_`,
         content: audioBytes.toString('base64'),
     };
     const config = {
         autoDecodingConfig: {},               // webm/opus を自動判定
         languageCodes,
-        model: 'latest_short',                // 短い発話向け（1切れ最長12秒）
+        model,
     };
     try {
         const [res] = await speech.recognize({
@@ -81,6 +100,21 @@ async function recognizeChunk(audioBytes: Buffer, languageCodes: string[]) {
 }
 
 /**
+ * 既定は Chirp 3（言語は自動判定）。新モデル側の障害（地域・上限など）で翻訳が止まらないよう、
+ * 失敗したら旧設定（latest_short・母国語+英語+日本語の3言語指定）で1回やり直す
+ */
+async function recognizeChunk(audioBytes: Buffer, fallbackLanguageCodes: string[]) {
+    if (STT_MODEL === 'chirp_3') {
+        try {
+            return await runRecognize('chirp_3', audioBytes, ['auto']);
+        } catch (err) {
+            console.error('[transcribe] chirp_3 failed, falling back to latest_short:', err instanceof Error ? err.message : err);
+        }
+    }
+    return runRecognize('latest_short', audioBytes, fallbackLanguageCodes);
+}
+
+/**
  * Google Cloud STT v2 + Translation で文字起こし＋翻訳。
  * context（直前の発話の原文）があれば、つなげた文章として翻訳する（B案の結合）
  */
@@ -90,11 +124,16 @@ async function transcribeWithGoogle(audioBytes: Buffer, studentLanguage: string,
 
     const sttResponse = await recognizeChunk(audioBytes, languageCodes);
 
+    // 検出言語（Chirp 3 は 'ja'、旧モデルは 'ja-JP' のように返る）
+    const detectedLang = sttResponse.results?.[0]?.languageCode || '';
+    const isJapanese = detectedLang.startsWith('ja');
+
     // 認識結果を連結
-    const original = (sttResponse.results || [])
+    let original = (sttResponse.results || [])
         .map(r => r.alternatives?.[0]?.transcript || '')
         .join(' ')
         .trim();
+    if (isJapanese) original = tidyJapaneseSpacing(original);
 
     if (!original) {
         return { original: '', japanese: '', merged: false };
@@ -102,11 +141,10 @@ async function transcribeWithGoogle(audioBytes: Buffer, studentLanguage: string,
 
     // 直前の発話が文の途中で終わっていた場合、画面側がその原文を文脈として送ってくる。
     // 前後をつなげた文章として翻訳し、画面側は前の吹き出しを差し替える
-    const merged = context ? `${context} ${original}` : original;
+    const merged = context ? (isJapanese ? tidyJapaneseSpacing(`${context} ${original}`) : `${context} ${original}`) : original;
 
-    // 検出言語が日本語ならそのまま、それ以外は日本語訳
-    const detectedLang = sttResponse.results?.[0]?.languageCode || '';
-    if (detectedLang.startsWith('ja')) {
+    // 日本語ならそのまま、それ以外は日本語訳
+    if (isJapanese) {
         return { original: merged, japanese: merged, merged: !!context };
     }
 

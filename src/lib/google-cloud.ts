@@ -18,7 +18,7 @@ type Credentials = {
 };
 
 let cachedCreds: Credentials | null = null;
-let speechClient: SpeechV2.SpeechClient | null = null;
+const speechClients: Record<string, SpeechV2.SpeechClient> = {};   // 接続先（global / us …）ごとに1つ
 let translateClient: TranslateV2.Translate | null = null;
 
 function getCredentials(): Credentials {
@@ -41,17 +41,19 @@ export function getProjectId(): string {
     return process.env.GOOGLE_CLOUD_PROJECT_ID || getCredentials().project_id;
 }
 
-export function getSpeechClient(): SpeechV2.SpeechClient {
-    if (speechClient) return speechClient;
+export function getSpeechClient(location = 'global'): SpeechV2.SpeechClient {
+    if (speechClients[location]) return speechClients[location];
     const creds = getCredentials();
-    speechClient = new SpeechV2.SpeechClient({
+    speechClients[location] = new SpeechV2.SpeechClient({
         projectId: creds.project_id,
         credentials: {
             client_email: creds.client_email,
             private_key: creds.private_key,
         },
+        // global 以外は地域ごとの接続先（例: us-speech.googleapis.com）。Chirp 3 は global では使えない
+        ...(location !== 'global' ? { apiEndpoint: `${location}-speech.googleapis.com` } : {}),
     });
-    return speechClient;
+    return speechClients[location];
 }
 
 export function getTranslateClient(): TranslateV2.Translate {
