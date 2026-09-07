@@ -152,6 +152,37 @@ export default function LiveLessonPage() {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [streamingText, setStreamingText] = useState('');
     const [micError, setMicError] = useState<string | null>(null);
+    // 使用中のマイクの名前（2026-09-06 かずき許可）。先生の音声認識はChrome内蔵でマイクを
+    // 選べないため、せめて「どのマイクか」を見せる。実機で Mac の入力が iPhone に連係で
+    // 切り替わり、録音中のまま無音になった事故から（原因の切り分けに1時間かかった）
+    const [micLabel, setMicLabel] = useState('');
+    const micWarnedLabelRef = useRef('');                          // iPhone警告を出した名前（同じ名前で繰り返さない）
+    const micErrorNoticeRef = useRef<Record<string, number>>({});  // エラー種別ごとの最終表示時刻
+    const IPHONE_MIC = /iphone|ipad|continuity|連係/i;
+
+    // 既定のマイクの名前を読む。Chrome内蔵の認識は「既定の入力」を使うので、
+    // enumerateDevices の 'default' がそれに当たる（前提・未検証）
+    const refreshMicLabel = useCallback(async () => {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const inputs = devices.filter(d => d.kind === 'audioinput');
+            const def = inputs.find(d => d.deviceId === 'default') ?? inputs[0];
+            const label = (def?.label ?? '').replace(/^(default|既定|デフォルト)\s*[-–—:：]\s*/i, '').trim();
+            setMicLabel(label);
+            if (label && IPHONE_MIC.test(label) && micWarnedLabelRef.current !== label) {
+                micWarnedLabelRef.current = label;
+                addFlow({ kind: 'notice', text: `⚠️ 先生のマイクが「${label}」になっています。Macのマイクを使うつもりなら、Macの「システム設定→サウンド→入力」で切り替えるか、iPhoneの「設定→一般→AirPlayとHandoff→連係カメラ」をオフにしてください。` });
+            }
+        } catch { /* 名前が取れなければ表示しないだけ */ }
+    }, [addFlow]);   // IPHONE_MIC は定数
+
+    // マイクが差し替わったら名前を更新（AirPods接続・iPhone連係など）
+    useEffect(() => {
+        const md = navigator.mediaDevices;
+        if (!md?.addEventListener) return;
+        md.addEventListener('devicechange', refreshMicLabel);
+        return () => md.removeEventListener('devicechange', refreshMicLabel);
+    }, [refreshMicLabel]);
 
     // ── 翻訳モード state ──
     const [isTranslationMode, setIsTranslationMode] = useState(false);
@@ -499,6 +530,18 @@ export default function LiveLessonPage() {
         }
         setMicError(null);
 
+        // マイクの許可を明示的に取り、どのマイクかを読む（Chrome内蔵の認識はマイクを選べず、
+        // 許可が保留のときも黙って「録音中」のままになるため）。取ったら即座に手放す
+        navigator.mediaDevices?.getUserMedia({ audio: true })
+            .then(stream => { stream.getTracks().forEach(t => t.stop()); void refreshMicLabel(); })
+            .catch((err: unknown) => {
+                if (err instanceof DOMException && err.name === 'NotAllowedError') {
+                    setMicError('マイクの使用が許可されていません。ブラウザのアドレスバー左のマイクアイコンから権限を許可してください。');
+                } else if (err instanceof DOMException && err.name === 'NotFoundError') {
+                    setMicError('マイクが見つかりません。Macの「システム設定→サウンド→入力」を確認してください。');
+                }
+            });
+
         const recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
@@ -568,6 +611,19 @@ export default function LiveLessonPage() {
                 setMicError('マイクの使用が許可されていません。ブラウザのアドレスバー左のマイクアイコンから権限を許可してください。');
             } else if (e.error !== 'no-speech') {
                 console.error('SpeechRecognition error:', e.error);
+                // 権限以外のエラーも画面に出す（2026-09-06 かずき許可）。同じ種類は60秒に1回まで
+                const now = Date.now();
+                if (now - (micErrorNoticeRef.current[e.error] ?? 0) > 60_000) {
+                    micErrorNoticeRef.current[e.error] = now;
+                    const why: Record<string, string> = {
+                        network: '認識サービスとの通信に失敗しています（回線かChromeの不調）',
+                        'audio-capture': 'マイクの音が取れません（別のアプリがマイクを使っていないか確認）',
+                        aborted: '認識が中断されました（別のタブでASTAの授業画面を開いていないか確認）',
+                        'language-not-supported': 'この環境では日本語の認識が使えません',
+                        'service-not-allowed': 'この環境では音声認識が使えません',
+                    };
+                    addFlow({ kind: 'notice', text: `⚠️ 先生のマイク認識：${why[e.error] ?? `エラー（${e.error}）`}。「録音中」のまま文字が出ない時はこれが原因です。` });
+                }
             }
         };
 
@@ -591,7 +647,7 @@ export default function LiveLessonPage() {
         recognitionRef.current = recognition;
         recognition.start();
         setIsListening(true);
-    }, [triggerAnalysis, translateSaid]);
+    }, [triggerAnalysis, translateSaid, addFlow, refreshMicLabel]);
 
     const stopListening = useCallback(() => {
         if (recognitionRef.current) {
@@ -969,6 +1025,14 @@ export default function LiveLessonPage() {
                             <span className="border-l border-white/40 pl-2 font-medium opacity-90">生徒の画面に翻訳を表示中</span>
                         )}
                     </button>
+                    {isListening && micLabel && (
+                        <span
+                            title="先生の音声認識が使っているマイク"
+                            className={`text-[11px] font-medium px-2.5 py-1 rounded-full whitespace-nowrap max-w-[220px] truncate ${IPHONE_MIC.test(micLabel) ? 'bg-amber-300 text-[#5a3d00]' : 'bg-white/15 opacity-90'}`}
+                        >
+                            🎙 {micLabel}
+                        </span>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-2">
