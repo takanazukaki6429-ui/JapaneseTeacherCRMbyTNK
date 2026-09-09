@@ -219,6 +219,8 @@ export async function POST(req: NextRequest) {
     } catch (error) {
         // 認識失敗＝何も表示しない（Geminiで捏造するより誠実）。原因はログに残す
         console.error('Transcribe error:', error instanceof Error ? error.message : error);
-        return NextResponse.json({ error: 'Transcription failed', original: '', japanese: '' }, { status: 500 });
+        // 音が不明瞭・短いなど「送られてきた音声が認識できない」場合が大半なので 400 で返す。
+        // 500 は監視の仕組みが「アプリの故障」として拾ってしまう（2026-09-10 掃除）
+        return NextResponse.json({ error: 'Transcription failed', original: '', japanese: '' }, { status: 400 });
     }
 }

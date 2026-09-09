@@ -4,6 +4,7 @@ import { BookOpen, Image as ImageIcon } from 'lucide-react';
 import { MaterialsTabBar } from '../tab-bar';
 import { LevelTabs } from './level-tabs';
 import type { JlptLevel, MasterMaterialRow } from '@/types/master-material';
+import { cleanLessonTitle } from '@/lib/lesson-title';
 
 export const revalidate = 0;
 
@@ -87,7 +88,7 @@ export default async function TextbookPage({ searchParams }: Props) {
                                 )}
                             </div>
                             <h3 className="text-sm font-bold text-[#1a1c1e] group-hover:text-[#6f5385] transition-colors line-clamp-2 leading-snug">
-                                {lesson.title}
+                                {cleanLessonTitle(lesson.title)}
                             </h3>
                         </Link>
                     ))}

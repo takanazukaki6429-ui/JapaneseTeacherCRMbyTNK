@@ -209,7 +209,7 @@ export default function NewLessonPage() {
             const res = await fetch('/api/ai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt }),
+                body: JSON.stringify({ prompt, type: 'record_assist' }),   // 記録：宿題・フィードバックの提案（利用実態を画面ごとに数えるため）
             });
 
             if (!res.ok) throw new Error('AI generation failed');

@@ -138,7 +138,7 @@ export default function LessonPreparePage() {
             const res = await fetch('/api/ai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt }),
+                body: JSON.stringify({ prompt, type: 'prep_plan' }),   // 授業前：準備プラン（利用実態を画面ごとに数えるため）
             });
             if (!res.ok) throw new Error('AI request failed');
             const data = await res.json();
@@ -235,7 +235,7 @@ ${typeInstructions[selectedType]}
             const res = await fetch('/api/ai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt }),
+                body: JSON.stringify({ prompt, type: 'prep_material' }),   // 授業前：今日の教材（利用実態を画面ごとに数えるため）
             });
             if (!res.ok) throw new Error('AI request failed');
             const data = await res.json();

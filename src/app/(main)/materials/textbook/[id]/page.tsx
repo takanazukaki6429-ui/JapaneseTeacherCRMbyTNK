@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { cleanLessonTitle } from '@/lib/lesson-title';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, BookOpen } from 'lucide-react';
@@ -60,7 +61,7 @@ export default async function TextbookLessonPage({ params }: Props) {
                         {material.lesson_label ?? `第${material.lesson_number}課`}
                     </span>
                 </div>
-                <h1 className="text-lg font-bold text-[#1a1c1e] leading-snug">{material.title}</h1>
+                <h1 className="text-lg font-bold text-[#1a1c1e] leading-snug">{cleanLessonTitle(material.title)}</h1>
             </div>
 
             {sections.length === 0 ? (
