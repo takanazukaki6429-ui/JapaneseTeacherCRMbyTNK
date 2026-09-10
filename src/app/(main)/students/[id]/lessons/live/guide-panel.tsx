@@ -11,7 +11,6 @@
  */
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { cleanLessonTitle } from '@/lib/lesson-title';
 import { BookOpen, ExternalLink, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -186,7 +185,7 @@ export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonC
                     <option value="">今日の課を選ぶ…</option>
                     {lessons.map(l => (
                         <option key={l.id} value={l.id}>
-                            {l.lesson_label ?? `第${l.lesson_number}課`}：{stripFurigana(cleanLessonTitle(l.title)).slice(0, 30)}
+                            {l.lesson_label ?? `第${l.lesson_number}課`}：{stripFurigana(l.title).slice(0, 30)}
                         </option>
                     ))}
                 </select>
