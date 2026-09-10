@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,15 +101,18 @@ JSONのみ出力。Markdownコードブロック不要。`;
             return NextResponse.json({ message: 'No patterns extracted', patterns: [] });
         }
 
-        // knowledge_base に upsert
+        // 共有の集計表（knowledge_base）への書き込みは管理者権限で行う（2026-09-11 かずき決定）。
+        // ここは全先生で共有する集計値なので、先生本人の権限で書けると
+        // 他人の集計を壊せてしまう。読むのは今までどおり先生の権限で行う
+        const admin = createAdminClient();
         const upsertResults = [];
         for (const p of patterns) {
             if (!['skip', 'focus', 'return'].includes(p.unit_action)) continue;
             if (!p.unit_id || typeof p.unit_id !== 'string') continue;
 
-            const { data: existing } = await supabase
+            const { data: existing } = await admin
                 .from('knowledge_base')
-                .select('id, success_count, fail_count')
+                .select('id, success_count, fail_count, unit_label')
                 .eq('goal_type', goalType)
                 .eq('jlpt_level', jlptLevel)
                 .eq('unit_action', p.unit_action)
@@ -116,18 +120,18 @@ JSONのみ出力。Markdownコードブロック不要。`;
                 .single();
 
             if (existing) {
-                const { error } = await supabase
+                const { error } = await admin
                     .from('knowledge_base')
                     .update({
                         success_count: existing.success_count + (isSuccess ? 1 : 0),
                         fail_count: existing.fail_count + (isSuccess ? 0 : 1),
-                        unit_label: p.unit_label || existing,
+                        unit_label: p.unit_label || existing.unit_label,
                         updated_at: new Date().toISOString(),
                     })
                     .eq('id', existing.id);
                 if (!error) upsertResults.push({ action: 'updated', unit_id: p.unit_id });
             } else {
-                const { error } = await supabase
+                const { error } = await admin
                     .from('knowledge_base')
                     .insert({
                         goal_type: goalType,
