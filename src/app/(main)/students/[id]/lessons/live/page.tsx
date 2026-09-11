@@ -1003,10 +1003,10 @@ export default function LiveLessonPage() {
     // 画面の高さ = 100vh − アプリ上部の帯(73px) − 本文の余白(上下24px)。
     // ここを緩めると、下の4ボタンが画面外に押し出される
     return (
-        <div className="flex flex-col h-[calc(100vh-121px)] max-w-6xl mx-auto bg-white rounded-2xl shadow-[0_8px_48px_rgba(111,83,133,0.15)] overflow-hidden border border-[#c9a8e0]/20">
+        <div className="flex flex-col h-[calc(100vh-121px)] max-w-6xl mx-auto bg-white rounded-2xl shadow-[0_8px_48px_rgba(156,79,90,0.15)] overflow-hidden border border-[#d9a7ae]/20">
 
             {/* ヘッダー */}
-            <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-[#6f5385] to-[#9b77b5] text-white shrink-0">
+            <div className="flex items-center justify-between px-4 py-3 bg-[#9c4f5a] text-white shrink-0">
                 <div className="flex items-center gap-3 min-w-0">
                     <button onClick={() => router.back()} className="p-1.5 hover:bg-white/20 rounded-full transition-colors shrink-0">
                         <ArrowLeft size={18} />
@@ -1041,7 +1041,7 @@ export default function LiveLessonPage() {
                             onClick={isTranslationMode ? stopTranslationMode : startTranslationMode}
                             title={isTranslationMode ? '翻訳を止める' : '画面共有の音声から翻訳を始める'}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all whitespace-nowrap ${isTranslationMode
-                                ? 'bg-[#c9a8e0] text-white'
+                                ? 'bg-[#d9a7ae] text-white'
                                 : 'bg-white/20 hover:bg-white/30 text-white'
                                 }`}
                         >
@@ -1086,7 +1086,7 @@ export default function LiveLessonPage() {
 
                     <button
                         onClick={finishLesson}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-[#6f5385] font-bold rounded-full hover:bg-[#f2daff] transition-colors text-xs shadow-sm whitespace-nowrap ml-2"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-[#9c4f5a] font-bold rounded-full hover:bg-[#f8e8e7] transition-colors text-xs shadow-sm whitespace-nowrap ml-2"
                     >
                         <Save size={14} />
                         授業を終える
@@ -1140,11 +1140,11 @@ export default function LiveLessonPage() {
                         <div className="flex-1 overflow-y-auto p-4 space-y-3">
                             {flow.length === 0 && (
                                 <div className="h-full flex flex-col items-center justify-center text-center py-12 gap-2">
-                                    <Mic size={32} className={isListening ? 'text-[#6f5385] animate-pulse' : 'opacity-20'} />
-                                    <p className="text-sm font-bold text-[#1a1c1e]">
+                                    <Mic size={32} className={isListening ? 'text-[#9c4f5a] animate-pulse' : 'opacity-20'} />
+                                    <p className="text-sm font-bold text-[#3b2e2a]">
                                         {isListening ? '聞いています' : '生徒情報を読み込み中…'}
                                     </p>
-                                    <p className="text-xs text-[#4b454e] max-w-xs leading-relaxed">
+                                    <p className="text-xs text-[#534344] max-w-xs leading-relaxed">
                                         授業の会話がここに流れます。困った場面ではASTAが自分から提案を出します。
                                         自分から頼みたい時は下のボタンを押してください。
                                     </p>
@@ -1155,13 +1155,13 @@ export default function LiveLessonPage() {
                                 <div key={item.id}>
                                     {/* 誰の言葉かを名前で示す：先生は左・生徒は右（共有画面では「自分＝右」の慣習が通じないため名前を主にする） */}
                                     {item.kind === 'said' && (
-                                        <div className="w-fit max-w-[85%] bg-white border border-[#f4f3f7] rounded-2xl rounded-tl-md px-4 py-2.5">
-                                            <p className="text-[11px] font-bold text-[#6f5385] mb-0.5">💬 先生</p>
-                                            <p className={`${toolsOut ? 'text-lg' : 'text-2xl'} text-[#1a1c1e] font-bold leading-relaxed`}>{readable(item.text ?? '')}</p>
+                                        <div className="w-fit max-w-[85%] bg-white border border-[#f1ebe1] rounded-2xl rounded-tl-md px-4 py-2.5">
+                                            <p className="text-[11px] font-bold text-[#9c4f5a] mb-0.5">💬 先生</p>
+                                            <p className={`${toolsOut ? 'text-lg' : 'text-2xl'} text-[#3b2e2a] font-bold leading-relaxed`}>{readable(item.text ?? '')}</p>
                                             {item.translation && (
-                                                <p className={`${toolsOut ? 'text-sm' : 'text-lg'} text-[#6f5385] mt-1 leading-relaxed`}>{item.translation}</p>
+                                                <p className={`${toolsOut ? 'text-sm' : 'text-lg'} text-[#9c4f5a] mt-1 leading-relaxed`}>{item.translation}</p>
                                             )}
-                                            <p className="text-[9px] text-[#b3adc0] mt-0.5">
+                                            <p className="text-[9px] text-[#c2b5ac] mt-0.5">
                                                 {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                                             </p>
                                         </div>
@@ -1170,7 +1170,7 @@ export default function LiveLessonPage() {
                                     {item.kind === 'student-said' && (
                                         <div className="w-fit max-w-[85%] ml-auto bg-[#eef7f3] border border-[#bfe3d2] rounded-2xl rounded-tr-md px-4 py-2.5">
                                             <p className="text-[11px] font-bold text-[#4e7a66] mb-0.5">🗣 {studentName ? `${studentName}さん` : '生徒'}</p>
-                                            <p className={`${toolsOut ? 'text-lg' : 'text-2xl'} text-[#1a1c1e] font-bold leading-relaxed`}>{item.text}</p>
+                                            <p className={`${toolsOut ? 'text-lg' : 'text-2xl'} text-[#3b2e2a] font-bold leading-relaxed`}>{item.text}</p>
                                             {item.translation && (
                                                 <p className={`${toolsOut ? 'text-sm' : 'text-lg'} text-[#4e7a66] mt-1 leading-relaxed`}>{item.translation}</p>
                                             )}
@@ -1187,19 +1187,19 @@ export default function LiveLessonPage() {
                                     )}
 
                                     {(item.kind === 'suggest' || item.kind === 'translate-help') && (
-                                        <div className="ml-auto max-w-[88%] bg-[#fdf8ff] border-[1.5px] border-[#c9a8e0] rounded-2xl p-3.5 shadow-[0_4px_18px_rgba(111,83,133,0.10)]">
+                                        <div className="ml-auto max-w-[88%] bg-[#fbf8f3] border-[1.5px] border-[#d9a7ae] rounded-2xl p-3.5 shadow-[0_4px_18px_rgba(156,79,90,0.10)]">
                                             <div className="flex items-center justify-between mb-1.5">
-                                                <span className="text-[10px] font-bold text-[#6f5385]">{item.title}</span>
-                                                <span className="text-[9px] text-[#b3adc0]">
+                                                <span className="text-[10px] font-bold text-[#9c4f5a]">{item.title}</span>
+                                                <span className="text-[9px] text-[#c2b5ac]">
                                                     {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
-                                            <p className="text-[13px] text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">{readable(item.text ?? '')}</p>
+                                            <p className="text-[13px] text-[#3b2e2a] whitespace-pre-wrap leading-relaxed">{readable(item.text ?? '')}</p>
                                         </div>
                                     )}
 
                                     {item.kind === 'asked' && (
-                                        <div className="ml-auto max-w-[75%] bg-gradient-to-br from-[#6f5385] to-[#9b77b5] text-white rounded-2xl rounded-tr-none px-3.5 py-2">
+                                        <div className="ml-auto max-w-[75%] bg-[#9c4f5a] text-white rounded-2xl rounded-tr-none px-3.5 py-2">
                                             <p className="text-[13px] leading-relaxed">{readable(item.text ?? '')}</p>
                                             <p className="text-[9px] text-white/60 mt-0.5">
                                                 あなたの質問 · {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
@@ -1208,22 +1208,22 @@ export default function LiveLessonPage() {
                                     )}
 
                                     {item.kind === 'answer' && (
-                                        <div className="max-w-[88%] bg-white border border-[#c9a8e0]/40 rounded-2xl rounded-tl-none p-3.5 shadow-[0_4px_18px_rgba(111,83,133,0.08)]">
+                                        <div className="max-w-[88%] bg-white border border-[#d9a7ae]/40 rounded-2xl rounded-tl-none p-3.5 shadow-[0_4px_18px_rgba(156,79,90,0.08)]">
                                             <div className="flex items-center justify-between mb-1.5">
-                                                <span className="text-[10px] font-bold text-[#6f5385]">{item.title}</span>
-                                                <span className="text-[9px] text-[#b3adc0]">
+                                                <span className="text-[10px] font-bold text-[#9c4f5a]">{item.title}</span>
+                                                <span className="text-[9px] text-[#c2b5ac]">
                                                     {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
-                                            <p className="text-[13px] text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">{readable(item.text ?? '')}</p>
+                                            <p className="text-[13px] text-[#3b2e2a] whitespace-pre-wrap leading-relaxed">{readable(item.text ?? '')}</p>
                                         </div>
                                     )}
 
                                     {item.kind === 'textbook' && (
-                                        <div className="bg-white border-2 border-[#c9a8e0]/50 rounded-2xl p-5 shadow-[0_4px_18px_rgba(111,83,133,0.10)]">
-                                            <p className="text-xs font-bold text-[#6f5385] mb-2">{item.title}</p>
+                                        <div className="bg-white border-2 border-[#d9a7ae]/50 rounded-2xl p-5 shadow-[0_4px_18px_rgba(156,79,90,0.10)]">
+                                            <p className="text-xs font-bold text-[#9c4f5a] mb-2">{item.title}</p>
                                             {/* 教科書の原文は生徒向け（ふりがな付き）のまま、生徒も読める大きさで */}
-                                            <p className={`${toolsOut ? 'text-base' : 'text-xl'} text-[#1a1c1e] leading-loose whitespace-pre-wrap`}>
+                                            <p className={`${toolsOut ? 'text-base' : 'text-xl'} text-[#3b2e2a] leading-loose whitespace-pre-wrap`}>
                                                 {readable((item.text ?? '').split('\n').filter(l => !l.trim().startsWith('![')).join('\n')).trim().slice(0, 1200)}
                                             </p>
                                             {(item.imgs ?? []).length > 0 && (
@@ -1238,30 +1238,30 @@ export default function LiveLessonPage() {
                                     )}
 
                                     {item.kind === 'material' && (
-                                        <div className="ml-auto max-w-[88%] bg-white border border-[#c9a8e0]/40 rounded-2xl p-3.5 shadow-[0_4px_18px_rgba(111,83,133,0.08)]">
+                                        <div className="ml-auto max-w-[88%] bg-white border border-[#d9a7ae]/40 rounded-2xl p-3.5 shadow-[0_4px_18px_rgba(156,79,90,0.08)]">
                                             <div className="flex items-center justify-between mb-1.5">
-                                                <span className="text-[10px] font-bold text-[#6f5385]">{item.title}</span>
-                                                <span className="text-[9px] text-[#b3adc0]">
+                                                <span className="text-[10px] font-bold text-[#9c4f5a]">{item.title}</span>
+                                                <span className="text-[9px] text-[#c2b5ac]">
                                                     {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
-                                            <p className="text-[13px] text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">{readable(item.text ?? '')}</p>
+                                            <p className="text-[13px] text-[#3b2e2a] whitespace-pre-wrap leading-relaxed">{readable(item.text ?? '')}</p>
                                         </div>
                                     )}
 
                                     {item.kind === 'illust' && (
-                                        <div className="ml-auto max-w-[88%] bg-white border border-[#c9a8e0]/40 rounded-2xl p-3 shadow-[0_4px_18px_rgba(111,83,133,0.08)]">
+                                        <div className="ml-auto max-w-[88%] bg-white border border-[#d9a7ae]/40 rounded-2xl p-3 shadow-[0_4px_18px_rgba(156,79,90,0.08)]">
                                             <div className="flex items-center justify-between mb-2">
-                                                <span className="text-[10px] font-bold text-[#6f5385]">{item.title}</span>
+                                                <span className="text-[10px] font-bold text-[#9c4f5a]">{item.title}</span>
                                                 {item.img && (
                                                     <a href={item.img} download="asta-illustration.png"
-                                                        className="inline-flex items-center gap-1 text-[10px] text-[#6f5385] hover:underline">
+                                                        className="inline-flex items-center gap-1 text-[10px] text-[#9c4f5a] hover:underline">
                                                         <Download size={11} />保存
                                                     </a>
                                                 )}
                                             </div>
                                             {!item.img && (
-                                                <div className="flex items-center gap-2 py-4 justify-center text-[#6f5385]">
+                                                <div className="flex items-center gap-2 py-4 justify-center text-[#9c4f5a]">
                                                     <Loader2 size={16} className="animate-spin" />
                                                     <span className="text-xs">授業を続けながらお待ちください</span>
                                                 </div>
@@ -1276,11 +1276,11 @@ export default function LiveLessonPage() {
                                                     onClick={() => patchFlow(item.id, { img: item.imgQuality, imgQuality: undefined })}
                                                     className="w-full mt-2 text-left text-[11px] bg-[#fdf6e7] border border-[#ecd9a8] text-[#8a6d1f] rounded-xl px-3 py-2 hover:bg-[#fbefd2] transition-colors"
                                                 >
-                                                    🖌 <b className="text-[#6f5385]">文字まできれいな版</b>ができました → 押すと差し替えます
+                                                    🖌 <b className="text-[#9c4f5a]">文字まできれいな版</b>ができました → 押すと差し替えます
                                                 </button>
                                             )}
                                             {item.img && !item.imgQuality && item.title?.includes('できた絵') && (
-                                                <p className="text-[10px] text-[#4b454e] mt-2">
+                                                <p className="text-[10px] text-[#534344] mt-2">
                                                     ※ AIが作った画像です。文字が正しいか目で確かめてから生徒さんに見せてください。
                                                 </p>
                                             )}
@@ -1291,15 +1291,15 @@ export default function LiveLessonPage() {
 
                             {/* 認識途中の文字（うすく表示） */}
                             {interimText && (
-                                <p className="text-[12px] text-[#b3adc0] italic px-1">{interimText}…</p>
+                                <p className="text-[12px] text-[#c2b5ac] italic px-1">{interimText}…</p>
                             )}
                             {(isAnalyzing || streamingText) && (
-                                <div className="ml-auto max-w-[88%] bg-[#fdf8ff] border border-[#c9a8e0]/50 rounded-2xl p-3">
-                                    <p className="text-[10px] font-bold text-[#6f5385] mb-1 flex items-center gap-1">
+                                <div className="ml-auto max-w-[88%] bg-[#fbf8f3] border border-[#d9a7ae]/50 rounded-2xl p-3">
+                                    <p className="text-[10px] font-bold text-[#9c4f5a] mb-1 flex items-center gap-1">
                                         <Sparkles size={11} /> ASTAが考えています…
                                     </p>
                                     {streamingText && (
-                                        <p className="text-xs text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">{streamingText}</p>
+                                        <p className="text-xs text-[#3b2e2a] whitespace-pre-wrap leading-relaxed">{streamingText}</p>
                                     )}
                                 </div>
                             )}
@@ -1307,7 +1307,7 @@ export default function LiveLessonPage() {
                         </div>
 
                         {/* 下部：自分から頼む4ボタン（道具をしまうと細いアイコンバーに） */}
-                        <div className={`border-t border-[#f4f3f7] bg-white shrink-0 ${toolsOut ? 'px-4 py-3' : 'px-4 py-1.5'}`}>
+                        <div className={`border-t border-[#f1ebe1] bg-white shrink-0 ${toolsOut ? 'px-4 py-3' : 'px-4 py-1.5'}`}>
                             {illustError && (
                                 <p className="text-[11px] text-[#ba1a1a] bg-[#fff0f0] border border-[#f4b8b8] rounded-xl px-3 py-1.5 mb-2">
                                     {illustError}
@@ -1315,10 +1315,10 @@ export default function LiveLessonPage() {
                             )}
                             {toolsOut && (
                                 <div className="flex items-center justify-between mb-2">
-                                    <span className="text-[10px] text-[#9a93a5]">
-                                        <b className="text-[#6f5385]">🤖 自動アシスト：ON</b>　困った場面はASTAが自分から提案します
+                                    <span className="text-[10px] text-[#8a7d77]">
+                                        <b className="text-[#9c4f5a]">🤖 自動アシスト：ON</b>　困った場面はASTAが自分から提案します
                                     </span>
-                                    <span className="text-[10px] text-[#9a93a5]">自分から頼む時はこのボタン（入力不要）</span>
+                                    <span className="text-[10px] text-[#8a7d77]">自分から頼む時はこのボタン（入力不要）</span>
                                 </div>
                             )}
                             <div className="grid grid-cols-4 gap-2">
@@ -1326,7 +1326,7 @@ export default function LiveLessonPage() {
                                     onClick={generateIllustration}
                                     disabled={illustBusy}
                                     title="いまの会話と課に合う絵を約10秒で作る。文字まできれいな版も自動で用意"
-                                    className={`flex flex-col items-center px-1 bg-gradient-to-br from-[#6f5385] to-[#a07cc0] text-white rounded-xl text-xs font-bold disabled:opacity-50 transition-opacity ${toolsOut ? 'py-2.5' : 'py-1.5'}`}
+                                    className={`flex flex-col items-center px-1 bg-[#9c4f5a] text-white rounded-xl text-xs font-bold disabled:opacity-50 transition-opacity ${toolsOut ? 'py-2.5' : 'py-1.5'}`}
                                 >
                                     <span className="flex items-center gap-1">
                                         {illustBusy ? <Loader2 size={12} className="animate-spin" /> : '🎨'} 絵で見せる
@@ -1339,7 +1339,7 @@ export default function LiveLessonPage() {
                                         onClick={() => makeMaterial(m)}
                                         disabled={materialBusy !== null}
                                         title={MATERIAL_MODES[m].hint}
-                                        className={`flex flex-col items-center px-1 bg-gradient-to-br from-[#6f5385] to-[#a07cc0] text-white rounded-xl text-xs font-bold disabled:opacity-50 transition-opacity ${toolsOut ? 'py-2.5' : 'py-1.5'}`}
+                                        className={`flex flex-col items-center px-1 bg-[#9c4f5a] text-white rounded-xl text-xs font-bold disabled:opacity-50 transition-opacity ${toolsOut ? 'py-2.5' : 'py-1.5'}`}
                                     >
                                         <span className="flex items-center gap-1">
                                             {materialBusy === m ? <Loader2 size={12} className="animate-spin" /> : null}
@@ -1358,13 +1358,13 @@ export default function LiveLessonPage() {
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
                                     placeholder="聞きたいことがあれば（画面共有中は生徒にも見えます）"
-                                    className="flex-1 px-3.5 py-2 bg-[#faf9fd] border border-[#f4f3f7] rounded-full outline-none focus:border-[#c9a8e0] text-xs text-[#1a1c1e]"
+                                    className="flex-1 px-3.5 py-2 bg-[#f7f3ec] border border-[#f1ebe1] rounded-full outline-none focus:border-[#d9a7ae] text-xs text-[#3b2e2a]"
                                 />
                                 <button
                                     type="submit"
                                     disabled={!input.trim() || isTyping}
                                     title="ASTAに聞く"
-                                    className="p-2 bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] text-white rounded-full disabled:opacity-40 transition-opacity shadow-sm shrink-0"
+                                    className="p-2 bg-[#9c4f5a] text-white rounded-full disabled:opacity-40 transition-opacity shadow-sm shrink-0"
                                 >
                                     {isTyping ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
                                 </button>

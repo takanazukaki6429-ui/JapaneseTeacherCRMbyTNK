@@ -64,7 +64,7 @@ export default function StudentRoadmapPage() {
 
     if (loading) return (
         <div className="flex h-screen items-center justify-center">
-            <Loader2 className="animate-spin text-[#6f5385]" size={32} />
+            <Loader2 className="animate-spin text-[#9c4f5a]" size={32} />
         </div>
     );
     if (!student) return <div>Student not found</div>;
@@ -81,25 +81,25 @@ export default function StudentRoadmapPage() {
         ? Math.round(((currentScore! - 10) / (targetLevel! - 10)) * 100)
         : 0;
 
-    const targetJlptColor = milestones.length > 0 ? milestones[milestones.length - 1].jlptColor : '#6f5385';
+    const targetJlptColor = milestones.length > 0 ? milestones[milestones.length - 1].jlptColor : '#9c4f5a';
 
     return (
-        <div className="min-h-screen bg-[#faf9fd]">
+        <div className="min-h-screen bg-[#f7f3ec]">
             {/* ヘッダー */}
-            <div className="bg-white border-b border-[#f4f3f7] sticky top-0 z-50">
+            <div className="bg-white border-b border-[#f1ebe1] sticky top-0 z-50">
                 <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <Link href={`/students/${studentId}`} className="p-2 text-[#4b454e] hover:text-[#1a1c1e] hover:bg-[#f4f3f7] rounded-full transition-colors">
+                        <Link href={`/students/${studentId}`} className="p-2 text-[#534344] hover:text-[#3b2e2a] hover:bg-[#f1ebe1] rounded-full transition-colors">
                             <ArrowLeft size={18} />
                         </Link>
-                        <h1 className="font-bold text-[#1a1c1e] flex items-center gap-2 text-sm">
-                            <Map size={15} className="text-[#6f5385]" />
+                        <h1 className="font-bold text-[#3b2e2a] flex items-center gap-2 text-sm">
+                            <Map size={15} className="text-[#9c4f5a]" />
                             {student.name}さんのロードマップ
                         </h1>
                     </div>
                     <Link
                         href={`/students/${studentId}/initial-hearing`}
-                        className="text-xs font-bold text-[#6f5385] bg-[#f2daff] hover:bg-[#e8c8ff] px-3 py-1.5 rounded-xl transition-colors"
+                        className="text-xs font-bold text-[#9c4f5a] bg-[#f8e8e7] hover:bg-[#f3dcdb] px-3 py-1.5 rounded-xl transition-colors"
                     >
                         再作成
                     </Link>
@@ -109,13 +109,13 @@ export default function StudentRoadmapPage() {
             <div className="max-w-2xl mx-auto p-4 md:p-6 space-y-5">
 
                 {!hasRoadmap ? (
-                    <div className="bg-white rounded-2xl p-8 text-center shadow-[0_0_40px_rgba(111,83,133,0.06)]">
-                        <Map size={32} className="text-[#c9a8e0] mx-auto mb-3" />
-                        <p className="text-sm font-bold text-[#1a1c1e] mb-1">ロードマップがまだ作成されていません</p>
-                        <p className="text-xs text-[#4b454e] mb-4">体験レッスンのヒアリングから自動生成できます</p>
+                    <div className="bg-white rounded-2xl p-8 text-center shadow-[0_0_40px_rgba(156,79,90,0.06)]">
+                        <Map size={32} className="text-[#d9a7ae] mx-auto mb-3" />
+                        <p className="text-sm font-bold text-[#3b2e2a] mb-1">ロードマップがまだ作成されていません</p>
+                        <p className="text-xs text-[#534344] mb-4">体験レッスンのヒアリングから自動生成できます</p>
                         <Link
                             href={`/students/${studentId}/initial-hearing`}
-                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#6f5385] to-[#c9a8e0] text-white text-sm font-bold rounded-xl hover:opacity-90 transition-opacity"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#9c4f5a] text-white text-sm font-bold rounded-xl hover:opacity-90 transition-opacity"
                         >
                             体験レッスン → ロードマップ作成
                         </Link>
@@ -123,7 +123,7 @@ export default function StudentRoadmapPage() {
                 ) : (
                     <>
                         {/* ヒーローカード */}
-                        <div className="bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] rounded-2xl p-6 text-white shadow-[0_8px_32px_rgba(111,83,133,0.25)]">
+                        <div className="bg-[#9c4f5a] rounded-2xl p-6 text-white shadow-[0_8px_32px_rgba(156,79,90,0.25)]">
                             <div className="flex items-center justify-between mb-5">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold text-lg">
@@ -163,28 +163,28 @@ export default function StudentRoadmapPage() {
 
                         {/* 体験レッスンAI分析 */}
                         {(aiSummary || focusAreas.length > 0) && (
-                            <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] p-5 space-y-4">
-                                <h2 className="text-sm font-bold text-[#1a1c1e] flex items-center gap-2">
-                                    <BookOpen size={15} className="text-[#6f5385]" />
+                            <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.06)] p-5 space-y-4">
+                                <h2 className="text-sm font-bold text-[#3b2e2a] flex items-center gap-2">
+                                    <BookOpen size={15} className="text-[#9c4f5a]" />
                                     体験レッスンAI分析
                                 </h2>
                                 {aiSummary && (
-                                    <p className="text-sm text-[#1a1c1e] leading-relaxed bg-[#faf9fd] rounded-xl p-4">{aiSummary}</p>
+                                    <p className="text-sm text-[#3b2e2a] leading-relaxed bg-[#f7f3ec] rounded-xl p-4">{aiSummary}</p>
                                 )}
                                 {focusAreas.length > 0 && (
                                     <div>
-                                        <p className="text-xs font-bold text-[#4b454e] mb-2">重点項目</p>
+                                        <p className="text-xs font-bold text-[#534344] mb-2">重点項目</p>
                                         <div className="flex flex-wrap gap-2">
                                             {focusAreas.map((area, i) => (
-                                                <span key={i} className="px-2.5 py-1 bg-[#f2daff] text-[#6f5385] text-xs font-medium rounded-full">{area}</span>
+                                                <span key={i} className="px-2.5 py-1 bg-[#f8e8e7] text-[#9c4f5a] text-xs font-medium rounded-full">{area}</span>
                                             ))}
                                         </div>
                                     </div>
                                 )}
                                 {convNotes && (
                                     <div>
-                                        <p className="text-xs font-bold text-[#4b454e] mb-2">会話メモ（原文）</p>
-                                        <p className="text-xs text-[#4b454e] leading-relaxed bg-[#faf9fd] rounded-xl p-3 whitespace-pre-wrap">{convNotes}</p>
+                                        <p className="text-xs font-bold text-[#534344] mb-2">会話メモ（原文）</p>
+                                        <p className="text-xs text-[#534344] leading-relaxed bg-[#f7f3ec] rounded-xl p-3 whitespace-pre-wrap">{convNotes}</p>
                                     </div>
                                 )}
                             </div>
@@ -192,13 +192,13 @@ export default function StudentRoadmapPage() {
 
                         {/* 月別マイルストーン（全件・フル表示） */}
                         <div className="space-y-4">
-                            <h2 className="text-sm font-bold text-[#1a1c1e] flex items-center gap-2 px-1">
-                                <Target size={15} className="text-[#6f5385]" />
+                            <h2 className="text-sm font-bold text-[#3b2e2a] flex items-center gap-2 px-1">
+                                <Target size={15} className="text-[#9c4f5a]" />
                                 月別ロードマップ
                             </h2>
 
                             {milestones.map((milestone) => (
-                                <Card key={milestone.month} className="bg-white shadow-sm overflow-hidden border-0 shadow-[0_0_40px_rgba(111,83,133,0.06)]">
+                                <Card key={milestone.month} className="bg-white shadow-sm overflow-hidden border-0 shadow-[0_0_40px_rgba(156,79,90,0.06)]">
                                     <div className="h-1" style={{ backgroundColor: milestone.jlptColor }} />
                                     <CardContent className="p-4 space-y-3">
                                         {/* ヘッダー */}
@@ -208,8 +208,8 @@ export default function StudentRoadmapPage() {
                                                     {milestone.month}
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold text-[#1a1c1e]">{milestone.month}ヶ月目</p>
-                                                    <p className="text-xs text-[#4b454e]">目標レベル: Lv.{milestone.level}</p>
+                                                    <p className="font-bold text-[#3b2e2a]">{milestone.month}ヶ月目</p>
+                                                    <p className="text-xs text-[#534344]">目標レベル: Lv.{milestone.level}</p>
                                                 </div>
                                             </div>
                                             <Badge className="text-white" style={{ backgroundColor: milestone.jlptColor }}>
@@ -221,13 +221,13 @@ export default function StudentRoadmapPage() {
                                         {milestone.purposeMilestone && (
                                             <div className="p-3 rounded-xl flex items-start gap-2" style={{ backgroundColor: `${milestone.jlptColor}15` }}>
                                                 <Sparkles className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: milestone.jlptColor }} />
-                                                <p className="text-sm text-[#1a1c1e]">{milestone.purposeMilestone}</p>
+                                                <p className="text-sm text-[#3b2e2a]">{milestone.purposeMilestone}</p>
                                             </div>
                                         )}
 
                                         {/* 学習内容 */}
                                         <div className="space-y-1.5">
-                                            <p className="text-xs font-bold text-[#4b454e]">学習内容</p>
+                                            <p className="text-xs font-bold text-[#534344]">学習内容</p>
                                             <div className="flex flex-wrap gap-1.5">
                                                 {milestone.focus.map((item: string, i: number) => (
                                                     <Badge key={i} variant="secondary" className="text-xs">{item}</Badge>
@@ -237,10 +237,10 @@ export default function StudentRoadmapPage() {
 
                                         {/* 習得スキル */}
                                         <div className="space-y-1.5">
-                                            <p className="text-xs font-bold text-[#4b454e]">習得スキル</p>
+                                            <p className="text-xs font-bold text-[#534344]">習得スキル</p>
                                             <ul className="space-y-1">
                                                 {milestone.skills.map((skill: string, i: number) => (
-                                                    <li key={i} className="flex items-center gap-2 text-sm text-[#4b454e]">
+                                                    <li key={i} className="flex items-center gap-2 text-sm text-[#534344]">
                                                         <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
                                                         {skill}
                                                     </li>
@@ -249,22 +249,22 @@ export default function StudentRoadmapPage() {
                                         </div>
 
                                         {/* 理由 */}
-                                        <div className="p-3 bg-[#faf9fd] rounded-xl">
-                                            <p className="text-sm text-[#4b454e]">
-                                                <strong className="text-[#1a1c1e]">この順番の理由：</strong><br />
+                                        <div className="p-3 bg-[#f7f3ec] rounded-xl">
+                                            <p className="text-sm text-[#534344]">
+                                                <strong className="text-[#3b2e2a]">この順番の理由：</strong><br />
                                                 {milestone.reason}
                                             </p>
                                         </div>
 
                                         {/* 教材 */}
                                         {milestone.textbooks && milestone.textbooks.length > 0 && (
-                                            <div className="space-y-1.5 pt-2 border-t border-[#f4f3f7]">
-                                                <p className="text-xs font-bold text-[#4b454e] flex items-center gap-1.5">
-                                                    <BookText className="w-3.5 h-3.5 text-[#6f5385]" /> おすすめ教材
+                                            <div className="space-y-1.5 pt-2 border-t border-[#f1ebe1]">
+                                                <p className="text-xs font-bold text-[#534344] flex items-center gap-1.5">
+                                                    <BookText className="w-3.5 h-3.5 text-[#9c4f5a]" /> おすすめ教材
                                                 </p>
                                                 <div className="flex flex-wrap gap-1.5">
                                                     {milestone.textbooks.map((item: string, i: number) => (
-                                                        <Badge key={i} variant="outline" className="text-xs bg-white text-[#4b454e] border-[#e2e8f0]">{item}</Badge>
+                                                        <Badge key={i} variant="outline" className="text-xs bg-white text-[#534344] border-[#e6ddd2]">{item}</Badge>
                                                     ))}
                                                 </div>
                                             </div>
@@ -287,9 +287,9 @@ export default function StudentRoadmapPage() {
                                         )}
 
                                         {/* 推奨レッスン数 */}
-                                        <div className="flex items-center justify-between pt-2 border-t border-[#f4f3f7]">
-                                            <span className="text-sm text-[#4b454e]">推奨レッスン数</span>
-                                            <span className="font-bold text-[#6f5385]">{milestone.lessonsNeeded}回/月</span>
+                                        <div className="flex items-center justify-between pt-2 border-t border-[#f1ebe1]">
+                                            <span className="text-sm text-[#534344]">推奨レッスン数</span>
+                                            <span className="font-bold text-[#9c4f5a]">{milestone.lessonsNeeded}回/月</span>
                                         </div>
                                     </CardContent>
                                 </Card>

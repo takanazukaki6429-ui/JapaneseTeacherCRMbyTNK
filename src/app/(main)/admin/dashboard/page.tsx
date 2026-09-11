@@ -80,7 +80,7 @@ export default function AdminDashboardPage() {
     };
 
     if (!authChecked) {
-        return <div className="flex h-64 items-center justify-center"><Loader2 className="animate-spin text-[#6f5385]" size={28} /></div>;
+        return <div className="flex h-64 items-center justify-center"><Loader2 className="animate-spin text-[#9c4f5a]" size={28} /></div>;
     }
 
     const failureCount = logs.filter(l => l.outcome === 'failure').length;
@@ -89,30 +89,30 @@ export default function AdminDashboardPage() {
         <div className="max-w-4xl mx-auto space-y-6 pb-12">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-[#1a1c1e]">管理ダッシュボード</h1>
-                    <p className="text-sm text-[#4b454e] mt-0.5">システム監視・監査ログ・エラー解析</p>
+                    <h1 className="text-2xl font-bold tracking-tight text-[#3b2e2a]">管理ダッシュボード</h1>
+                    <p className="text-sm text-[#534344] mt-0.5">システム監視・監査ログ・エラー解析</p>
                 </div>
                 <button onClick={loadData} disabled={loading}
-                    className="inline-flex items-center gap-1.5 text-xs text-[#6f5385] hover:text-[#1a1c1e] disabled:opacity-50">
+                    className="inline-flex items-center gap-1.5 text-xs text-[#9c4f5a] hover:text-[#3b2e2a] disabled:opacity-50">
                     <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> 更新
                 </button>
             </div>
 
             {/* システムヘルス */}
-            <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] overflow-hidden">
-                <div className="px-5 py-3.5 bg-[#f4f3f7] flex items-center gap-2.5">
-                    <Activity size={16} className="text-[#6f5385]" />
-                    <h2 className="font-bold text-sm text-[#1a1c1e]">システムヘルス</h2>
+            <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.06)] overflow-hidden">
+                <div className="px-5 py-3.5 bg-[#f1ebe1] flex items-center gap-2.5">
+                    <Activity size={16} className="text-[#9c4f5a]" />
+                    <h2 className="font-bold text-sm text-[#3b2e2a]">システムヘルス</h2>
                 </div>
                 <div className="p-5 flex flex-wrap gap-4">
-                    {health.length === 0 && <p className="text-sm text-[#4b454e]">取得中…</p>}
+                    {health.length === 0 && <p className="text-sm text-[#534344]">取得中…</p>}
                     {health.map(c => {
                         const m = STATUS_ICON[c.status];
                         return (
                             <div key={c.name} className="flex items-center gap-2">
                                 <m.Icon size={16} style={{ color: m.color }} />
-                                <span className="text-sm text-[#1a1c1e]">{c.name}</span>
-                                {c.latencyMs != null && <span className="text-xs text-[#4b454e]">{c.latencyMs}ms</span>}
+                                <span className="text-sm text-[#3b2e2a]">{c.name}</span>
+                                {c.latencyMs != null && <span className="text-xs text-[#534344]">{c.latencyMs}ms</span>}
                             </div>
                         );
                     })}
@@ -120,11 +120,11 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* エラーAI解析 */}
-            <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] overflow-hidden">
-                <div className="px-5 py-3.5 bg-[#f4f3f7] flex items-center justify-between">
+            <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.06)] overflow-hidden">
+                <div className="px-5 py-3.5 bg-[#f1ebe1] flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                        <Sparkles size={16} className="text-[#6f5385]" />
-                        <h2 className="font-bold text-sm text-[#1a1c1e]">エラーログAI解析</h2>
+                        <Sparkles size={16} className="text-[#9c4f5a]" />
+                        <h2 className="font-bold text-sm text-[#3b2e2a]">エラーログAI解析</h2>
                         {failureCount > 0 && (
                             <span className="text-[10px] bg-[#ba1a1a] text-white rounded-full px-2 py-0.5 font-bold">
                                 失敗 {failureCount}件
@@ -132,30 +132,30 @@ export default function AdminDashboardPage() {
                         )}
                     </div>
                     <button onClick={runAnalysis} disabled={analyzing}
-                        className="inline-flex items-center gap-1.5 text-xs bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] text-white font-bold px-3 py-1.5 rounded-full disabled:opacity-50">
+                        className="inline-flex items-center gap-1.5 text-xs bg-[#9c4f5a] text-white font-bold px-3 py-1.5 rounded-full disabled:opacity-50">
                         {analyzing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
                         {analyzing ? '解析中…' : 'AIで解析'}
                     </button>
                 </div>
                 {aiSummary && (
-                    <div className="p-5 text-sm text-[#1a1c1e] whitespace-pre-wrap leading-relaxed">{aiSummary}</div>
+                    <div className="p-5 text-sm text-[#3b2e2a] whitespace-pre-wrap leading-relaxed">{aiSummary}</div>
                 )}
             </div>
 
             {/* 監査ログ */}
-            <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] overflow-hidden">
-                <div className="px-5 py-3.5 bg-[#f4f3f7] flex items-center gap-2.5">
-                    <ShieldAlert size={16} className="text-[#655a6f]" />
-                    <h2 className="font-bold text-sm text-[#1a1c1e]">監査ログ（直近100件）</h2>
+            <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.06)] overflow-hidden">
+                <div className="px-5 py-3.5 bg-[#f1ebe1] flex items-center gap-2.5">
+                    <ShieldAlert size={16} className="text-[#6b5b8c]" />
+                    <h2 className="font-bold text-sm text-[#3b2e2a]">監査ログ（直近100件）</h2>
                 </div>
                 <div className="max-h-[480px] overflow-y-auto">
-                    {logs.length === 0 && <p className="p-5 text-sm text-[#4b454e]">ログがありません</p>}
+                    {logs.length === 0 && <p className="p-5 text-sm text-[#534344]">ログがありません</p>}
                     {logs.map(log => (
-                        <div key={log.id} className="flex items-center gap-3 px-5 py-2.5 border-t border-[#f4f3f7] text-xs">
+                        <div key={log.id} className="flex items-center gap-3 px-5 py-2.5 border-t border-[#f1ebe1] text-xs">
                             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${log.outcome === 'failure' ? 'bg-[#ba1a1a]' : 'bg-[#1a7f37]'}`} />
-                            <span className="font-mono text-[#6f5385] w-44 shrink-0">{log.action}</span>
-                            <span className="text-[#4b454e] flex-1 truncate">{log.actor_email || '—'}</span>
-                            <span className="text-[#4b454e]/60 shrink-0">{new Date(log.created_at).toLocaleString('ja-JP')}</span>
+                            <span className="font-mono text-[#9c4f5a] w-44 shrink-0">{log.action}</span>
+                            <span className="text-[#534344] flex-1 truncate">{log.actor_email || '—'}</span>
+                            <span className="text-[#534344]/60 shrink-0">{new Date(log.created_at).toLocaleString('ja-JP')}</span>
                         </div>
                     ))}
                 </div>

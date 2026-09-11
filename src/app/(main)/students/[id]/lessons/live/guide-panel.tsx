@@ -128,7 +128,7 @@ export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonC
             <button
                 onClick={() => setPeek(true)}
                 title="台本をひらく"
-                className="hidden md:flex flex-col items-center gap-2 w-9 shrink-0 h-full bg-white border-r border-[#f4f3f7] pt-4 text-[#6f5385] hover:bg-[#faf9fd] transition-colors"
+                className="hidden md:flex flex-col items-center gap-2 w-9 shrink-0 h-full bg-white border-r border-[#f1ebe1] pt-4 text-[#9c4f5a] hover:bg-[#f7f3ec] transition-colors"
             >
                 <BookOpen size={16} />
                 <span className="text-[10px] font-bold" style={{ writingMode: 'vertical-rl' }}>きょうの進め方</span>
@@ -137,31 +137,31 @@ export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonC
     }
     return (
         <div
-            className="hidden md:block w-[320px] shrink-0 h-full overflow-y-auto bg-white border-r border-[#f4f3f7] p-4 space-y-4"
+            className="hidden md:block w-[320px] shrink-0 h-full overflow-y-auto bg-white border-r border-[#f1ebe1] p-4 space-y-4"
             onMouseLeave={() => { if (collapsed) setPeek(false); }}
         >
             <div>
-                <h2 className="text-xs font-bold text-[#6f5385] tracking-wide flex items-center gap-1.5">
+                <h2 className="text-xs font-bold text-[#9c4f5a] tracking-wide flex items-center gap-1.5">
                     <BookOpen size={14} /> きょうの進め方
                 </h2>
-                <p className="text-[10px] text-[#9a93a5] mt-0.5">次に何をやるかはここを見る</p>
+                <p className="text-[10px] text-[#8a7d77] mt-0.5">次に何をやるかはここを見る</p>
             </div>
 
             {/* 準備データ：攻略メモなので折りたたみ。開くと画面共有中は生徒にも見える */}
             {prepContent && (
-                <details className="bg-[#f2daff]/50 rounded-2xl p-3 space-y-2">
-                    <summary className="text-[10px] font-bold text-[#6f5385] cursor-pointer select-none">
+                <details className="bg-[#f8e8e7]/50 rounded-2xl p-3 space-y-2">
+                    <summary className="text-[10px] font-bold text-[#9c4f5a] cursor-pointer select-none">
                         授業前のメモ（押すと開く・画面共有中は生徒にも見えます）
                     </summary>
                     {prepContent.review_quiz?.slice(0, 2).map((q, i) => (
                         <div key={i} className="text-xs">
-                            <p className="font-bold text-[#1a1c1e]">Q. {q.question}</p>
-                            <p className="text-[#4b454e] pl-2 border-l-2 border-[#c9a8e0] mt-0.5">A. {q.answer}</p>
+                            <p className="font-bold text-[#3b2e2a]">Q. {q.question}</p>
+                            <p className="text-[#534344] pl-2 border-l-2 border-[#d9a7ae] mt-0.5">A. {q.answer}</p>
                         </div>
                     ))}
                     {prepContent.intro_topic && (
-                        <p className="text-[11px] text-[#4b454e] leading-relaxed">
-                            <span className="font-bold text-[#6f5385]">導入：</span>
+                        <p className="text-[11px] text-[#534344] leading-relaxed">
+                            <span className="font-bold text-[#9c4f5a]">導入：</span>
                             {prepContent.intro_topic.slice(0, 80)}
                         </p>
                     )}
@@ -173,14 +173,14 @@ export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonC
                 <select
                     value={level}
                     onChange={e => setLevel(e.target.value)}
-                    className="text-xs bg-white border border-[#cdc3ce]/50 rounded-lg px-2 py-1.5 outline-none"
+                    className="text-xs bg-white border border-[#dccfc4]/50 rounded-lg px-2 py-1.5 outline-none"
                 >
                     {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
                 </select>
                 <select
                     value={lessonId}
                     onChange={e => onLessonChange(e.target.value)}
-                    className="flex-1 min-w-0 text-xs bg-white border border-[#cdc3ce]/50 rounded-lg px-2 py-1.5 outline-none"
+                    className="flex-1 min-w-0 text-xs bg-white border border-[#dccfc4]/50 rounded-lg px-2 py-1.5 outline-none"
                 >
                     <option value="">今日の課を選ぶ…</option>
                     {lessons.map(l => (
@@ -194,7 +194,7 @@ export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonC
                         href={`/materials/textbook/${selected.id}`}
                         target="_blank"
                         title="教科書を別画面で開く"
-                        className="p-1.5 text-[#6f5385] hover:bg-[#f2daff] rounded-lg transition-colors shrink-0"
+                        className="p-1.5 text-[#9c4f5a] hover:bg-[#f8e8e7] rounded-lg transition-colors shrink-0"
                     >
                         <ExternalLink size={14} />
                     </Link>
@@ -203,13 +203,13 @@ export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonC
 
             {/* 課の流れ（ステップ） */}
             {!lessonId && (
-                <p className="text-xs text-[#9a93a5] leading-relaxed py-6 text-center">
+                <p className="text-xs text-[#8a7d77] leading-relaxed py-6 text-center">
                     課を選ぶと、その課の流れが
                     <br />ここにステップで並びます
                 </p>
             )}
             {lessonId && sections.length === 0 && (
-                <p className="text-xs text-[#9a93a5] py-4 text-center">読み込み中…</p>
+                <p className="text-xs text-[#8a7d77] py-4 text-center">読み込み中…</p>
             )}
             <ol className="space-y-1.5">
                 {sections.map((s, i) => (
@@ -235,8 +235,8 @@ export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonC
                                 }
                             }}
                             className={`w-full text-left rounded-xl px-3 py-2 transition-colors ${openStep === i
-                                ? 'bg-[#f2daff] text-[#6f5385]'
-                                : 'hover:bg-[#faf9fd] text-[#1a1c1e]'
+                                ? 'bg-[#f8e8e7] text-[#9c4f5a]'
+                                : 'hover:bg-[#f7f3ec] text-[#3b2e2a]'
                                 }`}
                         >
                             <span className="flex items-center justify-between gap-2">
@@ -245,17 +245,17 @@ export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonC
                                 </span>
                                 <ChevronDown
                                     size={13}
-                                    className={`shrink-0 text-[#9a93a5] transition-transform ${openStep === i ? 'rotate-180' : ''}`}
+                                    className={`shrink-0 text-[#8a7d77] transition-transform ${openStep === i ? 'rotate-180' : ''}`}
                                 />
                             </span>
                             {openStep !== i && (
-                                <span className="block text-[10px] text-[#9a93a5] mt-0.5 leading-relaxed">
+                                <span className="block text-[10px] text-[#8a7d77] mt-0.5 leading-relaxed">
                                     {preview(s.content_md, 42)}
                                 </span>
                             )}
                         </button>
                         {openStep === i && (
-                            <div className="mx-1 mt-1 mb-2 px-3 py-2 bg-white border border-[#c9a8e0]/30 rounded-xl text-xs text-[#1a1c1e] leading-relaxed whitespace-pre-wrap max-h-56 overflow-y-auto">
+                            <div className="mx-1 mt-1 mb-2 px-3 py-2 bg-white border border-[#d9a7ae]/30 rounded-xl text-xs text-[#3b2e2a] leading-relaxed whitespace-pre-wrap max-h-56 overflow-y-auto">
                                 {preview(s.content_md, 600)}
                             </div>
                         )}

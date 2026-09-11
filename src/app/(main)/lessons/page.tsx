@@ -30,18 +30,18 @@ export default async function LessonsPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold tracking-tight text-[#1a1c1e]">レッスン一覧</h1>
-                <p className="text-sm text-[#4b454e] mt-0.5">全生徒のレッスン予定・履歴</p>
+                <h1 className="text-2xl font-bold tracking-tight text-[#3b2e2a]">レッスン一覧</h1>
+                <p className="text-sm text-[#534344] mt-0.5">全生徒のレッスン予定・履歴</p>
             </div>
 
             {lessons.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] text-center">
-                    <div className="w-14 h-14 bg-[#f2daff] rounded-full flex items-center justify-center mb-4">
-                        <BookOpen className="text-[#6f5385]" size={26} />
+                <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.06)] text-center">
+                    <div className="w-14 h-14 bg-[#f8e8e7] rounded-full flex items-center justify-center mb-4">
+                        <BookOpen className="text-[#9c4f5a]" size={26} />
                     </div>
-                    <h3 className="font-bold text-[#1a1c1e] mb-1">レッスンがありません</h3>
-                    <p className="text-sm text-[#4b454e] mb-4">生徒詳細ページからレッスンを記録・予約できます</p>
-                    <Link href="/students" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#6f5385] hover:underline">
+                    <h3 className="font-bold text-[#3b2e2a] mb-1">レッスンがありません</h3>
+                    <p className="text-sm text-[#534344] mb-4">生徒詳細ページからレッスンを記録・予約できます</p>
+                    <Link href="/students" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#9c4f5a] hover:underline">
                         <User size={14} /> 生徒一覧へ
                     </Link>
                 </div>
@@ -49,7 +49,7 @@ export default async function LessonsPage() {
                 <div className="space-y-6">
                     {upcoming.length > 0 && (
                         <div>
-                            <p className="text-[10px] font-bold tracking-[0.06em] uppercase text-[#6f5385] bg-[#f2daff] px-2 py-0.5 rounded-full inline-block mb-3">予定</p>
+                            <p className="text-[10px] font-bold tracking-[0.06em] uppercase text-[#9c4f5a] bg-[#f8e8e7] px-2 py-0.5 rounded-full inline-block mb-3">予定</p>
                             <div className="space-y-2">
                                 {upcoming.map(lesson => (
                                     <LessonRow key={lesson.id} lesson={lesson} isUpcoming />
@@ -60,7 +60,7 @@ export default async function LessonsPage() {
 
                     {completed.length > 0 && (
                         <div>
-                            <p className="text-[10px] font-bold tracking-[0.06em] uppercase text-[#4b454e] bg-[#f4f3f7] px-2 py-0.5 rounded-full inline-block mb-3">記録済み</p>
+                            <p className="text-[10px] font-bold tracking-[0.06em] uppercase text-[#534344] bg-[#f1ebe1] px-2 py-0.5 rounded-full inline-block mb-3">記録済み</p>
                             <div className="space-y-2">
                                 {completed.map(lesson => (
                                     <LessonRow key={lesson.id} lesson={lesson} isUpcoming={false} />
@@ -79,33 +79,33 @@ function LessonRow({ lesson, isUpcoming }: { lesson: LessonWithStudent; isUpcomi
     return (
         <Link
             href={`/students/${lesson.student_id}`}
-            className="flex items-center gap-4 p-4 bg-white rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.04)] hover:shadow-[0_0_40px_rgba(111,83,133,0.1)] border border-transparent hover:border-[#c9a8e0]/30 transition-all group"
+            className="flex items-center gap-4 p-4 bg-white rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.04)] hover:shadow-[0_0_40px_rgba(156,79,90,0.1)] border border-transparent hover:border-[#d9a7ae]/30 transition-all group"
         >
-            <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex flex-col items-center justify-center text-center ${isUpcoming ? 'bg-[#f2daff]' : 'bg-[#f4f3f7]'}`}>
-                <span className={`text-[10px] font-bold uppercase ${isUpcoming ? 'text-[#6f5385]' : 'text-[#4b454e]'}`}>
+            <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex flex-col items-center justify-center text-center ${isUpcoming ? 'bg-[#f8e8e7]' : 'bg-[#f1ebe1]'}`}>
+                <span className={`text-[10px] font-bold uppercase ${isUpcoming ? 'text-[#9c4f5a]' : 'text-[#534344]'}`}>
                     {d.toLocaleDateString('ja-JP', { month: 'short' }).replace('月', '')}月
                 </span>
-                <span className={`text-lg font-bold leading-tight ${isUpcoming ? 'text-[#6f5385]' : 'text-[#1a1c1e]'}`}>{d.getDate()}</span>
+                <span className={`text-lg font-bold leading-tight ${isUpcoming ? 'text-[#9c4f5a]' : 'text-[#3b2e2a]'}`}>{d.getDate()}</span>
             </div>
 
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
-                    <p className="text-sm font-bold text-[#1a1c1e] truncate">{lesson.students?.name || '不明'}</p>
+                    <p className="text-sm font-bold text-[#3b2e2a] truncate">{lesson.students?.name || '不明'}</p>
                     {isUpcoming && (
-                        <span className="text-[10px] font-bold bg-[#f2daff] text-[#6f5385] px-2 py-0.5 rounded-full flex-shrink-0">予定</span>
+                        <span className="text-[10px] font-bold bg-[#f8e8e7] text-[#9c4f5a] px-2 py-0.5 rounded-full flex-shrink-0">予定</span>
                     )}
                 </div>
-                <div className="flex items-center gap-3 text-xs text-[#4b454e]">
+                <div className="flex items-center gap-3 text-xs text-[#534344]">
                     <span className="flex items-center gap-1">
                         <Calendar size={11} />
                         {d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                     {lesson.topics && <span className="truncate">{lesson.topics}</span>}
-                    {!lesson.topics && !isUpcoming && <span className="text-[#4b454e]/50">{formatDate(lesson.date)}</span>}
+                    {!lesson.topics && !isUpcoming && <span className="text-[#534344]/50">{formatDate(lesson.date)}</span>}
                 </div>
             </div>
 
-            <ArrowRight size={16} className="text-[#cdc3ce] group-hover:text-[#6f5385] transition-colors flex-shrink-0" />
+            <ArrowRight size={16} className="text-[#dccfc4] group-hover:text-[#9c4f5a] transition-colors flex-shrink-0" />
         </Link>
     );
 }

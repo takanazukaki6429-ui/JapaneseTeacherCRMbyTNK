@@ -45,28 +45,28 @@ export default async function TextbookLessonPage({ params }: Props) {
         <div className="space-y-5">
             <Link
                 href={`/materials/textbook?level=${material.jlpt_level}`}
-                className="inline-flex items-center gap-1.5 text-sm text-[#6f5385] hover:underline"
+                className="inline-flex items-center gap-1.5 text-sm text-[#9c4f5a] hover:underline"
             >
                 <ArrowLeft size={15} />
                 教科書一覧に戻る
             </Link>
 
-            <div className="bg-white px-5 py-4 rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)]">
+            <div className="bg-white px-5 py-4 rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.06)]">
                 <div className="flex items-center gap-2 mb-2">
-                    <span className="px-2.5 py-0.5 text-[11px] font-bold bg-[#f2daff] text-[#6f5385] rounded-full">
+                    <span className="px-2.5 py-0.5 text-[11px] font-bold bg-[#f8e8e7] text-[#9c4f5a] rounded-full">
                         {material.jlpt_level}
                     </span>
-                    <span className="px-2.5 py-0.5 text-[11px] font-bold bg-[#f4f3f7] text-[#4b454e] rounded-full">
+                    <span className="px-2.5 py-0.5 text-[11px] font-bold bg-[#f1ebe1] text-[#534344] rounded-full">
                         {material.lesson_label ?? `第${material.lesson_number}課`}
                     </span>
                 </div>
-                <h1 className="text-lg font-bold text-[#1a1c1e] leading-snug">{material.title}</h1>
+                <h1 className="text-lg font-bold text-[#3b2e2a] leading-snug">{material.title}</h1>
             </div>
 
             {sections.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border-2 border-dashed border-[#cdc3ce]/40 text-center">
-                    <BookOpen size={32} className="text-[#cdc3ce] mb-3" />
-                    <p className="text-sm text-[#4b454e]">この課の中身がまだ登録されていません。</p>
+                <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border-2 border-dashed border-[#dccfc4]/40 text-center">
+                    <BookOpen size={32} className="text-[#dccfc4] mb-3" />
+                    <p className="text-sm text-[#534344]">この課の中身がまだ登録されていません。</p>
                 </div>
             ) : (
                 <>
@@ -82,9 +82,9 @@ export default async function TextbookLessonPage({ params }: Props) {
                             <section
                                 key={section.section_order}
                                 id={`sec-${section.section_order}`}
-                                className="bg-white px-5 py-4 rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] scroll-mt-4"
+                                className="bg-white px-5 py-4 rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.06)] scroll-mt-4"
                             >
-                                <h2 className="text-sm font-bold text-[#6f5385] mb-3 pb-2 border-b border-[#f4f3f7]">
+                                <h2 className="text-sm font-bold text-[#9c4f5a] mb-3 pb-2 border-b border-[#f1ebe1]">
                                     {SECTION_LABELS[section.section_type] ?? section.section_type}
                                 </h2>
                                 <LessonContent contentMd={section.content_md} imageBaseUrl={imageBaseUrl} />

@@ -405,7 +405,7 @@ export default function RoadmapGenerator({
             {showRoadmap && (
                 <>
                     {/* サマリーカード */}
-                    <Card className="bg-gradient-to-br from-[#2563eb] to-[#7c3aed] text-white shadow-xl">
+                    <Card className="bg-[#9c4f5a] text-white shadow-xl">
                         <CardContent className="p-6 space-y-4">
                             <h2 className="text-lg font-bold text-center">{t.planSummary}</h2>
 
@@ -456,26 +456,26 @@ export default function RoadmapGenerator({
                     <Card className="bg-white shadow-lg">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-lg flex items-center gap-2">
-                                <TrendingUp className="w-5 h-5 text-[#2563eb]" />
+                                <TrendingUp className="w-5 h-5 text-[#9c4f5a]" />
                                 {t.growthChart}
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="p-4 h-64">
                             <ResponsiveContainer width="100%" height="100%">
                                 <LineChart data={chartData} margin={{ top: 10, right: 30, left: -20, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} dy={10} />
-                                    <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} />
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e6ddd2" />
+                                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#a3968f' }} dy={10} />
+                                    <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#a3968f' }} />
                                     <Tooltip
                                         contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
                                         formatter={(value) => [`Lv.${value}`, t.level]}
                                     />
                                     <ReferenceLine y={targetLevel} stroke="#10B981" strokeDasharray="3 3" />
-                                    <Line type="monotone" dataKey="level" stroke="url(#colorGradient)" strokeWidth={3} dot={{ fill: '#2563eb', r: 4, strokeWidth: 2, stroke: '#fff' }} />
+                                    <Line type="monotone" dataKey="level" stroke="url(#colorGradient)" strokeWidth={3} dot={{ fill: '#9c4f5a', r: 4, strokeWidth: 2, stroke: '#fff' }} />
                                     <defs>
                                         <linearGradient id="colorGradient" x1="0" y1="0" x2="1" y2="0">
-                                            <stop offset="0%" stopColor="#2563eb" />
-                                            <stop offset="100%" stopColor="#7c3aed" />
+                                            <stop offset="0%" stopColor="#9c4f5a" />
+                                            <stop offset="100%" stopColor="#6b5b8c" />
                                         </linearGradient>
                                     </defs>
                                 </LineChart>
@@ -487,10 +487,10 @@ export default function RoadmapGenerator({
                     <Card className="bg-white shadow-lg">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-lg flex items-center gap-2">
-                                <BookOpen className="w-5 h-5 text-[#2563eb]" />
+                                <BookOpen className="w-5 h-5 text-[#9c4f5a]" />
                                 {t.lessonDistribution}
                             </CardTitle>
-                            <p className="text-sm text-[#64748b]">{t.optimizedForYou}</p>
+                            <p className="text-sm text-[#6f625c]">{t.optimizedForYou}</p>
                         </CardHeader>
                         <CardContent className="p-4">
                             <div className="flex items-center gap-4">
@@ -517,7 +517,7 @@ export default function RoadmapGenerator({
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex justify-between text-sm">
                                                         <span className="font-medium">{t.lessonTypes[lessonTypeKeys[idx]]}</span>
-                                                        <span className="text-[#64748b]">{percentage}%</span>
+                                                        <span className="text-[#6f625c]">{percentage}%</span>
                                                     </div>
                                                     <div className="w-full bg-gray-100 rounded-full h-1.5 mt-1">
                                                         <div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${percentage}%`, backgroundColor: type.color }} />
@@ -530,7 +530,7 @@ export default function RoadmapGenerator({
                             </div>
 
                             <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                                <p className="text-sm text-[#2563eb]">
+                                <p className="text-sm text-[#9c4f5a]">
                                     💡 <strong>{t.whyThisBalance}</strong><br />
                                     💡 <strong>{t.whyThisBalance}</strong><br />
                                     {getDistributionReason(selectedPurposes, currentLevel, t)}
@@ -542,7 +542,7 @@ export default function RoadmapGenerator({
                     {/* 月別ロードマップ */}
                     <div className="space-y-4">
                         <h2 className="text-lg font-bold flex items-center gap-2 px-1">
-                            <Target className="w-5 h-5 text-[#2563eb]" />
+                            <Target className="w-5 h-5 text-[#9c4f5a]" />
                             {t.monthlyMilestones}
                         </h2>
 
@@ -556,8 +556,8 @@ export default function RoadmapGenerator({
                                                 {milestone.month}
                                             </div>
                                             <div>
-                                                <p className="font-bold text-[#020817]">{milestone.month}{t.monthN}</p>
-                                                <p className="text-xs text-[#64748b]">{t.targetLevelLabel}: Lv.{milestone.level}</p>
+                                                <p className="font-bold text-[#3b2e2a]">{milestone.month}{t.monthN}</p>
+                                                <p className="text-xs text-[#6f625c]">{t.targetLevelLabel}: Lv.{milestone.level}</p>
                                             </div>
                                         </div>
                                         <Badge className="text-white bg-slate-400" style={{ backgroundColor: milestone.jlptColor }}>
@@ -572,7 +572,7 @@ export default function RoadmapGenerator({
                                                 <p className="text-xs font-semibold mb-0.5" style={{ color: purposeIcon.color }}>
                                                     {t.purposeStep}
                                                 </p>
-                                                <p className="text-sm font-medium text-[#020817]">
+                                                <p className="text-sm font-medium text-[#3b2e2a]">
                                                     {milestone.purposeMilestone}
                                                 </p>
                                             </div>
@@ -580,7 +580,7 @@ export default function RoadmapGenerator({
                                     )}
 
                                     <div className="space-y-2">
-                                        <p className="text-sm font-semibold text-[#4b5563]">{t.learningContent}</p>
+                                        <p className="text-sm font-semibold text-[#534344]">{t.learningContent}</p>
                                         <div className="flex flex-wrap gap-2">
                                             {milestone.focus.map((item: string, i: number) => (
                                                 <Badge key={i} variant="secondary" className="text-xs">{item}</Badge>
@@ -589,10 +589,10 @@ export default function RoadmapGenerator({
                                     </div>
 
                                     <div className="space-y-2">
-                                        <p className="text-sm font-semibold text-[#4b5563]">{t.achievedSkills}</p>
+                                        <p className="text-sm font-semibold text-[#534344]">{t.achievedSkills}</p>
                                         <ul className="space-y-1">
                                             {milestone.skills.map((skill: string, i: number) => (
-                                                <li key={i} className="flex items-center gap-2 text-sm text-[#64748b]">
+                                                <li key={i} className="flex items-center gap-2 text-sm text-[#6f625c]">
                                                     <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
                                                     {skill}
                                                 </li>
@@ -601,15 +601,15 @@ export default function RoadmapGenerator({
                                     </div>
 
                                     <div className="p-3 bg-gray-50 rounded-lg">
-                                        <p className="text-sm text-[#64748b]">
-                                            <strong className="text-[#4b5563]">{t.whyThisOrder}</strong><br />
+                                        <p className="text-sm text-[#6f625c]">
+                                            <strong className="text-[#534344]">{t.whyThisOrder}</strong><br />
                                             {milestone.reason}
                                         </p>
                                     </div>
 
                                     <div className="space-y-2 pt-2 border-t border-gray-100">
-                                        <p className="text-sm font-semibold text-[#4b5563] flex gap-2 items-center">
-                                            <BookText className="w-4 h-4 text-[#2563eb]" /> {t.textbooksLabel}
+                                        <p className="text-sm font-semibold text-[#534344] flex gap-2 items-center">
+                                            <BookText className="w-4 h-4 text-[#9c4f5a]" /> {t.textbooksLabel}
                                         </p>
                                         <div className="flex flex-wrap gap-2">
                                             {milestone.textbooks && milestone.textbooks.map((item: string, i: number) => (
@@ -636,8 +636,8 @@ export default function RoadmapGenerator({
 
 
                                     <div className="flex items-center justify-between pt-2 border-t">
-                                        <span className="text-sm text-[#64748b]">{t.recommendedLessons}</span>
-                                        <span className="font-bold text-[#2563eb]">{milestone.lessonsNeeded}{t.lessonsPerMonth}</span>
+                                        <span className="text-sm text-[#6f625c]">{t.recommendedLessons}</span>
+                                        <span className="font-bold text-[#9c4f5a]">{milestone.lessonsNeeded}{t.lessonsPerMonth}</span>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -647,7 +647,7 @@ export default function RoadmapGenerator({
                     {/* CTA Actions */}
                     <Card
                         className="text-white border-none sticky bottom-4 z-50 overflow-hidden shadow-2xl"
-                        style={{ backgroundColor: '#ffffff', borderTop: '1px solid #e2e8f0' }}
+                        style={{ backgroundColor: '#ffffff', borderTop: '1px solid #e6ddd2' }}
                     >
                         <CardContent className="p-4 flex gap-3">
                             {onSave && (
@@ -655,7 +655,7 @@ export default function RoadmapGenerator({
                                     onClick={handleSaveProfile}
                                     disabled={isSaving}
                                     className="flex-1 font-bold text-white shadow-lg transition-all hover:scale-[1.02]"
-                                    style={{ backgroundColor: '#2563eb' }}
+                                    style={{ backgroundColor: '#9c4f5a' }}
                                     size="lg"
                                 >
                                     {isSaving ? (

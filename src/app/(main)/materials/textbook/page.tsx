@@ -43,17 +43,17 @@ export default async function TextbookPage({ searchParams }: Props) {
     return (
         <div className="space-y-5">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold tracking-tight text-[#1a1c1e]">教材</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-[#3b2e2a]">教材</h1>
             </div>
 
             <MaterialsTabBar currentTab="textbook" />
 
-            <div className="bg-white px-5 py-4 rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)]">
+            <div className="bg-white px-5 py-4 rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.06)]">
                 <div className="flex items-center gap-2 mb-1">
-                    <BookOpen size={18} className="text-[#6f5385]" />
-                    <h2 className="text-sm font-bold text-[#1a1c1e]">教科書</h2>
+                    <BookOpen size={18} className="text-[#9c4f5a]" />
+                    <h2 className="text-sm font-bold text-[#3b2e2a]">教科書</h2>
                 </div>
-                <p className="text-xs text-[#4b454e] leading-relaxed">
+                <p className="text-xs text-[#534344] leading-relaxed">
                     あいちゃん監修のマスター教材です。授業中にそのまま開いて使えます。
                 </p>
             </div>
@@ -61,9 +61,9 @@ export default async function TextbookPage({ searchParams }: Props) {
             <LevelTabs current={level} counts={counts} />
 
             {lessons.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border-2 border-dashed border-[#cdc3ce]/40 text-center">
+                <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border-2 border-dashed border-[#dccfc4]/40 text-center">
                     <div className="text-4xl mb-4">📖</div>
-                    <h3 className="text-base font-bold text-[#1a1c1e] mb-1">
+                    <h3 className="text-base font-bold text-[#3b2e2a] mb-1">
                         {level} の教科書がまだありません
                     </h3>
                 </div>
@@ -73,20 +73,20 @@ export default async function TextbookPage({ searchParams }: Props) {
                         <Link
                             key={lesson.id}
                             href={`/materials/textbook/${lesson.id}`}
-                            className="group flex flex-col p-4 bg-white rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] hover:shadow-[0_8px_40px_rgba(111,83,133,0.12)] hover:-translate-y-0.5 transition-all"
+                            className="group flex flex-col p-4 bg-white rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.06)] hover:shadow-[0_8px_40px_rgba(156,79,90,0.12)] hover:-translate-y-0.5 transition-all"
                         >
                             <div className="flex items-center justify-between mb-2">
-                                <span className="px-2.5 py-0.5 text-[11px] font-bold bg-[#f2daff] text-[#6f5385] rounded-full">
+                                <span className="px-2.5 py-0.5 text-[11px] font-bold bg-[#f8e8e7] text-[#9c4f5a] rounded-full">
                                     {lesson.lesson_label ?? `第${lesson.lesson_number}課`}
                                 </span>
                                 {lesson.image_count > 0 && (
-                                    <span className="inline-flex items-center gap-1 text-[11px] text-[#4b454e]">
+                                    <span className="inline-flex items-center gap-1 text-[11px] text-[#534344]">
                                         <ImageIcon size={11} />
                                         {lesson.image_count}
                                     </span>
                                 )}
                             </div>
-                            <h3 className="text-sm font-bold text-[#1a1c1e] group-hover:text-[#6f5385] transition-colors line-clamp-2 leading-snug">
+                            <h3 className="text-sm font-bold text-[#3b2e2a] group-hover:text-[#9c4f5a] transition-colors line-clamp-2 leading-snug">
                                 {lesson.title}
                             </h3>
                         </Link>

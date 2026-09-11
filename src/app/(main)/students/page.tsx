@@ -21,11 +21,11 @@ async function getStudents() {
 }
 
 const jlptColors: Record<string, string> = {
-    N1: 'bg-[#f2daff] text-[#6f5385]',
-    N2: 'bg-[#eddcf4] text-[#655a6f]',
+    N1: 'bg-[#f8e8e7] text-[#9c4f5a]',
+    N2: 'bg-[#ece8f3] text-[#6b5b8c]',
     N3: 'bg-[#d7f8e4] text-[#1a7a44]',
-    N4: 'bg-[#ffdbd1] text-[#805347]',
-    N5: 'bg-[#ffdbd1] text-[#805347]',
+    N4: 'bg-[#f1e7da] text-[#7a5a3a]',
+    N5: 'bg-[#f1e7da] text-[#7a5a3a]',
 };
 
 export default async function StudentsPage() {
@@ -34,11 +34,11 @@ export default async function StudentsPage() {
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold tracking-tight text-[#1a1c1e]">生徒</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-[#3b2e2a]">生徒</h1>
                 <Link
                     prefetch
                     href="/students/new"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] text-white text-sm font-bold rounded-full hover:scale-[1.02] transition-transform shadow-[0_4px_20px_rgba(111,83,133,0.25)]"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#9c4f5a] text-white text-sm font-bold rounded-full hover:scale-[1.02] transition-transform shadow-[0_4px_20px_rgba(156,79,90,0.25)]"
                 >
                     <Plus size={16} />
                     新規生徒登録
@@ -46,16 +46,16 @@ export default async function StudentsPage() {
             </div>
 
             {students.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border-2 border-dashed border-[#cdc3ce]/40 text-center">
+                <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border-2 border-dashed border-[#dccfc4]/40 text-center">
                     <div className="text-4xl mb-4">👥</div>
-                    <h3 className="text-base font-bold text-[#1a1c1e] mb-1">生徒がいません</h3>
-                    <p className="text-sm text-[#4b454e] mb-4 max-w-xs">
+                    <h3 className="text-base font-bold text-[#3b2e2a] mb-1">生徒がいません</h3>
+                    <p className="text-sm text-[#534344] mb-4 max-w-xs">
                         「新規生徒登録」から最初の生徒を追加しましょう。
                     </p>
                     <Link
                     prefetch
                         href="/students/new"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#f2daff] text-[#6f5385] text-sm font-bold rounded-xl hover:bg-[#e8c8ff] transition-colors"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#f8e8e7] text-[#9c4f5a] text-sm font-bold rounded-xl hover:bg-[#f3dcdb] transition-colors"
                     >
                         生徒を登録する
                     </Link>
@@ -67,21 +67,21 @@ export default async function StudentsPage() {
                     prefetch
                             key={student.id}
                             href={`/students/${student.id}`}
-                            className="group flex items-center gap-4 p-5 bg-white rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] hover:shadow-[0_8px_40px_rgba(111,83,133,0.12)] hover:-translate-y-0.5 transition-all"
+                            className="group flex items-center gap-4 p-5 bg-white rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.06)] hover:shadow-[0_8px_40px_rgba(156,79,90,0.12)] hover:-translate-y-0.5 transition-all"
                         >
-                            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#f2daff] to-[#eddcf4] flex items-center justify-center text-lg font-bold text-[#6f5385] flex-shrink-0">
+                            <div className="w-11 h-11 rounded-full bg-[#f8e8e7] flex items-center justify-center text-lg font-bold text-[#9c4f5a] flex-shrink-0">
                                 {student.name.charAt(0)}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="font-bold text-[#1a1c1e] group-hover:text-[#6f5385] transition-colors">
+                                <p className="font-bold text-[#3b2e2a] group-hover:text-[#9c4f5a] transition-colors">
                                     {student.name}
                                 </p>
-                                <p className="text-xs text-[#4b454e] mt-0.5 truncate">
+                                <p className="text-xs text-[#534344] mt-0.5 truncate">
                                     {[student.nationality, student.current_phase || '進度未設定'].filter(Boolean).join(' · ')}
                                 </p>
                             </div>
                             {student.jlpt_level && (
-                                <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${jlptColors[student.jlpt_level] || 'bg-[#f4f3f7] text-[#4b454e]'}`}>
+                                <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${jlptColors[student.jlpt_level] || 'bg-[#f1ebe1] text-[#534344]'}`}>
                                     {student.jlpt_level}
                                 </span>
                             )}

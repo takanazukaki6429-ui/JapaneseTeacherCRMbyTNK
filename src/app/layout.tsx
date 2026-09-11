@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
+import { Zen_Maru_Gothic, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 
-const plusJakarta = Plus_Jakarta_Sans({
-  variable: "--font-plus-jakarta",
+// 書体＝E：丸ゴシック（2026-09-11 かずき決定）
+const zenMaru = Zen_Maru_Gothic({
+  variable: "--font-zen-maru",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500", "700"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
@@ -40,7 +42,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body
-        className={`${plusJakarta.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+        className={`${zenMaru.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
         {children}
         <Toaster />

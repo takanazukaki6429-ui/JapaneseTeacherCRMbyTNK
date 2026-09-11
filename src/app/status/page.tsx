@@ -62,14 +62,14 @@ export default function StatusPage() {
     const meta = STATUS_META[overall];
 
     return (
-        <div className="min-h-screen bg-[#faf9fd] flex flex-col items-center py-16 px-4">
+        <div className="min-h-screen bg-[#f7f3ec] flex flex-col items-center py-16 px-4">
             <div className="w-full max-w-2xl">
                 <div className="flex items-center justify-between mb-8">
-                    <h1 className="text-2xl font-bold text-[#1a1c1e]">ASTA ステータス</h1>
+                    <h1 className="text-2xl font-bold text-[#3b2e2a]">ASTA ステータス</h1>
                     <button
                         onClick={fetchHealth}
                         disabled={loading}
-                        className="inline-flex items-center gap-1.5 text-xs text-[#6f5385] hover:text-[#1a1c1e] transition-colors disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 text-xs text-[#9c4f5a] hover:text-[#3b2e2a] transition-colors disabled:opacity-50"
                     >
                         <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                         更新
@@ -89,7 +89,7 @@ export default function StatusPage() {
                     <div>
                         <p className="text-lg font-bold" style={{ color: meta.color }}>{meta.label}</p>
                         {lastChecked && (
-                            <p className="text-xs text-[#4b454e] mt-0.5">
+                            <p className="text-xs text-[#534344] mt-0.5">
                                 最終確認: {lastChecked.toLocaleString('ja-JP')}
                             </p>
                         )}
@@ -97,23 +97,23 @@ export default function StatusPage() {
                 </div>
 
                 {/* 個別サービス */}
-                <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] overflow-hidden">
+                <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.06)] overflow-hidden">
                     {data?.checks.map((check, i) => {
                         const cMeta = STATUS_META[check.status];
                         return (
                             <div
                                 key={check.name}
-                                className={`flex items-center justify-between px-5 py-4 ${i > 0 ? 'border-t border-[#f4f3f7]' : ''}`}
+                                className={`flex items-center justify-between px-5 py-4 ${i > 0 ? 'border-t border-[#f1ebe1]' : ''}`}
                             >
                                 <div className="flex items-center gap-3">
                                     <cMeta.Icon size={18} style={{ color: cMeta.color }} />
-                                    <span className="text-sm font-medium text-[#1a1c1e]">
+                                    <span className="text-sm font-medium text-[#3b2e2a]">
                                         {SERVICE_LABELS[check.name] || check.name}
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-3">
                                     {check.latencyMs != null && (
-                                        <span className="text-xs text-[#4b454e] tabular-nums">{check.latencyMs}ms</span>
+                                        <span className="text-xs text-[#534344] tabular-nums">{check.latencyMs}ms</span>
                                     )}
                                     <span className="text-xs font-bold" style={{ color: cMeta.color }}>
                                         {cMeta.label}
@@ -123,13 +123,13 @@ export default function StatusPage() {
                         );
                     })}
                     {(!data || data.checks.length === 0) && !loading && (
-                        <div className="px-5 py-8 text-center text-sm text-[#4b454e]">
+                        <div className="px-5 py-8 text-center text-sm text-[#534344]">
                             ステータス情報を取得できませんでした
                         </div>
                     )}
                 </div>
 
-                <p className="text-xs text-[#4b454e]/60 text-center mt-6">
+                <p className="text-xs text-[#534344]/60 text-center mt-6">
                     このページは1分ごとに自動更新されます
                 </p>
             </div>
