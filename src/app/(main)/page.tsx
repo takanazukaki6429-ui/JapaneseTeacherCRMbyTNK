@@ -1,15 +1,16 @@
 /**
  * ホーム（2026-09-11 かずき決定：配置＝E、色＝D、書体＝E）
+ * 画面案 strategy/デザイン案_色D書体E_2026-09-11/ホーム_色D書体E.html をそのまま写し、中身を本物のデータにつないだもの。
  *
  * 役目：開いた瞬間に「生徒の様子」と「やり残し」が分かる（画面の要素一覧_2026-09-10.md 画面1）
  * - 左：生徒カード。授業が空いている生徒を上に（記録がまだ → 最終授業日が古い順）
- * - 右：ASTAからの声かけ（次の授業の準備／宿題を出していない／学習計画がまだ）。0件なら畳む
+ * - 右：ASTAからの声かけ（次の授業の準備／宿題を出していない／学習計画がまだ）。0件なら出さない
  * - 下：ASTAに聞く
  * - 出さない：先生の実績数字（コマ数・理解度など。目的とズレるため・かずき決定）
  * - 「記録が下書きのまま」は授業記録の自動下書き（B）ができてから足す
  */
 import Link from 'next/link';
-import { CalendarDays, ClipboardList, FileCheck2, CalendarClock } from 'lucide-react';
+import { CalendarDays, ClipboardList, ListChecks, CalendarClock } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { AddStudentInline } from '@/components/home/add-student-inline';
 import { AskAsta } from '@/components/home/ask-asta';
@@ -20,6 +21,10 @@ const DAY = 24 * 60 * 60 * 1000;
 const LONG_GAP_DAYS = 14;      // これより空いたら「しばらく授業なし」
 const SHOW_STUDENTS = 6;
 const SHOW_NOTICES = 5;
+
+// 画面案の「カードの影」「押せるカードの動き」
+const CARD = 'bg-white border border-[#e9e2d7]/30 shadow-[0_10px_30px_-5px_rgba(156,79,90,0.08)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_-4px_rgba(156,79,90,0.12)]';
+const CHIP = 'text-[12px] leading-[18px] px-2.5 py-0.5 rounded-full';
 
 type StudentRow = {
     id: string; name: string; nationality: string | null; jlpt_level: string | null;
@@ -70,28 +75,28 @@ async function getHomeData() {
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0] ?? null;
         const daysSince = last ? Math.floor((now - new Date(last.date).getTime()) / DAY) : null;
         const noPlan = !st.initial_hearing_done && !st.current_phase;
-        const marks: string[] = [];
-        if (daysSince === null) marks.push('授業の記録がまだ');
-        else if (daysSince >= LONG_GAP_DAYS) marks.push('しばらく授業なし');
-        if (noPlan) marks.push('学習計画がまだ');
+        const marks: { text: string; tone: 'beige' | 'rose' }[] = [];
+        if (daysSince === null) marks.push({ text: '授業の記録がまだ', tone: 'beige' });
+        else if (daysSince >= LONG_GAP_DAYS) marks.push({ text: 'しばらく授業なし', tone: 'beige' });
+        if (noPlan) marks.push({ text: '学習計画がまだ', tone: 'rose' });
         return { st, last, next, daysSince, noPlan, marks };
     }).sort((a, b) => (b.daysSince ?? Infinity) - (a.daysSince ?? Infinity));
 
-    type Notice = { key: string; icon: 'next' | 'homework' | 'plan'; text: string; label: string; href: string; tone: 'rose' | 'lavender' };
+    type Notice = { key: string; icon: 'next' | 'homework' | 'plan'; text: string; label: string; href: string; tone: 'beige' | 'lavender' };
     const nextNotices: Notice[] = [], homeworkNotices: Notice[] = [], planNotices: Notice[] = [];
     for (const c of cards) {
         if (c.next && new Date(c.next.date).getTime() - now <= 7 * DAY) {
-            nextNotices.push({ key: `next-${c.st.id}`, icon: 'next', tone: 'rose',
+            nextNotices.push({ key: `next-${c.st.id}`, icon: 'next', tone: 'lavender',
                 text: `${c.st.name}さんの授業が ${jpDate(c.next.date, true)} にあります`,
                 label: '授業前の準備', href: `/students/${c.st.id}/lessons/prepare?scheduledLessonId=${c.next.id}` });
         }
         if (c.last && c.daysSince !== null && c.daysSince < LONG_GAP_DAYS && !c.last.homework?.trim()) {
             homeworkNotices.push({ key: `hw-${c.st.id}`, icon: 'homework', tone: 'lavender',
-                text: `${c.st.name}さんに前回の授業で宿題を出していません`,
-                label: '次の授業の準備へ', href: `/students/${c.st.id}/lessons/prepare` });
+                text: `${c.st.name}さんに宿題を出していません`,
+                label: '宿題を作る', href: `/students/${c.st.id}/lessons/prepare` });
         }
         if (c.noPlan) {
-            planNotices.push({ key: `plan-${c.st.id}`, icon: 'plan', tone: 'rose',
+            planNotices.push({ key: `plan-${c.st.id}`, icon: 'plan', tone: 'beige',
                 text: `${c.st.name}さんの学習計画がまだありません`,
                 label: '体験レッスンから作る', href: `/students/${c.st.id}/initial-hearing` });
         }
@@ -104,7 +109,29 @@ async function getHomeData() {
     return { cards, notices, teacherName, today: jpDate(now), total: students.length };
 }
 
-const NOTICE_ICON = { next: CalendarClock, homework: FileCheck2, plan: ClipboardList };
+const NOTICE_ICON = { next: CalendarClock, homework: ListChecks, plan: ClipboardList };
+
+/** 画面案の余白の飾り（葉と星の線画）。押せない・読み上げない */
+function Decorations() {
+    return (
+        <div aria-hidden className="fixed inset-0 pointer-events-none z-0 overflow-hidden opacity-30">
+            <svg className="absolute -top-12 -right-12 w-96 h-96 text-[#7f3843] stroke-current fill-none" strokeWidth="0.75" viewBox="0 0 200 200">
+                <path d="M120,20 C140,60 170,80 180,120 C190,160 150,180 110,180 C70,180 30,150 40,100 C50,50 100,-20 120,20 Z" strokeDasharray="3 3" />
+                <path d="M140,50 Q160,90 120,130 Q100,100 140,50" />
+                <circle cx="165" cy="85" fill="#9c4f5a" opacity="0.4" r="3" />
+                <circle cx="95" cy="140" fill="#9c4f5a" opacity="0.3" r="2.5" />
+            </svg>
+            <svg className="absolute bottom-10 left-72 w-80 h-80 text-[#7f3843] stroke-current fill-none" strokeWidth="0.6" viewBox="0 0 200 200">
+                <path d="M30,160 Q80,120 70,70 Q100,100 130,90 Q90,140 30,160" />
+                <path d="M70,70 Q60,40 40,50 Q50,70 70,70" />
+                <circle cx="135" cy="85" fill="#9c4f5a" opacity="0.4" r="2" />
+            </svg>
+            <svg className="absolute top-1/2 right-1/4 w-32 h-32 text-[#7f3843] stroke-current fill-none" strokeWidth="0.8" viewBox="0 0 100 100">
+                <path d="M50,15 L53,35 L73,38 L55,48 L60,68 L45,55 L30,68 L35,48 L17,38 L37,35 Z" opacity="0.25" />
+            </svg>
+        </div>
+    );
+}
 
 export default async function Home() {
     const data = await getHomeData();
@@ -113,109 +140,123 @@ export default async function Home() {
     const shown = cards.slice(0, SHOW_STUDENTS);
 
     return (
-        <div className="max-w-6xl mx-auto space-y-8 pb-12">
-            <div>
-                <p className="text-sm text-[#534344]">{today}</p>
-                <h1 className="text-2xl font-bold text-[#3b2e2a] mt-1">{teacherName}、お疲れさまです</h1>
-            </div>
+        <>
+            <Decorations />
+            <div className="relative z-10 max-w-[1160px] flex flex-col">
+                <header className="mb-8">
+                    <p className="text-[12px] leading-[18px] text-[#7f3843] font-medium tracking-wide">{today}</p>
+                    <h1 className="text-[24px] leading-[36px] font-semibold text-[#1e1b15] mt-1">{teacherName}、お疲れさまです</h1>
+                </header>
 
-            <div className={notices.length > 0 ? 'grid grid-cols-1 lg:grid-cols-3 gap-8' : ''}>
-                {/* 左：生徒の様子 */}
-                <section className={notices.length > 0 ? 'lg:col-span-2 space-y-4' : 'space-y-4'}>
-                    <h2 className="text-lg font-bold text-[#3b2e2a] flex items-center gap-2">
-                        生徒の様子 <span className="w-1.5 h-1.5 rounded-full bg-[#d9a7ae]" />
-                    </h2>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-10">
+                    {/* 左：生徒の様子 */}
+                    <section className={`${notices.length > 0 ? 'lg:col-span-7' : 'lg:col-span-12'} flex flex-col gap-5`}>
+                        <h2 className="text-[20px] leading-[30px] font-bold text-[#1e1b15] flex items-center gap-2">
+                            生徒の様子
+                            <span className="inline-block w-2 h-2 rounded-full bg-[#7f3843]/40" />
+                        </h2>
 
-                    {total === 0 && (
-                        <div className="bg-white rounded-3xl p-6 shadow-[0_2px_24px_rgba(156,79,90,0.06)]">
-                            <p className="text-[15px] font-bold text-[#3b2e2a]">まず生徒を1人登録しましょう</p>
-                            <p className="text-sm text-[#534344] mt-1">下の「生徒を追加」から、この画面のまま登録できます。</p>
-                        </div>
-                    )}
+                        <div className="space-y-4">
+                            {total === 0 && (
+                                <article className={`${CARD} rounded-3xl p-6`}>
+                                    <p className="text-[18px] leading-[28px] font-bold text-[#1e1b15]">まず生徒を1人登録しましょう</p>
+                                    <p className="text-[15px] leading-[26px] text-[#534344] mt-1">下の「生徒を追加」から、この画面のまま登録できます。</p>
+                                </article>
+                            )}
 
-                    {shown.map(({ st, last, daysSince, marks }) => (
-                        <div key={st.id} className="bg-white rounded-3xl p-6 shadow-[0_2px_24px_rgba(156,79,90,0.06)]">
-                            <div className="flex items-start justify-between gap-4">
-                                <div className="min-w-0">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <Link href={`/students/${st.id}`} className="text-lg font-bold text-[#3b2e2a] hover:text-[#9c4f5a] tracking-wide">
-                                            {st.name}さん
+                            {shown.map(({ st, last, daysSince, marks }) => (
+                                <article key={st.id} className={`${CARD} rounded-3xl p-6 flex flex-col gap-4`}>
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <Link href={`/students/${st.id}`} className="text-[18px] leading-[28px] font-bold text-[#1e1b15] hover:text-[#7f3843]">
+                                                    {st.name}さん
+                                                </Link>
+                                                {st.nationality && <span className={`${CHIP} text-[#534344] bg-[#f4ede2]`}>{st.nationality}</span>}
+                                                {st.jlpt_level && <span className={`${CHIP} font-semibold bg-[#ece8f3] text-[#6b5b8c]`}>{st.jlpt_level}</span>}
+                                                {marks.map(m => (
+                                                    <span key={m.text} className={`${CHIP} font-semibold ${m.tone === 'beige' ? 'bg-[#f1e7da] text-[#664928]' : 'bg-[#eee7dc] text-[#7f3843]'}`}>{m.text}</span>
+                                                ))}
+                                            </div>
+                                            <p className="text-[15px] leading-[26px] text-[#534344] mt-2">
+                                                <span className="font-medium text-[#7f3843]">今の課：</span>{st.textbook || '未設定'}
+                                            </p>
+                                        </div>
+                                        <Link
+                                            href={`/students/${st.id}/lessons/live`}
+                                            className="shrink-0 bg-[#7f3843] text-white hover:opacity-95 active:scale-[0.98] transition-all px-5 py-2.5 rounded-2xl text-[15px] leading-[22px] font-semibold shadow-sm"
+                                        >
+                                            授業を始める
                                         </Link>
-                                        {st.nationality && <span className="text-xs font-semibold bg-[#f1e7da] text-[#664928] px-2.5 py-0.5 rounded-full">{st.nationality}</span>}
-                                        {st.jlpt_level && <span className="text-xs font-semibold bg-[#ece8f3] text-[#6b5b8c] px-2.5 py-0.5 rounded-full">{st.jlpt_level}</span>}
-                                        {marks.map(m => (
-                                            <span key={m} className="text-xs font-semibold bg-[#f8e8e7] text-[#9c4f5a] px-2.5 py-0.5 rounded-full">{m}</span>
-                                        ))}
                                     </div>
-                                    <p className="text-[15px] text-[#3b2e2a] mt-2">
-                                        <span className="text-[#9c4f5a] font-semibold">今の課：</span>{st.textbook || '未設定'}
-                                    </p>
-                                </div>
-                                <Link
-                                    href={`/students/${st.id}/lessons/live`}
-                                    className="flex-shrink-0 bg-[#9c4f5a] hover:bg-[#8a434d] text-white text-[15px] font-bold px-5 py-2.5 rounded-full transition-colors"
-                                >
-                                    授業を始める
+                                    <div className="bg-[#faf3e7] rounded-2xl p-3.5 space-y-1.5 border border-[#e9e2d7]/20">
+                                        {last?.mistakes?.trim() ? (
+                                            <p className="text-[15px] leading-[26px] text-[#1e1b15] line-clamp-2">
+                                                <span className="text-[12px] leading-[18px] font-medium text-[#7f3843] block sm:inline">前回のつまずき：</span>
+                                                {last.mistakes.trim()}
+                                            </p>
+                                        ) : (
+                                            <p className="text-[15px] leading-[26px] text-[#534344]">
+                                                {last ? '前回の記録に、つまずきの記入はありません' : '授業の記録はまだありません'}
+                                            </p>
+                                        )}
+                                        {last && (
+                                            <div className="text-[12px] leading-[18px] text-[#534344] flex items-center gap-1.5 pt-1 border-t border-[#e9e2d7]/30">
+                                                <CalendarDays size={15} className="text-[#7f3843]/70" />
+                                                <span>最終授業日：{jpDate(last.date)}（{daysSince === 0 ? '今日' : `${daysSince}日前`}）</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </article>
+                            ))}
+
+                            {total > SHOW_STUDENTS && (
+                                <Link href="/students" className="block text-center text-[15px] font-semibold text-[#7f3843] hover:underline">
+                                    ほかの{total - SHOW_STUDENTS}人の生徒を見る
                                 </Link>
-                            </div>
-                            {last && (
-                                <div className="mt-4 bg-[#f7f3ec] rounded-2xl px-4 py-3 space-y-2">
-                                    {last.mistakes?.trim() && (
-                                        <p className="text-[15px] text-[#3b2e2a] line-clamp-2">
-                                            <span className="text-sm font-semibold text-[#9c4f5a] mr-1">前回のつまずき：</span>{last.mistakes.trim()}
-                                        </p>
-                                    )}
-                                    <p className="text-xs text-[#534344] flex items-center gap-1.5">
-                                        <CalendarDays size={13} /> 最終授業日：{jpDate(last.date)}（{daysSince === 0 ? '今日' : `${daysSince}日前`}）
-                                    </p>
-                                </div>
                             )}
                         </div>
-                    ))}
 
-                    {total > SHOW_STUDENTS && (
-                        <Link href="/students" className="block text-center text-sm font-bold text-[#9c4f5a] hover:underline">
-                            ほかの{total - SHOW_STUDENTS}人の生徒を見る
-                        </Link>
-                    )}
-
-                    <AddStudentInline openByDefault={total === 0} />
-                </section>
-
-                {/* 右：ASTAからの声かけ（0件なら出さない） */}
-                {notices.length > 0 && (
-                    <section className="space-y-4">
-                        <h2 className="text-lg font-bold text-[#3b2e2a] flex items-center gap-2">
-                            ASTAからの声かけ <span className="w-1.5 h-1.5 rounded-full bg-[#6b5b8c]" />
-                        </h2>
-                        {notices.map(n => {
-                            const Icon = NOTICE_ICON[n.icon];
-                            return (
-                                <div key={n.key} className="bg-white rounded-3xl p-5 shadow-[0_2px_24px_rgba(156,79,90,0.06)]">
-                                    <p className="text-[15px] text-[#3b2e2a] flex items-start gap-3">
-                                        <Icon size={18} className="text-[#534344] flex-shrink-0 mt-0.5" />
-                                        {n.text}
-                                    </p>
-                                    <div className="flex justify-end mt-3">
-                                        <Link
-                                            href={n.href}
-                                            className={n.tone === 'rose'
-                                                ? 'text-sm font-bold bg-[#f8e8e7] text-[#9c4f5a] hover:bg-[#f3dcdb] px-4 py-2 rounded-full transition-colors'
-                                                : 'text-sm font-bold bg-[#ece8f3] text-[#6b5b8c] hover:bg-[#e0daec] px-4 py-2 rounded-full transition-colors'}
-                                        >
-                                            {n.label}
-                                        </Link>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                        <AddStudentInline openByDefault={total === 0} />
                     </section>
-                )}
+
+                    {/* 右：ASTAからの声かけ（0件なら出さない） */}
+                    {notices.length > 0 && (
+                        <section className="lg:col-span-5 flex flex-col gap-5">
+                            <h2 className="text-[20px] leading-[30px] font-bold text-[#1e1b15] flex items-center gap-2">
+                                ASTAからの声かけ
+                                <span className="inline-block w-2 h-2 rounded-full bg-[#665687]" />
+                            </h2>
+                            <div className="space-y-4">
+                                {notices.map(n => {
+                                    const Icon = NOTICE_ICON[n.icon];
+                                    return (
+                                        <article key={n.key} className={`${CARD} rounded-3xl p-5 flex flex-col gap-3.5`}>
+                                            <div className="flex items-start gap-3">
+                                                <Icon size={24} strokeWidth={1.5} className="text-[#7f3843] mt-0.5 shrink-0" />
+                                                <p className="text-[15px] leading-relaxed text-[#1e1b15]">{n.text}</p>
+                                            </div>
+                                            <div className="flex justify-end">
+                                                <Link
+                                                    href={n.href}
+                                                    className={n.tone === 'lavender'
+                                                        ? 'bg-[#ece8f3] text-[#6b5b8c] hover:bg-[#e0daec] active:scale-[0.98] transition-all px-4 py-2.5 rounded-xl text-[15px] leading-[22px] font-medium'
+                                                        : 'bg-[#f4ede2] hover:bg-[#eee7dc] text-[#7f3843] active:scale-[0.98] transition-all px-4 py-2.5 rounded-xl text-[15px] leading-[22px] font-medium'}
+                                                >
+                                                    {n.label}
+                                                </Link>
+                                            </div>
+                                        </article>
+                                    );
+                                })}
+                            </div>
+                        </section>
+                    )}
+                </div>
+
+                {/* 下：ASTAに聞く */}
+                <AskAsta />
             </div>
-
-            {/* 下：ASTAに聞く */}
-            <AskAsta />
-
-        </div>
+        </>
     );
 }

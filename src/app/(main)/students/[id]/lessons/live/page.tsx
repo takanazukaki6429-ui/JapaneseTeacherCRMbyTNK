@@ -5,9 +5,9 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { SpeechSegmenter, rmsOf } from '@/lib/speech-segmenter';
 import {
-    ArrowLeft, Send,
-    Save, Sparkles, X, Mic, Loader2, Zap, Download
+    ArrowLeft, Send, Sparkles, Mic, Loader2, Download, ChevronDown, Headphones, Lightbulb, Image as ImageIcon, BookOpen, PencilLine, Repeat2, Home, GraduationCap, Settings,
 } from 'lucide-react';
+import Link from 'next/link';
 import { GuidePanel } from './guide-panel';
 
 // ────────────────────────────────────────────
@@ -848,7 +848,7 @@ export default function LiveLessonPage() {
             setIsTranslationMode(true);
             // ヘッドホン推奨の案内（2026-09-06 かずき決定・運用案内）。スピーカー再生だと生徒の声を
             // 先生のマイクが拾い、「先生」の吹き出しとして出る（経路はかずきの実機で確認中）
-            addFlow({ kind: 'notice', text: '🎧 ヘッドホン推奨：スピーカーで聞くと、生徒の声を先生のマイクが拾って「先生」の吹き出しに混ざることがあります。' });
+            // （表示は画面の上の帯の下に常に出す：2026-09-11 画面案に合わせて流れへの差し込みはやめた）
 
             audioTrack.onended = () => stopTranslationMode();
 
@@ -1000,151 +1000,200 @@ export default function LiveLessonPage() {
     // ────────────────────────────────────────────
     // UI
     // ────────────────────────────────────────────
-    // 画面の高さ = 100vh − アプリ上部の帯(73px) − 本文の余白(上下24px)。
-    // ここを緩めると、下の4ボタンが画面外に押し出される
+    // 見た目は画面案 strategy/デザイン案_色D書体E_2026-09-11/ライブ授業_色D書体E.html（2026-09-11 かずき決定：配置＝D）。
+    // アプリの左のナビを使わない全画面。左の細いナビは「生徒」を選んだ状態（ライブ授業は生徒の中の画面のため）
+    const timeOf = (d: Date) => d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    const RAIL = [
+        { name: 'ホーム', href: '/', Icon: Home },
+        { name: '生徒', href: '/students', Icon: GraduationCap },
+        { name: '教材', href: '/materials', Icon: BookOpen },
+        { name: '設定', href: '/settings', Icon: Settings },
+    ];
+    const ASK_BUTTONS = [
+        { key: 'illust', title: '絵で見せる', hint: 'いまの内容を1枚の絵に', Icon: ImageIcon, tile: 'bg-[#f9f0f2] text-[#9c4f5a] group-hover:bg-[#9c4f5a]',
+          busy: illustBusy, disabled: illustBusy, onClick: generateIllustration, tip: 'いまの会話と課に合う絵を約10秒で作る。文字まできれいな版も自動で用意' },
+        { key: 'examples', title: '例文', hint: MATERIAL_MODES.examples.hint, Icon: BookOpen, tile: 'bg-[#ece8f3] text-[#6b5b8c] group-hover:bg-[#6b5b8c]',
+          busy: materialBusy === 'examples', disabled: materialBusy !== null, onClick: () => makeMaterial('examples'), tip: MATERIAL_MODES.examples.hint },
+        { key: 'exercises', title: '練習問題', hint: MATERIAL_MODES.exercises.hint, Icon: PencilLine, tile: 'bg-[#f4ede2] text-[#7f3843] group-hover:bg-[#7f3843]',
+          busy: materialBusy === 'exercises', disabled: materialBusy !== null, onClick: () => makeMaterial('exercises'), tip: MATERIAL_MODES.exercises.hint },
+        { key: 'explain', title: 'やさしく言い換え', hint: MATERIAL_MODES.explain.hint, Icon: Repeat2, tile: 'bg-[#ece8f3] text-[#6b5b8c] group-hover:bg-[#6b5b8c]',
+          busy: materialBusy === 'explain', disabled: materialBusy !== null, onClick: () => makeMaterial('explain'), tip: MATERIAL_MODES.explain.hint },
+    ];
+
     return (
-        <div className="flex flex-col h-[calc(100vh-121px)] max-w-6xl mx-auto bg-white rounded-2xl shadow-[0_8px_48px_rgba(156,79,90,0.15)] overflow-hidden border border-[#d9a7ae]/20">
+        <div className="fixed inset-0 z-50 flex flex-row overflow-hidden bg-[#f7f3ec] text-[#3b2e2a]">
 
-            {/* ヘッダー */}
-            <div className="flex items-center justify-between px-4 py-3 bg-[#9c4f5a] text-white shrink-0">
-                <div className="flex items-center gap-3 min-w-0">
-                    <button onClick={() => router.back()} className="p-1.5 hover:bg-white/20 rounded-full transition-colors shrink-0">
-                        <ArrowLeft size={18} />
-                    </button>
-                    <h1 className="font-bold text-base whitespace-nowrap">授業中</h1>
-
-                    {/* 状態はこの信号1つに集約。押すと録音の一時停止/再開 */}
-                    <button
-                        onClick={isListening ? stopListening : startListening}
-                        title={isListening ? '押すと録音を一時停止' : '押すと録音を再開'}
-                        className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 hover:bg-white/25 transition-all text-xs font-bold whitespace-nowrap"
-                    >
-                        <span className={`w-2.5 h-2.5 rounded-full ${isListening ? 'bg-red-400 animate-pulse' : 'bg-white/50'}`} />
-                        {isListening ? '録音中' : '一時停止中'}
-                        {isTranslationMode && (
-                            <span className="border-l border-white/40 pl-2 font-medium opacity-90">生徒の画面に翻訳を表示中</span>
-                        )}
-                    </button>
-                    {isListening && micLabel && (
-                        <span
-                            title="先生の音声認識が使っているマイク"
-                            className={`text-[11px] font-medium px-2.5 py-1 rounded-full whitespace-nowrap max-w-[220px] truncate ${IPHONE_MIC.test(micLabel) ? 'bg-amber-300 text-[#5a3d00]' : 'bg-white/15 opacity-90'}`}
-                        >
-                            🎙 {micLabel}
-                        </span>
-                    )}
+            {/* 左の細いナビ */}
+            <aside className="hidden md:flex w-20 bg-[#faf3e7] border-r border-[#e2dbcf] flex-col justify-between items-center py-6 px-2 shrink-0">
+                <div className="flex flex-col items-center gap-1">
+                    <span className="text-[20px] leading-[30px] font-semibold tracking-wider text-[#7f3843]">ASTA</span>
+                    <span className="w-4 h-px bg-[#9c4f5a] opacity-30 mt-0.5" />
                 </div>
+                <nav className="flex flex-col items-center gap-6 w-full">
+                    {RAIL.map(({ name, href, Icon }) => {
+                        const active = href === '/students';
+                        return (
+                            <Link
+                                key={href}
+                                href={href}
+                                aria-current={active ? 'page' : undefined}
+                                className={`w-full flex flex-col items-center justify-center py-2.5 rounded-lg transition-colors ${active
+                                    ? 'text-[#7f3843] bg-[#ffd9dc]/60 font-semibold'
+                                    : 'text-[#534344] hover:text-[#7f3843] hover:bg-[#f4ede2]'}`}
+                            >
+                                <Icon size={24} strokeWidth={1.6} />
+                                <span className="text-[15px] mt-1">{name}</span>
+                            </Link>
+                        );
+                    })}
+                </nav>
+                <div className="h-10" />
+            </aside>
 
-                <div className="flex items-center gap-2">
-                    {isChromeDesktop && (
-                        <button
-                            onClick={isTranslationMode ? stopTranslationMode : startTranslationMode}
-                            title={isTranslationMode ? '翻訳を止める' : '画面共有の音声から翻訳を始める'}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all whitespace-nowrap ${isTranslationMode
-                                ? 'bg-[#d9a7ae] text-white'
-                                : 'bg-white/20 hover:bg-white/30 text-white'
-                                }`}
-                        >
-                            <Zap size={14} />
-                            {isTranslationMode ? '翻訳を止める' : '翻訳を始める'}
+            <main className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden">
+
+                {/* 上の帯 */}
+                <header className="h-16 px-6 bg-[#fcfbf9] border-b border-[#e2dbcf] flex items-center justify-between gap-4 shrink-0">
+                    <div className="flex items-center gap-4 min-w-0">
+                        <button onClick={() => router.back()} title="戻る" className="w-9 h-9 flex items-center justify-center rounded-lg border border-[#e2dbcf] text-[#3b2e2a] hover:bg-[#f4ede2] transition-colors shrink-0">
+                            <ArrowLeft size={18} />
                         </button>
-                    )}
+                        <h1 className="text-[26px] leading-[36px] font-semibold tracking-wide whitespace-nowrap">授業中</h1>
+                        <div className="h-5 w-px bg-[#e2dbcf] mx-1 shrink-0" />
 
-                    {/* 生徒の母国語（生徒の画面に出す翻訳の言語） */}
-                    <select
-                        value={studentNativeLanguage}
-                        onChange={e => setStudentNativeLanguage(e.target.value)}
-                        className="text-xs bg-white/20 hover:bg-white/30 text-white border-0 rounded-full px-2 py-1.5 font-bold cursor-pointer outline-none"
-                        title="生徒の母国語（翻訳して見せる言語）"
-                    >
-                        <option value="English">英語</option>
-                        <option value="Spanish">スペイン語</option>
-                        <option value="Portuguese">ポルトガル語</option>
-                        <option value="Korean">韓国語</option>
-                        <option value="Chinese">中国語</option>
-                        <option value="French">フランス語</option>
-                        <option value="German">ドイツ語</option>
-                        <option value="Thai">タイ語</option>
-                        <option value="Vietnamese">ベトナム語</option>
-                        <option value="Indonesian">インドネシア語</option>
-                    </select>
+                        {/* 状態はこの信号1つに集約。押すと録音の一時停止/再開 */}
+                        <button
+                            onClick={isListening ? stopListening : startListening}
+                            title={isListening ? '押すと録音を一時停止' : '押すと録音を再開'}
+                            className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#f9f0f2] border border-[#d8c1c2] text-[#9c4f5a] hover:bg-[#ffd9dc]/40 transition-colors whitespace-nowrap shrink-0"
+                        >
+                            <span className={`w-2.5 h-2.5 rounded-full ${isListening ? 'bg-[#9c4f5a] animate-pulse' : 'bg-[#d8c1c2]'}`} />
+                            <span className="text-[14px] font-medium tracking-wide">{isListening ? '録音中' : '一時停止中'}</span>
+                        </button>
+                        {isListening && micLabel && (
+                            <span
+                                title="先生の音声認識が使っているマイク"
+                                className={`flex items-center gap-1.5 text-[15px] whitespace-nowrap min-w-0 ${IPHONE_MIC.test(micLabel)
+                                    ? 'px-2.5 py-1 rounded-md bg-amber-100 text-[#5a3d00] border border-amber-300'
+                                    : 'text-[#3b2e2a]'}`}
+                            >
+                                <Mic size={15} className="shrink-0" />
+                                <span className="truncate max-w-[200px]">{micLabel}</span>
+                            </span>
+                        )}
+                        {isTranslationMode && (
+                            <span className="px-2.5 py-1 rounded-md bg-[#ece8f3] text-[#6b5b8c] border border-[#d8cfe5] text-[13px] font-medium flex items-center gap-1 whitespace-nowrap shrink-0">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#6b5b8c]" />
+                                生徒の画面に翻訳を表示中
+                            </span>
+                        )}
+                    </div>
 
+                    <div className="flex items-center gap-3 shrink-0">
+                        {isChromeDesktop && (
+                            <button
+                                onClick={isTranslationMode ? stopTranslationMode : startTranslationMode}
+                                title={isTranslationMode ? '翻訳を止める' : '画面共有の音声から翻訳を始める'}
+                                className={`px-3.5 py-1.5 rounded-lg border bg-white text-[15px] font-medium transition-colors whitespace-nowrap ${isTranslationMode
+                                    ? 'border-[#d8cfe5] text-[#6b5b8c] hover:bg-[#ece8f3]'
+                                    : 'border-[#d8c1c2] text-[#9c4f5a] hover:bg-[#f9f0f2]'}`}
+                            >
+                                {isTranslationMode ? '翻訳を止める' : '翻訳を始める'}
+                            </button>
+                        )}
 
+                        {/* 生徒の母国語（生徒の画面に出す翻訳の言語） */}
+                        <div className="relative">
+                            <select
+                                value={studentNativeLanguage}
+                                onChange={e => setStudentNativeLanguage(e.target.value)}
+                                title="生徒の母国語（翻訳して見せる言語）"
+                                className="appearance-none bg-white border border-[#e2dbcf] text-[#3b2e2a] text-[15px] font-medium rounded-lg pl-3.5 pr-8 py-1.5 focus:outline-none focus:border-[#9c4f5a] focus:ring-1 focus:ring-[#9c4f5a] cursor-pointer"
+                            >
+                                <option value="English">英語</option>
+                                <option value="Spanish">スペイン語</option>
+                                <option value="Portuguese">ポルトガル語</option>
+                                <option value="Korean">韓国語</option>
+                                <option value="Chinese">中国語</option>
+                                <option value="French">フランス語</option>
+                                <option value="German">ドイツ語</option>
+                                <option value="Thai">タイ語</option>
+                                <option value="Vietnamese">ベトナム語</option>
+                                <option value="Indonesian">インドネシア語</option>
+                            </select>
+                            <ChevronDown size={16} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#3b2e2a]" />
+                        </div>
 
-                    <button
-                        onClick={() => setToolsOut(v => !v)}
-                        title={toolsOut
-                            ? '生徒と見る画面にする。Zoomで画面共有するときはこの状態で'
-                            : '先生の道具を出して、準備の画面に戻る'}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all whitespace-nowrap ${toolsOut
-                            ? 'bg-white/20 hover:bg-white/30 text-white'
-                            : 'bg-emerald-400 text-white'
-                            }`}
-                    >
-                        {toolsOut ? '🖥 共有モード' : '🛠 準備モード'}
-                    </button>
+                        {/* 共有モード：オン＝生徒と見る画面（道具をしまう）。Zoomで画面共有するときはオン */}
+                        <button
+                            onClick={() => setToolsOut(v => !v)}
+                            role="switch"
+                            aria-checked={!toolsOut}
+                            title={toolsOut
+                                ? '押すと共有モード（生徒と見る画面）。Zoomで画面共有するときはこの状態で'
+                                : '押すと準備モード（先生の道具を出す）'}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#e2dbcf] bg-white text-[#3b2e2a] whitespace-nowrap"
+                        >
+                            <span className="text-[15px] font-medium">共有モード</span>
+                            <span className={`w-9 h-5 rounded-full flex items-center p-0.5 transition-colors ${!toolsOut ? 'bg-[#9c4f5a] justify-end' : 'bg-[#d8c1c2] justify-start'}`}>
+                                <span className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                            </span>
+                        </button>
 
-                    <button
-                        onClick={finishLesson}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-[#9c4f5a] font-bold rounded-full hover:bg-[#f8e8e7] transition-colors text-xs shadow-sm whitespace-nowrap ml-2"
-                    >
-                        <Save size={14} />
-                        授業を終える
-                    </button>
-                </div>
-            </div>
+                        <button
+                            onClick={finishLesson}
+                            className="px-4 py-2 rounded-lg bg-[#9c4f5a] hover:bg-[#7f3843] text-white text-[15px] font-medium shadow-sm transition-colors active:scale-[0.98] whitespace-nowrap"
+                        >
+                            授業を終える
+                        </button>
+                    </div>
+                </header>
 
-            {/* コンテンツエリア */}
-            <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+                <div className="flex-1 flex overflow-hidden">
 
-                {/* タブ（モバイル） */}
-                {/* 左パネル：きょうの進め方（台本） */}
-                <GuidePanel
-                    studentId={studentId}
-                    collapsed={!toolsOut}
-                    prepContent={prepContent}
-                    lessonId={selectedLessonId}
-                    onLessonChange={handleLessonChange}
-                    onStepOpen={pg => {
-                        addFlow({
-                            kind: 'textbook',
-                            title: `📖 ${pg.lessonLabel}　${pg.stepTitle}`,
-                            text: pg.body,
-                            imgs: pg.imageUrls,
-                        });
-                    }}
-                />
+                    {/* 左の列：きょうの進め方（台本） */}
+                    <GuidePanel
+                        studentId={studentId}
+                        collapsed={!toolsOut}
+                        prepContent={prepContent}
+                        lessonId={selectedLessonId}
+                        onLessonChange={handleLessonChange}
+                        onStepOpen={pg => {
+                            addFlow({
+                                kind: 'textbook',
+                                title: `${pg.lessonLabel}　${pg.stepTitle}`,
+                                text: pg.body,
+                                imgs: pg.imageUrls,
+                            });
+                        }}
+                    />
 
-                {/* 右エリア：授業の流れ + 翻訳ログ + チャット */}
-                <div className="flex-1 flex flex-col overflow-hidden">
+                    {/* 右：授業の流れ（会話とASTAの提案・生成物が時系列で並ぶ） */}
+                    <section className="flex-1 flex flex-col justify-between overflow-hidden bg-[#f7f3ec]">
+                        {/* ヘッドホン推奨の案内（2026-09-06 かずき決定・運用案内）。画面案では常に上の帯の下に出す */}
+                        <div className="px-6 py-2 bg-[#f4ede2] border-b border-[#e2dbcf] flex items-center justify-center gap-2 text-[13px] text-[#534344] shrink-0">
+                            <Headphones size={15} />
+                            <span>ヘッドホン推奨：スピーカーだと、生徒の声が先生の吹き出しに混ざることがあります</span>
+                        </div>
 
-                    {/* 📋 授業の流れ（会話とASTAの提案・生成物が時系列で並ぶ）。
-                        タブは廃止（2026-09-03 かずき決定：翻訳ログを流れに統合してタブが1つになったため） */}
-                    <div className="flex-1 flex flex-col overflow-hidden">
                         {micError && (
-                            <div className="mx-4 mt-3 p-3 bg-red-50 border border-red-200 rounded-2xl shrink-0 flex items-start gap-2">
-                                <span className="text-red-500 shrink-0 mt-0.5">⚠️</span>
-                                <div>
-                                    <p className="text-xs font-bold text-red-700 mb-0.5">マイクが使えません</p>
-                                    <p className="text-xs text-red-600">{micError}</p>
-                                    <button
-                                        onClick={startListening}
-                                        className="mt-1.5 text-xs text-red-700 underline font-bold"
-                                    >
-                                        再試行
-                                    </button>
-                                </div>
+                            <div className="mx-6 mt-3 p-3 bg-[#fff0f0] border border-[#f4b8b8] rounded-xl shrink-0">
+                                <p className="text-[13px] font-bold text-[#ba1a1a] mb-0.5">マイクが使えません</p>
+                                <p className="text-[13px] text-[#960000]">{micError}</p>
+                                <button onClick={startListening} className="mt-1.5 text-[13px] text-[#ba1a1a] underline font-bold">
+                                    再試行
+                                </button>
                             </div>
                         )}
 
-                        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        <div className="flex-1 overflow-y-auto p-6 space-y-5">
                             {flow.length === 0 && (
                                 <div className="h-full flex flex-col items-center justify-center text-center py-12 gap-2">
-                                    <Mic size={32} className={isListening ? 'text-[#9c4f5a] animate-pulse' : 'opacity-20'} />
-                                    <p className="text-sm font-bold text-[#3b2e2a]">
+                                    <Mic size={32} className={isListening ? 'text-[#9c4f5a] animate-pulse' : 'text-[#d8c1c2]'} />
+                                    <p className="text-[16px] font-bold text-[#3b2e2a]">
                                         {isListening ? '聞いています' : '生徒情報を読み込み中…'}
                                     </p>
-                                    <p className="text-xs text-[#534344] max-w-xs leading-relaxed">
+                                    <p className="text-[13px] text-[#534344] max-w-sm leading-relaxed">
                                         授業の会話がここに流れます。困った場面ではASTAが自分から提案を出します。
                                         自分から頼みたい時は下のボタンを押してください。
                                     </p>
@@ -1155,132 +1204,138 @@ export default function LiveLessonPage() {
                                 <div key={item.id}>
                                     {/* 誰の言葉かを名前で示す：先生は左・生徒は右（共有画面では「自分＝右」の慣習が通じないため名前を主にする） */}
                                     {item.kind === 'said' && (
-                                        <div className="w-fit max-w-[85%] bg-white border border-[#f1ebe1] rounded-2xl rounded-tl-md px-4 py-2.5">
-                                            <p className="text-[11px] font-bold text-[#9c4f5a] mb-0.5">💬 先生</p>
-                                            <p className={`${toolsOut ? 'text-lg' : 'text-2xl'} text-[#3b2e2a] font-bold leading-relaxed`}>{readable(item.text ?? '')}</p>
-                                            {item.translation && (
-                                                <p className={`${toolsOut ? 'text-sm' : 'text-lg'} text-[#9c4f5a] mt-1 leading-relaxed`}>{item.translation}</p>
-                                            )}
-                                            <p className="text-[9px] text-[#c2b5ac] mt-0.5">
-                                                {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
-                                            </p>
+                                        <div className="flex flex-col items-start max-w-[85%]">
+                                            <div className="flex items-center gap-1.5 mb-1 px-1">
+                                                <span className="text-[13px] font-medium text-[#534344]">先生</span>
+                                                <span className="text-[12px] text-[#6f5d5b]">{timeOf(item.ts)}</span>
+                                            </div>
+                                            <div className="bg-[#fcfbf9] border border-[#e2dbcf] rounded-2xl rounded-tl-sm p-4 shadow-sm">
+                                                <p className={`${toolsOut ? 'text-[20px] leading-[32px]' : 'text-[24px] leading-[38px]'} font-medium text-[#3b2e2a]`}>{readable(item.text ?? '')}</p>
+                                                {item.translation && (
+                                                    <p className={`${toolsOut ? 'text-[14px]' : 'text-[18px]'} leading-relaxed text-[#6b5b8c] mt-1.5 border-t border-[#e2dbcf]/50 pt-1.5`}>{item.translation}</p>
+                                                )}
+                                            </div>
                                         </div>
                                     )}
 
                                     {item.kind === 'student-said' && (
-                                        <div className="w-fit max-w-[85%] ml-auto bg-[#eef7f3] border border-[#bfe3d2] rounded-2xl rounded-tr-md px-4 py-2.5">
-                                            <p className="text-[11px] font-bold text-[#4e7a66] mb-0.5">🗣 {studentName ? `${studentName}さん` : '生徒'}</p>
-                                            <p className={`${toolsOut ? 'text-lg' : 'text-2xl'} text-[#3b2e2a] font-bold leading-relaxed`}>{item.text}</p>
-                                            {item.translation && (
-                                                <p className={`${toolsOut ? 'text-sm' : 'text-lg'} text-[#4e7a66] mt-1 leading-relaxed`}>{item.translation}</p>
-                                            )}
-                                            <p className="text-[9px] text-[#9ec4b0] mt-0.5">
-                                                {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
-                                            </p>
+                                        <div className="flex flex-col items-end ml-auto max-w-[85%]">
+                                            <div className="flex items-center gap-1.5 mb-1 px-1">
+                                                <span className="text-[12px] text-[#6f5d5b]">{timeOf(item.ts)}</span>
+                                                <span className="text-[13px] font-medium text-[#6b5b8c]">{studentName ? `${studentName}さん` : '生徒'}</span>
+                                            </div>
+                                            <div className="bg-[#ece8f3] border border-[#d8cfe5] rounded-2xl rounded-tr-sm p-4 shadow-sm">
+                                                <p className={`${toolsOut ? 'text-[20px] leading-[32px]' : 'text-[24px] leading-[38px]'} font-medium text-[#3b2e2a]`}>{item.text}</p>
+                                                {item.translation && (
+                                                    <p className={`${toolsOut ? 'text-[14px]' : 'text-[18px]'} leading-relaxed text-[#534344] mt-1.5 border-t border-[#d8cfe5]/60 pt-1.5`}>{item.translation}</p>
+                                                )}
+                                            </div>
                                         </div>
                                     )}
 
                                     {item.kind === 'notice' && (
-                                        <div className="mx-auto max-w-[92%] bg-[#fdf6e7] border border-[#ecd9a8] rounded-xl px-4 py-2 text-xs text-[#8a6d1f] leading-relaxed">
+                                        <div className="mx-auto max-w-[92%] bg-[#fdf6e7] border border-[#ecd9a8] rounded-xl px-4 py-2 text-[13px] text-[#8a6d1f] leading-relaxed">
                                             {item.text}
                                         </div>
                                     )}
 
                                     {(item.kind === 'suggest' || item.kind === 'translate-help') && (
-                                        <div className="ml-auto max-w-[88%] bg-[#fbf8f3] border-[1.5px] border-[#d9a7ae] rounded-2xl p-3.5 shadow-[0_4px_18px_rgba(156,79,90,0.10)]">
-                                            <div className="flex items-center justify-between mb-1.5">
-                                                <span className="text-[10px] font-bold text-[#9c4f5a]">{item.title}</span>
-                                                <span className="text-[9px] text-[#c2b5ac]">
-                                                    {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
+                                        <div className="bg-[#fcfbf9] border border-[#e2dbcf] border-l-4 border-l-[#9c4f5a] rounded-xl p-4 shadow-sm flex items-start gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-[#f9f0f2] flex items-center justify-center shrink-0 text-[#9c4f5a] mt-0.5">
+                                                <Lightbulb size={16} />
                                             </div>
-                                            <p className="text-[13px] text-[#3b2e2a] whitespace-pre-wrap leading-relaxed">{readable(item.text ?? '')}</p>
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2 mb-0.5">
+                                                    <span className="text-[12px] font-bold text-[#9c4f5a] tracking-wider">ASTA</span>
+                                                    <span className="text-[12px] text-[#6f5d5b]">{item.title}</span>
+                                                    <span className="text-[12px] text-[#6f5d5b]">{timeOf(item.ts)}</span>
+                                                </div>
+                                                <p className="text-[16px] leading-[26px] text-[#3b2e2a] whitespace-pre-wrap">{readable(item.text ?? '')}</p>
+                                            </div>
                                         </div>
                                     )}
 
                                     {item.kind === 'asked' && (
-                                        <div className="ml-auto max-w-[75%] bg-[#9c4f5a] text-white rounded-2xl rounded-tr-none px-3.5 py-2">
-                                            <p className="text-[13px] leading-relaxed">{readable(item.text ?? '')}</p>
-                                            <p className="text-[9px] text-white/60 mt-0.5">
-                                                あなたの質問 · {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
-                                            </p>
+                                        <div className="w-fit ml-auto max-w-[75%] bg-[#9c4f5a] text-white rounded-2xl rounded-tr-sm px-4 py-2.5">
+                                            <p className="text-[15px] leading-relaxed">{readable(item.text ?? '')}</p>
+                                            <p className="text-[12px] text-white/85 mt-0.5">あなたの質問 · {timeOf(item.ts)}</p>
                                         </div>
                                     )}
 
-                                    {item.kind === 'answer' && (
-                                        <div className="max-w-[88%] bg-white border border-[#d9a7ae]/40 rounded-2xl rounded-tl-none p-3.5 shadow-[0_4px_18px_rgba(156,79,90,0.08)]">
-                                            <div className="flex items-center justify-between mb-1.5">
-                                                <span className="text-[10px] font-bold text-[#9c4f5a]">{item.title}</span>
-                                                <span className="text-[9px] text-[#c2b5ac]">
-                                                    {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
+                                    {(item.kind === 'answer' || item.kind === 'material') && (
+                                        <div className="bg-white border border-[#e2dbcf] rounded-xl p-5 shadow-sm">
+                                            <div className="flex items-center justify-between gap-2 mb-3">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <span className="w-2 h-2 rounded-full bg-[#9c4f5a] shrink-0" />
+                                                    <h3 className="text-[17px] font-bold text-[#3b2e2a] truncate">{item.title}</h3>
+                                                </div>
+                                                <span className="text-[12px] text-[#6f5d5b] shrink-0">{timeOf(item.ts)}</span>
                                             </div>
-                                            <p className="text-[13px] text-[#3b2e2a] whitespace-pre-wrap leading-relaxed">{readable(item.text ?? '')}</p>
+                                            <div className="bg-[#faf3e7]/50 p-4 rounded-lg border border-[#e2dbcf]/70">
+                                                <p className="text-[16px] leading-[26px] text-[#3b2e2a] whitespace-pre-wrap">{readable(item.text ?? '')}</p>
+                                            </div>
                                         </div>
                                     )}
 
                                     {item.kind === 'textbook' && (
-                                        <div className="bg-white border-2 border-[#d9a7ae]/50 rounded-2xl p-5 shadow-[0_4px_18px_rgba(156,79,90,0.10)]">
-                                            <p className="text-xs font-bold text-[#9c4f5a] mb-2">{item.title}</p>
+                                        <div className="bg-white border border-[#e2dbcf] rounded-xl p-5 shadow-sm relative overflow-hidden">
+                                            <div className="absolute top-0 right-8 w-6 h-8 bg-[#ece8f3] border-b border-x border-[#d8cfe5] rounded-b-sm" />
+                                            <div className="flex items-center gap-2 mb-3 pr-12">
+                                                <span className="w-2 h-2 rounded-full bg-[#9c4f5a] shrink-0" />
+                                                <h3 className="text-[17px] font-bold text-[#3b2e2a]">{item.title}</h3>
+                                            </div>
                                             {/* 教科書の原文は生徒向け（ふりがな付き）のまま、生徒も読める大きさで */}
-                                            <p className={`${toolsOut ? 'text-base' : 'text-xl'} text-[#3b2e2a] leading-loose whitespace-pre-wrap`}>
-                                                {readable((item.text ?? '').split('\n').filter(l => !l.trim().startsWith('![')).join('\n')).trim().slice(0, 1200)}
-                                            </p>
+                                            <div className="bg-[#faf3e7]/50 p-4 rounded-lg border border-[#e2dbcf]/70">
+                                                <p className={`${toolsOut ? 'text-[16px] leading-[26px]' : 'text-[20px] leading-[34px]'} text-[#3b2e2a] whitespace-pre-wrap`}>
+                                                    {readable((item.text ?? '').split('\n').filter(l => !l.trim().startsWith('![')).join('\n')).trim().slice(0, 1200)}
+                                                </p>
+                                            </div>
                                             {(item.imgs ?? []).length > 0 && (
                                                 <div className="grid grid-cols-2 gap-3 mt-4">
                                                     {(item.imgs ?? []).map((u, i) => (
                                                         // eslint-disable-next-line @next/next/no-img-element
-                                                        <img key={i} src={u} alt="" className="w-full rounded-xl" />
+                                                        <img key={i} src={u} alt="" className="w-full rounded-lg" />
                                                     ))}
                                                 </div>
                                             )}
                                         </div>
                                     )}
 
-                                    {item.kind === 'material' && (
-                                        <div className="ml-auto max-w-[88%] bg-white border border-[#d9a7ae]/40 rounded-2xl p-3.5 shadow-[0_4px_18px_rgba(156,79,90,0.08)]">
-                                            <div className="flex items-center justify-between mb-1.5">
-                                                <span className="text-[10px] font-bold text-[#9c4f5a]">{item.title}</span>
-                                                <span className="text-[9px] text-[#c2b5ac]">
-                                                    {item.ts.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                            </div>
-                                            <p className="text-[13px] text-[#3b2e2a] whitespace-pre-wrap leading-relaxed">{readable(item.text ?? '')}</p>
-                                        </div>
-                                    )}
-
                                     {item.kind === 'illust' && (
-                                        <div className="ml-auto max-w-[88%] bg-white border border-[#d9a7ae]/40 rounded-2xl p-3 shadow-[0_4px_18px_rgba(156,79,90,0.08)]">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <span className="text-[10px] font-bold text-[#9c4f5a]">{item.title}</span>
+                                        <div className="bg-white border border-[#e2dbcf] rounded-xl p-5 shadow-sm">
+                                            <div className="flex items-center justify-between gap-2 mb-3">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <span className="w-2 h-2 rounded-full bg-[#9c4f5a] shrink-0" />
+                                                    <h3 className="text-[17px] font-bold text-[#3b2e2a] truncate">{item.title}</h3>
+                                                </div>
                                                 {item.img && (
                                                     <a href={item.img} download="asta-illustration.png"
-                                                        className="inline-flex items-center gap-1 text-[10px] text-[#9c4f5a] hover:underline">
-                                                        <Download size={11} />保存
+                                                        className="inline-flex items-center gap-1 text-[13px] text-[#9c4f5a] hover:underline shrink-0">
+                                                        <Download size={13} />保存
                                                     </a>
                                                 )}
                                             </div>
                                             {!item.img && (
                                                 <div className="flex items-center gap-2 py-4 justify-center text-[#9c4f5a]">
                                                     <Loader2 size={16} className="animate-spin" />
-                                                    <span className="text-xs">授業を続けながらお待ちください</span>
+                                                    <span className="text-[13px]">授業を続けながらお待ちください</span>
                                                 </div>
                                             )}
                                             {item.img && (
                                                 // eslint-disable-next-line @next/next/no-img-element
-                                                <img src={item.img} alt="生成したイラスト" className="w-full rounded-xl" />
+                                                <img src={item.img} alt="生成したイラスト" className="w-full rounded-lg" />
                                             )}
                                             {/* 案C：丁寧版ができたら差し替えを提案 */}
                                             {item.img && item.imgQuality && (
                                                 <button
                                                     onClick={() => patchFlow(item.id, { img: item.imgQuality, imgQuality: undefined })}
-                                                    className="w-full mt-2 text-left text-[11px] bg-[#fdf6e7] border border-[#ecd9a8] text-[#8a6d1f] rounded-xl px-3 py-2 hover:bg-[#fbefd2] transition-colors"
+                                                    className="w-full mt-2 text-left text-[13px] bg-[#fdf6e7] border border-[#ecd9a8] text-[#8a6d1f] rounded-lg px-3 py-2 hover:bg-[#fbefd2] transition-colors"
                                                 >
-                                                    🖌 <b className="text-[#9c4f5a]">文字まできれいな版</b>ができました → 押すと差し替えます
+                                                    <b className="text-[#9c4f5a]">文字まできれいな版</b>ができました → 押すと差し替えます
                                                 </button>
                                             )}
                                             {item.img && !item.imgQuality && item.title?.includes('できた絵') && (
-                                                <p className="text-[10px] text-[#534344] mt-2">
+                                                <p className="text-[12px] text-[#534344] mt-2">
                                                     ※ AIが作った画像です。文字が正しいか目で確かめてから生徒さんに見せてください。
                                                 </p>
                                             )}
@@ -1291,89 +1346,75 @@ export default function LiveLessonPage() {
 
                             {/* 認識途中の文字（うすく表示） */}
                             {interimText && (
-                                <p className="text-[12px] text-[#c2b5ac] italic px-1">{interimText}…</p>
+                                <p className="text-[13px] text-[#6f5d5b] italic px-1">{interimText}…</p>
                             )}
                             {(isAnalyzing || streamingText) && (
-                                <div className="ml-auto max-w-[88%] bg-[#fbf8f3] border border-[#d9a7ae]/50 rounded-2xl p-3">
-                                    <p className="text-[10px] font-bold text-[#9c4f5a] mb-1 flex items-center gap-1">
-                                        <Sparkles size={11} /> ASTAが考えています…
+                                <div className="bg-[#fcfbf9] border border-[#e2dbcf] border-l-4 border-l-[#9c4f5a] rounded-xl p-4 shadow-sm">
+                                    <p className="text-[12px] font-bold text-[#9c4f5a] mb-1 flex items-center gap-1">
+                                        <Sparkles size={12} /> ASTAが考えています…
                                     </p>
                                     {streamingText && (
-                                        <p className="text-xs text-[#3b2e2a] whitespace-pre-wrap leading-relaxed">{streamingText}</p>
+                                        <p className="text-[15px] text-[#3b2e2a] whitespace-pre-wrap leading-relaxed">{streamingText}</p>
                                     )}
                                 </div>
                             )}
                             <div ref={flowEndRef} />
                         </div>
 
-                        {/* 下部：自分から頼む4ボタン（道具をしまうと細いアイコンバーに） */}
-                        <div className={`border-t border-[#f1ebe1] bg-white shrink-0 ${toolsOut ? 'px-4 py-3' : 'px-4 py-1.5'}`}>
+                        {/* 下：自分から頼む4ボタン＋聞きたい時の入力欄（共有モードでは小さくし、入力欄はしまう） */}
+                        <div className={`bg-[#fcfbf9] border-t border-[#e2dbcf] shrink-0 flex flex-col gap-3 ${toolsOut ? 'p-4' : 'px-4 py-2'}`}>
                             {illustError && (
-                                <p className="text-[11px] text-[#ba1a1a] bg-[#fff0f0] border border-[#f4b8b8] rounded-xl px-3 py-1.5 mb-2">
+                                <p className="text-[13px] text-[#ba1a1a] bg-[#fff0f0] border border-[#f4b8b8] rounded-lg px-3 py-1.5">
                                     {illustError}
                                 </p>
                             )}
-                            {toolsOut && (
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="text-[10px] text-[#8a7d77]">
-                                        <b className="text-[#9c4f5a]">🤖 自動アシスト：ON</b>　困った場面はASTAが自分から提案します
-                                    </span>
-                                    <span className="text-[10px] text-[#8a7d77]">自分から頼む時はこのボタン（入力不要）</span>
-                                </div>
-                            )}
-                            <div className="grid grid-cols-4 gap-2">
-                                <button
-                                    onClick={generateIllustration}
-                                    disabled={illustBusy}
-                                    title="いまの会話と課に合う絵を約10秒で作る。文字まできれいな版も自動で用意"
-                                    className={`flex flex-col items-center px-1 bg-[#9c4f5a] text-white rounded-xl text-xs font-bold disabled:opacity-50 transition-opacity ${toolsOut ? 'py-2.5' : 'py-1.5'}`}
-                                >
-                                    <span className="flex items-center gap-1">
-                                        {illustBusy ? <Loader2 size={12} className="animate-spin" /> : '🎨'} 絵で見せる
-                                    </span>
-                                    {toolsOut && <span className="text-[9px] font-normal opacity-85 mt-0.5">いまの内容を1枚の絵に</span>}
-                                </button>
-                                {(Object.keys(MATERIAL_MODES) as (keyof typeof MATERIAL_MODES)[]).map(m => (
-                                    <button
-                                        key={m}
-                                        onClick={() => makeMaterial(m)}
-                                        disabled={materialBusy !== null}
-                                        title={MATERIAL_MODES[m].hint}
-                                        className={`flex flex-col items-center px-1 bg-[#9c4f5a] text-white rounded-xl text-xs font-bold disabled:opacity-50 transition-opacity ${toolsOut ? 'py-2.5' : 'py-1.5'}`}
-                                    >
-                                        <span className="flex items-center gap-1">
-                                            {materialBusy === m ? <Loader2 size={12} className="animate-spin" /> : null}
-                                            {MATERIAL_MODES[m].label}
-                                        </span>
-                                        {toolsOut && <span className="text-[9px] font-normal opacity-85 mt-0.5">{MATERIAL_MODES[m].hint}</span>}
-                                    </button>
-                                ))}
+                            <div className="grid grid-cols-4 gap-3">
+                                {ASK_BUTTONS.map(b => {
+                                    const Icon = b.Icon;
+                                    return (
+                                        <button
+                                            key={b.key}
+                                            onClick={b.onClick}
+                                            disabled={b.disabled}
+                                            title={b.tip}
+                                            className={`group flex items-center gap-3 bg-white hover:bg-[#faf3e7] border border-[#e2dbcf] rounded-xl text-left transition-colors shadow-sm active:scale-[0.99] disabled:opacity-50 ${toolsOut ? 'p-3' : 'px-3 py-1.5'}`}
+                                        >
+                                            <span className={`${toolsOut ? 'w-10 h-10' : 'w-8 h-8'} rounded-lg flex items-center justify-center shrink-0 transition-colors group-hover:text-white ${b.tile}`}>
+                                                {b.busy ? <Loader2 size={18} className="animate-spin" /> : <Icon size={20} strokeWidth={1.8} />}
+                                            </span>
+                                            <span className="min-w-0">
+                                                <span className="block text-[16px] font-bold text-[#3b2e2a]">{b.title}</span>
+                                                {toolsOut && <span className="block text-[12px] text-[#6a5852] truncate">{b.hint}</span>}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
                             </div>
 
                             {/* 聞きたい時だけ使う入力欄。授業中の入力は不要だが、
                                 聞きたくなったらここで聞ける（2026-08-20 チャットタブを統合） */}
-                            <form onSubmit={handleSendMessage} className={`${toolsOut ? 'flex' : 'hidden'} items-center gap-2 mt-2.5`}>
+                            <form onSubmit={handleSendMessage} className={`${toolsOut ? 'flex' : 'hidden'} items-center gap-2`}>
                                 <input
                                     type="text"
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
                                     placeholder="聞きたいことがあれば（画面共有中は生徒にも見えます）"
-                                    className="flex-1 px-3.5 py-2 bg-[#f7f3ec] border border-[#f1ebe1] rounded-full outline-none focus:border-[#d9a7ae] text-xs text-[#3b2e2a]"
+                                    className="flex-1 min-w-0 bg-[#f7f3ec] border border-[#e2dbcf] rounded-lg px-4 py-2.5 text-[15px] text-[#3b2e2a] placeholder:text-[#6f5d5b] focus:outline-none focus:border-[#9c4f5a] focus:ring-1 focus:ring-[#9c4f5a]"
                                 />
                                 <button
                                     type="submit"
                                     disabled={!input.trim() || isTyping}
-                                    title="ASTAに聞く"
-                                    className="p-2 bg-[#9c4f5a] text-white rounded-full disabled:opacity-40 transition-opacity shadow-sm shrink-0"
+                                    className="px-6 py-2.5 bg-[#9c4f5a] hover:bg-[#7f3843] text-white text-[15px] font-medium rounded-lg shadow-sm transition-colors flex items-center gap-1.5 active:scale-[0.98] disabled:opacity-40 shrink-0"
                                 >
-                                    {isTyping ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+                                    {isTyping ? <Loader2 size={15} className="animate-spin" /> : null}
+                                    <span>送信</span>
+                                    {!isTyping && <Send size={15} />}
                                 </button>
                             </form>
                         </div>
-                    </div>
-
+                    </section>
                 </div>
-            </div>
+            </main>
         </div>
     );
 }

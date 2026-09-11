@@ -11,7 +11,7 @@
  */
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { BookOpen, ExternalLink, ChevronDown } from 'lucide-react';
+import { BookOpen, ExternalLink, ChevronDown, StickyNote } from 'lucide-react';
 import Link from 'next/link';
 import {
     SECTION_LABELS,
@@ -121,147 +121,152 @@ export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonC
             .trim()
             .slice(0, len);
 
+    // ステップを開く／閉じる。開いたステップは教科書ページとして授業の流れにも入る
+    const toggleStep = (i: number) => {
+        const next = openStep === i ? null : i;
+        setOpenStep(next);
+        if (next === null) return;
+        const sec = sections[i];
+        const lesson = lessons.find(l => l.id === lessonId);
+        const lessonPath = lesson
+            ? `${lesson.jlpt_level}/${lesson.lesson_number}${lesson.lesson_sub ? `-${lesson.lesson_sub}` : ''}`
+            : '';
+        const base = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${MASTER_MATERIAL_BUCKET}/${lessonPath}`;
+        onStepOpen({
+            lessonLabel: lesson ? `${lesson.lesson_label ?? `第${lesson.lesson_number}課`}` : '',
+            stepTitle: SECTION_LABELS[sec.section_type],
+            body: sec.content_md,
+            imageUrls: (sec.images ?? []).slice(0, 4).map(f => `${base}/${f}`),
+        });
+    };
+
+    const SELECT = 'w-full appearance-none bg-white border border-[#e2dbcf] text-[#3b2e2a] text-[15px] font-medium rounded-lg pl-3 pr-7 py-1.5 focus:border-[#9c4f5a] focus:outline-none';
+
+    // 見た目は画面案 ライブ授業_色D書体E.html の左の列（2026-09-11）。
     // 台本が長くてもこの枠の中だけがスクロールする（画面全体を縦に伸ばさない）
     if (isNarrow) {
-        // 道具をしまった状態：縦書きの細い帯。押すと一時的に開く
+        // 道具をしまった状態（共有モード）：縦書きの細い帯。押すと一時的に開く
         return (
             <button
                 onClick={() => setPeek(true)}
                 title="台本をひらく"
-                className="hidden md:flex flex-col items-center gap-2 w-9 shrink-0 h-full bg-white border-r border-[#f1ebe1] pt-4 text-[#9c4f5a] hover:bg-[#f7f3ec] transition-colors"
+                className="hidden md:flex flex-col items-center gap-2 w-10 shrink-0 h-full bg-[#fcfbf9] border-r border-[#e2dbcf] pt-4 text-[#9c4f5a] hover:bg-[#f4ede2] transition-colors"
             >
                 <BookOpen size={16} />
-                <span className="text-[10px] font-bold" style={{ writingMode: 'vertical-rl' }}>きょうの進め方</span>
+                <span className="text-[13px] font-bold" style={{ writingMode: 'vertical-rl' }}>きょうの進め方</span>
             </button>
         );
     }
     return (
-        <div
-            className="hidden md:block w-[320px] shrink-0 h-full overflow-y-auto bg-white border-r border-[#f1ebe1] p-4 space-y-4"
+        <section
+            className="hidden md:flex w-[310px] shrink-0 h-full bg-[#fcfbf9] border-r border-[#e2dbcf] flex-col justify-between"
             onMouseLeave={() => { if (collapsed) setPeek(false); }}
         >
-            <div>
-                <h2 className="text-xs font-bold text-[#9c4f5a] tracking-wide flex items-center gap-1.5">
-                    <BookOpen size={14} /> きょうの進め方
-                </h2>
-                <p className="text-[10px] text-[#8a7d77] mt-0.5">次に何をやるかはここを見る</p>
+            <div className="p-4 overflow-y-auto flex-1">
+                <div className="flex items-baseline justify-between mb-1">
+                    <h2 className="text-[20px] font-bold text-[#3b2e2a]">きょうの進め方</h2>
+                    {lessonId && (
+                        <span className="text-[12px] text-[#6b5b8c] bg-[#ece8f3] px-2 py-0.5 rounded border border-[#d8cfe5]">進行中</span>
+                    )}
+                </div>
+                <p className="text-[13px] text-[#534344] mb-3">次に何をやるかはここを見る</p>
+
+                {/* 課の選択 */}
+                <div className="grid grid-cols-5 gap-2 mb-4">
+                    <div className="col-span-2 relative">
+                        <select value={level} onChange={e => setLevel(e.target.value)} className={SELECT}>
+                            {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                        </select>
+                        <ChevronDown size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#534344]" />
+                    </div>
+                    <div className="col-span-3 relative flex items-center gap-1">
+                        <div className="relative flex-1 min-w-0">
+                            <select value={lessonId} onChange={e => onLessonChange(e.target.value)} className={SELECT}>
+                                <option value="">今日の課を選ぶ…</option>
+                                {lessons.map(l => (
+                                    <option key={l.id} value={l.id}>
+                                        {l.lesson_label ?? `第${l.lesson_number}課`}：{stripFurigana(l.title).slice(0, 30)}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#534344]" />
+                        </div>
+                        {selected && (
+                            <Link
+                                href={`/materials/textbook/${selected.id}`}
+                                target="_blank"
+                                title="教科書を別画面で開く"
+                                className="p-1.5 text-[#9c4f5a] hover:bg-[#f9f0f2] rounded-lg transition-colors shrink-0"
+                            >
+                                <ExternalLink size={14} />
+                            </Link>
+                        )}
+                    </div>
+                </div>
+                <div className="w-full h-px bg-[#e2dbcf] mb-3" />
+
+                {/* 課の流れ（ステップ） */}
+                {!lessonId && (
+                    <p className="text-[13px] text-[#534344] leading-relaxed py-6 text-center">
+                        課を選ぶと、その課の流れが
+                        <br />ここにステップで並びます
+                    </p>
+                )}
+                {lessonId && sections.length === 0 && (
+                    <p className="text-[13px] text-[#534344] py-4 text-center">読み込み中…</p>
+                )}
+                <ol className="space-y-1.5">
+                    {sections.map((s, i) => openStep === i ? (
+                        <li key={i} className="rounded-lg bg-[#f9f0f2] border border-[#d8c1c2] p-2.5 shadow-sm">
+                            <button onClick={() => toggleStep(i)} className="w-full flex items-center justify-between text-left">
+                                <span className="flex items-center gap-2 text-[#9c4f5a] font-bold">
+                                    <span className="text-[14px]">{i + 1}.</span>
+                                    <span className="text-[15px]">{SECTION_LABELS[s.section_type]}</span>
+                                </span>
+                                <span className="text-[12px] bg-[#9c4f5a] text-white px-2 py-0.5 rounded font-medium">現在</span>
+                            </button>
+                            <div className="mt-2 text-[15px] leading-relaxed text-[#3b2e2a] bg-white p-2.5 rounded-md border border-[#e2dbcf] whitespace-pre-wrap max-h-56 overflow-y-auto">
+                                {preview(s.content_md, 600)}
+                            </div>
+                        </li>
+                    ) : (
+                        <li key={i}>
+                            <button
+                                onClick={() => toggleStep(i)}
+                                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[#534344] hover:bg-[#f4ede2] transition-colors text-left"
+                            >
+                                <span className="text-[13px] font-semibold w-5 text-right">{i + 1}.</span>
+                                <span className="text-[15px]">{SECTION_LABELS[s.section_type]}</span>
+                            </button>
+                        </li>
+                    ))}
+                </ol>
             </div>
 
             {/* 準備データ：攻略メモなので折りたたみ。開くと画面共有中は生徒にも見える */}
             {prepContent && (
-                <details className="bg-[#f8e8e7]/50 rounded-2xl p-3 space-y-2">
-                    <summary className="text-[10px] font-bold text-[#9c4f5a] cursor-pointer select-none">
-                        授業前のメモ（押すと開く・画面共有中は生徒にも見えます）
-                    </summary>
-                    {prepContent.review_quiz?.slice(0, 2).map((q, i) => (
-                        <div key={i} className="text-xs">
-                            <p className="font-bold text-[#3b2e2a]">Q. {q.question}</p>
-                            <p className="text-[#534344] pl-2 border-l-2 border-[#d9a7ae] mt-0.5">A. {q.answer}</p>
-                        </div>
-                    ))}
-                    {prepContent.intro_topic && (
-                        <p className="text-[11px] text-[#534344] leading-relaxed">
-                            <span className="font-bold text-[#9c4f5a]">導入：</span>
-                            {prepContent.intro_topic.slice(0, 80)}
-                        </p>
-                    )}
-                </details>
-            )}
-
-            {/* 課の選択 */}
-            <div className="flex items-center gap-2">
-                <select
-                    value={level}
-                    onChange={e => setLevel(e.target.value)}
-                    className="text-xs bg-white border border-[#dccfc4]/50 rounded-lg px-2 py-1.5 outline-none"
-                >
-                    {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
-                </select>
-                <select
-                    value={lessonId}
-                    onChange={e => onLessonChange(e.target.value)}
-                    className="flex-1 min-w-0 text-xs bg-white border border-[#dccfc4]/50 rounded-lg px-2 py-1.5 outline-none"
-                >
-                    <option value="">今日の課を選ぶ…</option>
-                    {lessons.map(l => (
-                        <option key={l.id} value={l.id}>
-                            {l.lesson_label ?? `第${l.lesson_number}課`}：{stripFurigana(l.title).slice(0, 30)}
-                        </option>
-                    ))}
-                </select>
-                {selected && (
-                    <Link
-                        href={`/materials/textbook/${selected.id}`}
-                        target="_blank"
-                        title="教科書を別画面で開く"
-                        className="p-1.5 text-[#9c4f5a] hover:bg-[#f8e8e7] rounded-lg transition-colors shrink-0"
-                    >
-                        <ExternalLink size={14} />
-                    </Link>
-                )}
-            </div>
-
-            {/* 課の流れ（ステップ） */}
-            {!lessonId && (
-                <p className="text-xs text-[#8a7d77] leading-relaxed py-6 text-center">
-                    課を選ぶと、その課の流れが
-                    <br />ここにステップで並びます
-                </p>
-            )}
-            {lessonId && sections.length === 0 && (
-                <p className="text-xs text-[#8a7d77] py-4 text-center">読み込み中…</p>
-            )}
-            <ol className="space-y-1.5">
-                {sections.map((s, i) => (
-                    <li key={i}>
-                        <button
-                            onClick={() => {
-                                const next = openStep === i ? null : i;
-                                setOpenStep(next);
-                                // 開いたステップは教科書ページとして授業の流れにも入る
-                                if (next !== null) {
-                                    const sec = sections[i];
-                                    const lesson = lessons.find(l => l.id === lessonId);
-                                    const lessonPath = lesson
-                                        ? `${lesson.jlpt_level}/${lesson.lesson_number}${lesson.lesson_sub ? `-${lesson.lesson_sub}` : ''}`
-                                        : '';
-                                    const base = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${MASTER_MATERIAL_BUCKET}/${lessonPath}`;
-                                    onStepOpen({
-                                        lessonLabel: lesson ? `${lesson.lesson_label ?? `第${lesson.lesson_number}課`}` : '',
-                                        stepTitle: SECTION_LABELS[sec.section_type],
-                                        body: sec.content_md,
-                                        imageUrls: (sec.images ?? []).slice(0, 4).map(f => `${base}/${f}`),
-                                    });
-                                }
-                            }}
-                            className={`w-full text-left rounded-xl px-3 py-2 transition-colors ${openStep === i
-                                ? 'bg-[#f8e8e7] text-[#9c4f5a]'
-                                : 'hover:bg-[#f7f3ec] text-[#3b2e2a]'
-                                }`}
-                        >
-                            <span className="flex items-center justify-between gap-2">
-                                <span className="text-xs font-bold">
-                                    {i + 1}. {SECTION_LABELS[s.section_type]}
-                                </span>
-                                <ChevronDown
-                                    size={13}
-                                    className={`shrink-0 text-[#8a7d77] transition-transform ${openStep === i ? 'rotate-180' : ''}`}
-                                />
+                <div className="p-3 bg-[#f4ede2] border-t border-[#e2dbcf]">
+                    <details className="group">
+                        <summary className="list-none flex items-center justify-between text-[13px] text-[#534344] font-medium cursor-pointer select-none">
+                            <span className="flex items-center gap-1.5">
+                                <StickyNote size={14} /> 授業前のメモ（画面共有中は生徒にも見えます）
                             </span>
-                            {openStep !== i && (
-                                <span className="block text-[10px] text-[#8a7d77] mt-0.5 leading-relaxed">
-                                    {preview(s.content_md, 42)}
-                                </span>
+                            <ChevronDown size={14} className="transition-transform group-open:rotate-180" />
+                        </summary>
+                        <div className="mt-2 p-2.5 bg-white rounded border border-[#e2dbcf] text-[13px] leading-relaxed text-[#3b2e2a] space-y-2">
+                            {prepContent.review_quiz?.slice(0, 2).map((q, i) => (
+                                <div key={i}>
+                                    <p className="font-bold">Q. {q.question}</p>
+                                    <p className="text-[#534344] pl-2 border-l-2 border-[#d8c1c2] mt-0.5">A. {q.answer}</p>
+                                </div>
+                            ))}
+                            {prepContent.intro_topic && (
+                                <p><span className="font-bold text-[#9c4f5a]">導入：</span>{prepContent.intro_topic.slice(0, 80)}</p>
                             )}
-                        </button>
-                        {openStep === i && (
-                            <div className="mx-1 mt-1 mb-2 px-3 py-2 bg-white border border-[#d9a7ae]/30 rounded-xl text-xs text-[#3b2e2a] leading-relaxed whitespace-pre-wrap max-h-56 overflow-y-auto">
-                                {preview(s.content_md, 600)}
-                            </div>
-                        )}
-                    </li>
-                ))}
-            </ol>
-        </div>
+                        </div>
+                    </details>
+                </div>
+            )}
+        </section>
     );
 }
