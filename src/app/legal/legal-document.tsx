@@ -39,14 +39,14 @@ export function LegalDocument({ markdown }: { markdown: string }) {
                 <table className="min-w-full text-sm border-collapse">
                     <tbody>
                         {rows.map((row, ri) => (
-                            <tr key={ri} className={ri === 0 ? 'bg-[#f1ebe1]' : ''}>
+                            <tr key={ri} className={ri === 0 ? 'bg-[#f0ebf8]' : ''}>
                                 {row.map((cell, ci) => (
                                     <td
                                         key={ci}
-                                        className={`border border-[#dccfc4]/40 px-3 py-2 align-top ${
+                                        className={`border border-[#d6cfe2]/40 px-3 py-2 align-top ${
                                             ri === 0 || ci === 0
-                                                ? 'font-bold text-[#3b2e2a]'
-                                                : 'text-[#534344]'
+                                                ? 'font-bold text-[#3a3350]'
+                                                : 'text-[#484550]'
                                         }`}
                                     >
                                         {cell}
@@ -73,12 +73,12 @@ export function LegalDocument({ markdown }: { markdown: string }) {
         flushTable(`t${i}`);
 
         if (line === '---') {
-            blocks.push(<hr key={`hr${i}`} className="my-6 border-[#f1ebe1]" />);
+            blocks.push(<hr key={`hr${i}`} className="my-6 border-[#f0ebf8]" />);
             return;
         }
         if (line.startsWith('### ')) {
             blocks.push(
-                <h3 key={i} className="text-sm font-bold text-[#3b2e2a] mt-5 mb-1.5">
+                <h3 key={i} className="text-sm font-bold text-[#3a3350] mt-5 mb-1.5">
                     {line.slice(4)}
                 </h3>
             );
@@ -86,7 +86,7 @@ export function LegalDocument({ markdown }: { markdown: string }) {
         }
         if (line.startsWith('## ')) {
             blocks.push(
-                <h2 key={i} className="text-base font-bold text-[#9c4f5a] mt-7 mb-2">
+                <h2 key={i} className="text-base font-bold text-[#6b5ca5] mt-7 mb-2">
                     {line.slice(3)}
                 </h2>
             );
@@ -94,7 +94,7 @@ export function LegalDocument({ markdown }: { markdown: string }) {
         }
         if (line.startsWith('# ')) {
             blocks.push(
-                <h1 key={i} className="text-xl font-bold text-[#3b2e2a] mt-8 mb-3 first:mt-0">
+                <h1 key={i} className="text-xl font-bold text-[#3a3350] mt-8 mb-3 first:mt-0">
                     {line.slice(2)}
                 </h1>
             );
@@ -102,7 +102,7 @@ export function LegalDocument({ markdown }: { markdown: string }) {
         }
         if (/^[-*]\s/.test(line)) {
             blocks.push(
-                <p key={i} className="text-sm text-[#534344] leading-relaxed pl-4 -indent-3">
+                <p key={i} className="text-sm text-[#484550] leading-relaxed pl-4 -indent-3">
                     ・{line.slice(2)}
                 </p>
             );
@@ -111,7 +111,7 @@ export function LegalDocument({ markdown }: { markdown: string }) {
         // 「1. 〜」の番号付き箇条書き
         if (/^\d+\.\s/.test(line)) {
             blocks.push(
-                <p key={i} className="text-sm text-[#534344] leading-relaxed pl-5 -indent-5">
+                <p key={i} className="text-sm text-[#484550] leading-relaxed pl-5 -indent-5">
                     {line}
                 </p>
             );
@@ -119,7 +119,7 @@ export function LegalDocument({ markdown }: { markdown: string }) {
         }
 
         blocks.push(
-            <p key={i} className="text-sm text-[#3b2e2a] leading-relaxed my-2">
+            <p key={i} className="text-sm text-[#3a3350] leading-relaxed my-2">
                 {line.replace(/\*\*/g, '')}
             </p>
         );

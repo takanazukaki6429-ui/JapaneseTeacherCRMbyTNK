@@ -140,7 +140,7 @@ export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonC
         });
     };
 
-    const SELECT = 'w-full appearance-none bg-white border border-[#e2dbcf] text-[#3b2e2a] text-[15px] font-medium rounded-lg pl-3 pr-7 py-1.5 focus:border-[#9c4f5a] focus:outline-none';
+    const SELECT = 'w-full appearance-none bg-white border border-[#e4ddf0] text-[#3a3350] text-[15px] font-medium rounded-lg pl-3 pr-7 py-1.5 focus:border-[#6b5ca5] focus:outline-none';
 
     // 見た目は画面案 ライブ授業_色D書体E.html の左の列（2026-09-11）。
     // 台本が長くてもこの枠の中だけがスクロールする（画面全体を縦に伸ばさない）
@@ -150,7 +150,7 @@ export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonC
             <button
                 onClick={() => setPeek(true)}
                 title="台本をひらく"
-                className="hidden md:flex flex-col items-center gap-2 w-10 shrink-0 h-full bg-[#fcfbf9] border-r border-[#e2dbcf] pt-4 text-[#9c4f5a] hover:bg-[#f4ede2] transition-colors"
+                className="hidden md:flex flex-col items-center gap-2 w-10 shrink-0 h-full bg-[#fbfaff] border-r border-[#e4ddf0] pt-4 text-[#6b5ca5] hover:bg-[#efe9f8] transition-colors"
             >
                 <BookOpen size={16} />
                 <span className="text-[13px] font-bold" style={{ writingMode: 'vertical-rl' }}>きょうの進め方</span>
@@ -159,17 +159,17 @@ export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonC
     }
     return (
         <section
-            className="hidden md:flex w-[310px] shrink-0 h-full bg-[#fcfbf9] border-r border-[#e2dbcf] flex-col justify-between"
+            className="hidden md:flex w-[310px] shrink-0 h-full bg-[#fbfaff] border-r border-[#e4ddf0] flex-col justify-between"
             onMouseLeave={() => { if (collapsed) setPeek(false); }}
         >
             <div className="p-4 overflow-y-auto flex-1">
                 <div className="flex items-baseline justify-between mb-1">
-                    <h2 className="text-[20px] font-bold text-[#3b2e2a]">きょうの進め方</h2>
+                    <h2 className="text-[20px] font-bold text-[#3a3350]">きょうの進め方</h2>
                     {lessonId && (
-                        <span className="text-[12px] text-[#6b5b8c] bg-[#ece8f3] px-2 py-0.5 rounded border border-[#d8cfe5]">進行中</span>
+                        <span className="text-[12px] text-[#2a6f5a] bg-[#dff1ea] px-2 py-0.5 rounded border border-[#bfe3d4]">進行中</span>
                     )}
                 </div>
-                <p className="text-[13px] text-[#534344] mb-3">次に何をやるかはここを見る</p>
+                <p className="text-[13px] text-[#484550] mb-3">次に何をやるかはここを見る</p>
 
                 {/* 課の選択 */}
                 <div className="grid grid-cols-5 gap-2 mb-4">
@@ -177,7 +177,7 @@ export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonC
                         <select value={level} onChange={e => setLevel(e.target.value)} className={SELECT}>
                             {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
                         </select>
-                        <ChevronDown size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#534344]" />
+                        <ChevronDown size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#484550]" />
                     </div>
                     <div className="col-span-3 relative flex items-center gap-1">
                         <div className="relative flex-1 min-w-0">
@@ -189,43 +189,43 @@ export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonC
                                     </option>
                                 ))}
                             </select>
-                            <ChevronDown size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#534344]" />
+                            <ChevronDown size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#484550]" />
                         </div>
                         {selected && (
                             <Link
                                 href={`/materials/textbook/${selected.id}`}
                                 target="_blank"
                                 title="教科書を別画面で開く"
-                                className="p-1.5 text-[#9c4f5a] hover:bg-[#f9f0f2] rounded-lg transition-colors shrink-0"
+                                className="p-1.5 text-[#6b5ca5] hover:bg-[#ede8fa] rounded-lg transition-colors shrink-0"
                             >
                                 <ExternalLink size={14} />
                             </Link>
                         )}
                     </div>
                 </div>
-                <div className="w-full h-px bg-[#e2dbcf] mb-3" />
+                <div className="w-full h-px bg-[#e4ddf0] mb-3" />
 
                 {/* 課の流れ（ステップ） */}
                 {!lessonId && (
-                    <p className="text-[13px] text-[#534344] leading-relaxed py-6 text-center">
+                    <p className="text-[13px] text-[#484550] leading-relaxed py-6 text-center">
                         課を選ぶと、その課の流れが
                         <br />ここにステップで並びます
                     </p>
                 )}
                 {lessonId && sections.length === 0 && (
-                    <p className="text-[13px] text-[#534344] py-4 text-center">読み込み中…</p>
+                    <p className="text-[13px] text-[#484550] py-4 text-center">読み込み中…</p>
                 )}
                 <ol className="space-y-1.5">
                     {sections.map((s, i) => openStep === i ? (
-                        <li key={i} className="rounded-lg bg-[#f9f0f2] border border-[#d8c1c2] p-2.5 shadow-sm">
+                        <li key={i} className="rounded-lg bg-[#ede8fa] border border-[#cfc6ea] p-2.5 shadow-sm">
                             <button onClick={() => toggleStep(i)} className="w-full flex items-center justify-between text-left">
-                                <span className="flex items-center gap-2 text-[#9c4f5a] font-bold">
+                                <span className="flex items-center gap-2 text-[#6b5ca5] font-bold">
                                     <span className="text-[14px]">{i + 1}.</span>
                                     <span className="text-[15px]">{SECTION_LABELS[s.section_type]}</span>
                                 </span>
-                                <span className="text-[12px] bg-[#9c4f5a] text-white px-2 py-0.5 rounded font-medium">現在</span>
+                                <span className="text-[12px] bg-[#6b5ca5] text-white px-2 py-0.5 rounded font-medium">現在</span>
                             </button>
-                            <div className="mt-2 text-[15px] leading-relaxed text-[#3b2e2a] bg-white p-2.5 rounded-md border border-[#e2dbcf] whitespace-pre-wrap max-h-56 overflow-y-auto">
+                            <div className="mt-2 text-[15px] leading-relaxed text-[#3a3350] bg-white p-2.5 rounded-md border border-[#e4ddf0] whitespace-pre-wrap max-h-56 overflow-y-auto">
                                 {preview(s.content_md, 600)}
                             </div>
                         </li>
@@ -233,7 +233,7 @@ export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonC
                         <li key={i}>
                             <button
                                 onClick={() => toggleStep(i)}
-                                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[#534344] hover:bg-[#f4ede2] transition-colors text-left"
+                                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[#484550] hover:bg-[#efe9f8] transition-colors text-left"
                             >
                                 <span className="text-[13px] font-semibold w-5 text-right">{i + 1}.</span>
                                 <span className="text-[15px]">{SECTION_LABELS[s.section_type]}</span>
@@ -245,23 +245,23 @@ export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonC
 
             {/* 準備データ：攻略メモなので折りたたみ。開くと画面共有中は生徒にも見える */}
             {prepContent && (
-                <div className="p-3 bg-[#f4ede2] border-t border-[#e2dbcf]">
+                <div className="p-3 bg-[#efe9f8] border-t border-[#e4ddf0]">
                     <details className="group">
-                        <summary className="list-none flex items-center justify-between text-[13px] text-[#534344] font-medium cursor-pointer select-none">
+                        <summary className="list-none flex items-center justify-between text-[13px] text-[#484550] font-medium cursor-pointer select-none">
                             <span className="flex items-center gap-1.5">
                                 <StickyNote size={14} /> 授業前のメモ（画面共有中は生徒にも見えます）
                             </span>
                             <ChevronDown size={14} className="transition-transform group-open:rotate-180" />
                         </summary>
-                        <div className="mt-2 p-2.5 bg-white rounded border border-[#e2dbcf] text-[13px] leading-relaxed text-[#3b2e2a] space-y-2">
+                        <div className="mt-2 p-2.5 bg-white rounded border border-[#e4ddf0] text-[13px] leading-relaxed text-[#3a3350] space-y-2">
                             {prepContent.review_quiz?.slice(0, 2).map((q, i) => (
                                 <div key={i}>
                                     <p className="font-bold">Q. {q.question}</p>
-                                    <p className="text-[#534344] pl-2 border-l-2 border-[#d8c1c2] mt-0.5">A. {q.answer}</p>
+                                    <p className="text-[#484550] pl-2 border-l-2 border-[#cfc6ea] mt-0.5">A. {q.answer}</p>
                                 </div>
                             ))}
                             {prepContent.intro_topic && (
-                                <p><span className="font-bold text-[#9c4f5a]">導入：</span>{prepContent.intro_topic.slice(0, 80)}</p>
+                                <p><span className="font-bold text-[#6b5ca5]">導入：</span>{prepContent.intro_topic.slice(0, 80)}</p>
                             )}
                         </div>
                     </details>

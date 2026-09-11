@@ -63,26 +63,26 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#f7f3ec] p-4">
+        <div className="min-h-screen flex items-center justify-center bg-[#f6f3fb] p-4">
             {/* Ambient glow */}
-            <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full bg-[#d9a7ae]/20 blur-[120px] pointer-events-none" />
+            <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full bg-[#ccbeff]/20 blur-[120px] pointer-events-none" />
 
             <div className="w-full max-w-md relative">
                 {/* Card */}
-                <div className="bg-white/70 backdrop-blur-[24px] rounded-3xl shadow-[0_8px_48px_rgba(156,79,90,0.12)] border border-white/60 p-8">
+                <div className="bg-white/70 backdrop-blur-[24px] rounded-3xl shadow-[0_8px_48px_rgba(107,92,165,0.12)] border border-white/60 p-8">
                     {/* Tab switcher */}
-                    <div className="flex gap-1 bg-[#f1ebe1] p-1 rounded-2xl mb-7">
+                    <div className="flex gap-1 bg-[#f0ebf8] p-1 rounded-2xl mb-7">
                         <button
                             type="button"
                             onClick={() => switchMode(false)}
-                            className={`flex-1 py-2 text-sm font-bold rounded-xl transition-all ${!isSignUp ? 'bg-white text-[#9c4f5a] shadow-sm' : 'text-[#534344] hover:text-[#3b2e2a]'}`}
+                            className={`flex-1 py-2 text-sm font-bold rounded-xl transition-all ${!isSignUp ? 'bg-white text-[#6b5ca5] shadow-sm' : 'text-[#484550] hover:text-[#3a3350]'}`}
                         >
                             ログイン
                         </button>
                         <button
                             type="button"
                             onClick={() => switchMode(true)}
-                            className={`flex-1 py-2 text-sm font-bold rounded-xl transition-all ${isSignUp ? 'bg-white text-[#9c4f5a] shadow-sm' : 'text-[#534344] hover:text-[#3b2e2a]'}`}
+                            className={`flex-1 py-2 text-sm font-bold rounded-xl transition-all ${isSignUp ? 'bg-white text-[#6b5ca5] shadow-sm' : 'text-[#484550] hover:text-[#3a3350]'}`}
                         >
                             新規登録
                         </button>
@@ -110,19 +110,19 @@ export default function LoginPage() {
                         )}
 
                         <div className="space-y-1.5">
-                            <label className="block text-xs font-bold text-[#534344] uppercase tracking-wider">メールアドレス</label>
+                            <label className="block text-xs font-bold text-[#484550] uppercase tracking-wider">メールアドレス</label>
                             <input
                                 type="email"
                                 required
                                 value={email}
                                 onChange={e => setEmail(e.target.value)}
                                 placeholder="teacher@example.com"
-                                className="w-full px-4 py-3 bg-[#f1ebe1] rounded-xl text-sm text-[#3b2e2a] outline-none focus:bg-[#f8e8e7] transition-colors placeholder:text-[#534344]/50"
+                                className="w-full px-4 py-3 bg-[#f0ebf8] rounded-xl text-sm text-[#3a3350] outline-none focus:bg-[#efe9ff] transition-colors placeholder:text-[#484550]/50"
                             />
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="block text-xs font-bold text-[#534344] uppercase tracking-wider">パスワード</label>
+                            <label className="block text-xs font-bold text-[#484550] uppercase tracking-wider">パスワード</label>
                             <input
                                 type="password"
                                 required
@@ -130,14 +130,14 @@ export default function LoginPage() {
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
                                 placeholder="••••••••"
-                                className="w-full px-4 py-3 bg-[#f1ebe1] rounded-xl text-sm text-[#3b2e2a] outline-none focus:bg-[#f8e8e7] transition-colors placeholder:text-[#534344]/50"
+                                className="w-full px-4 py-3 bg-[#f0ebf8] rounded-xl text-sm text-[#3a3350] outline-none focus:bg-[#efe9ff] transition-colors placeholder:text-[#484550]/50"
                             />
                             {isSignUp && (
                                 <div className="space-y-1">
                                     {pwStrength && password.length > 0 && (
                                         <>
                                             <div className="flex items-center gap-2">
-                                                <div className="flex-1 h-1.5 bg-[#f1ebe1] rounded-full overflow-hidden">
+                                                <div className="flex-1 h-1.5 bg-[#f0ebf8] rounded-full overflow-hidden">
                                                     <div
                                                         className="h-full transition-all duration-200"
                                                         style={{
@@ -159,7 +159,7 @@ export default function LoginPage() {
                                         </>
                                     )}
                                     {!password && (
-                                        <p className="text-[11px] text-[#534344]">8文字以上、英大文字・小文字・数字・記号から3種類以上</p>
+                                        <p className="text-[11px] text-[#484550]">8文字以上、英大文字・小文字・数字・記号から3種類以上</p>
                                     )}
                                 </div>
                             )}
@@ -167,7 +167,7 @@ export default function LoginPage() {
                                 <div className="text-right pt-1">
                                     <a
                                         href="/reset-password"
-                                        className="text-[11px] text-[#9c4f5a] hover:underline"
+                                        className="text-[11px] text-[#6b5ca5] hover:underline"
                                     >
                                         パスワードを忘れた場合
                                     </a>
@@ -177,7 +177,7 @@ export default function LoginPage() {
 
                         {isSignUp && (
                             <div className="space-y-1.5">
-                                <label className="block text-xs font-bold text-[#9c4f5a] uppercase tracking-wider flex items-center gap-1.5">
+                                <label className="block text-xs font-bold text-[#6b5ca5] uppercase tracking-wider flex items-center gap-1.5">
                                     <KeyRound size={12} />
                                     招待コード <span className="text-[#ba1a1a]">*</span>
                                 </label>
@@ -187,9 +187,9 @@ export default function LoginPage() {
                                     value={inviteCode}
                                     onChange={e => setInviteCode(e.target.value)}
                                     placeholder="例: A8F3-K9P2"
-                                    className="w-full px-4 py-3 bg-[#f8e8e7] rounded-xl text-sm text-[#3b2e2a] font-mono tracking-wider outline-none focus:bg-[#ece8f3] transition-colors placeholder:text-[#9c4f5a]/40 border border-[#d9a7ae]/40"
+                                    className="w-full px-4 py-3 bg-[#efe9ff] rounded-xl text-sm text-[#3a3350] font-mono tracking-wider outline-none focus:bg-[#dff1ea] transition-colors placeholder:text-[#6b5ca5]/40 border border-[#ccbeff]/40"
                                 />
-                                <p className="text-[11px] text-[#9c4f5a]">コンサルタントから発行された招待コードを入力してください</p>
+                                <p className="text-[11px] text-[#6b5ca5]">コンサルタントから発行された招待コードを入力してください</p>
                             </div>
                         )}
 
@@ -199,12 +199,12 @@ export default function LoginPage() {
                                     type="checkbox"
                                     checked={agreed}
                                     onChange={e => setAgreed(e.target.checked)}
-                                    className="mt-0.5 w-4 h-4 accent-[#9c4f5a] shrink-0"
+                                    className="mt-0.5 w-4 h-4 accent-[#6b5ca5] shrink-0"
                                 />
-                                <span className="text-[11px] text-[#534344] leading-relaxed">
-                                    <a href="/legal/terms" target="_blank" className="text-[#9c4f5a] underline">利用規約</a>
+                                <span className="text-[11px] text-[#484550] leading-relaxed">
+                                    <a href="/legal/terms" target="_blank" className="text-[#6b5ca5] underline">利用規約</a>
                                     {' と '}
-                                    <a href="/legal/privacy" target="_blank" className="text-[#9c4f5a] underline">プライバシーポリシー</a>
+                                    <a href="/legal/privacy" target="_blank" className="text-[#6b5ca5] underline">プライバシーポリシー</a>
                                     {' に同意します'}
                                 </span>
                             </label>
@@ -213,7 +213,7 @@ export default function LoginPage() {
                         <button
                             type="submit"
                             disabled={loading || (isSignUp && !agreed)}
-                            className="w-full py-3 mt-2 bg-[#9c4f5a] text-white font-bold rounded-full hover:scale-[1.01] transition-transform shadow-[0_4px_20px_rgba(156,79,90,0.3)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                            className="w-full py-3 mt-2 bg-[#6b5ca5] text-white font-bold rounded-full hover:scale-[1.01] transition-transform shadow-[0_4px_20px_rgba(107,92,165,0.3)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         >
                             {loading
                                 ? <span className="flex items-center justify-center gap-2"><Loader2 className="animate-spin" size={18} />処理中...</span>

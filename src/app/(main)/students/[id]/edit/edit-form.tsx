@@ -68,20 +68,20 @@ export function EditStudentForm({ student }: EditStudentFormProps) {
             <div className="flex items-center gap-4">
                 <Link
                     href={`/students/${student.id}`}
-                    className="p-2 text-[#534344] hover:text-[#3b2e2a] hover:bg-[#f1ebe1] rounded-full transition-colors"
+                    className="p-2 text-[#484550] hover:text-[#3a3350] hover:bg-[#f0ebf8] rounded-full transition-colors"
                 >
                     <ArrowLeft size={20} />
                 </Link>
                 <div>
-                    <h1 className="text-xl font-bold tracking-tight text-[#3b2e2a]">生徒情報を編集</h1>
-                    <p className="text-sm text-[#534344]">{student.name}</p>
+                    <h1 className="text-xl font-bold tracking-tight text-[#3a3350]">生徒情報を編集</h1>
+                    <p className="text-sm text-[#484550]">{student.name}</p>
                 </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.06)] space-y-6">
+            <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] space-y-6">
                 <div className="space-y-4">
                     <div>
-                        <label htmlFor="name" className="block text-xs font-bold text-[#534344] uppercase tracking-wider mb-1.5">
+                        <label htmlFor="name" className="block text-xs font-bold text-[#484550] uppercase tracking-wider mb-1.5">
                             氏名 <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -91,14 +91,14 @@ export function EditStudentForm({ student }: EditStudentFormProps) {
                             required
                             value={formData.name}
                             onChange={handleChange}
-                            className="w-full px-3 py-2 border border-[#dccfc4] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9c4f5a] focus:border-transparent text-sm"
+                            className="w-full px-3 py-2 border border-[#d6cfe2] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6b5ca5] focus:border-transparent text-sm"
                             placeholder="田中 太郎"
                         />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label htmlFor="nationality" className="block text-xs font-bold text-[#534344] uppercase tracking-wider mb-1.5">
+                            <label htmlFor="nationality" className="block text-xs font-bold text-[#484550] uppercase tracking-wider mb-1.5">
                                 国籍
                             </label>
                             <input
@@ -107,12 +107,12 @@ export function EditStudentForm({ student }: EditStudentFormProps) {
                                 name="nationality"
                                 value={formData.nationality}
                                 onChange={handleChange}
-                                className="w-full px-3 py-2 border border-[#dccfc4] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9c4f5a] focus:border-transparent text-sm"
+                                className="w-full px-3 py-2 border border-[#d6cfe2] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6b5ca5] focus:border-transparent text-sm"
                                 placeholder="アメリカ"
                             />
                         </div>
                         <div>
-                            <label htmlFor="jlpt_level" className="block text-xs font-bold text-[#534344] uppercase tracking-wider mb-1.5">
+                            <label htmlFor="jlpt_level" className="block text-xs font-bold text-[#484550] uppercase tracking-wider mb-1.5">
                                 JLPTレベル
                             </label>
                             <select
@@ -120,7 +120,7 @@ export function EditStudentForm({ student }: EditStudentFormProps) {
                                 name="jlpt_level"
                                 value={formData.jlpt_level}
                                 onChange={handleChange}
-                                className="w-full px-3 py-2 border border-[#dccfc4] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9c4f5a] focus:border-transparent text-sm bg-white"
+                                className="w-full px-3 py-2 border border-[#d6cfe2] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6b5ca5] focus:border-transparent text-sm bg-white"
                             >
                                 <option value="">未設定</option>
                                 <option value="N1">N1</option>
@@ -134,7 +134,7 @@ export function EditStudentForm({ student }: EditStudentFormProps) {
                     </div>
 
                     <div>
-                        <label htmlFor="goal_text" className="block text-xs font-bold text-[#534344] uppercase tracking-wider mb-1.5">
+                        <label htmlFor="goal_text" className="block text-xs font-bold text-[#484550] uppercase tracking-wider mb-1.5">
                             学習目的
                         </label>
                         <input
@@ -143,14 +143,14 @@ export function EditStudentForm({ student }: EditStudentFormProps) {
                             name="goal_text"
                             value={formData.goal_text}
                             onChange={handleChange}
-                            className="w-full px-3 py-2 border border-[#dccfc4] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9c4f5a] focus:border-transparent text-sm"
+                            className="w-full px-3 py-2 border border-[#d6cfe2] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6b5ca5] focus:border-transparent text-sm"
                             placeholder="ビジネス会話、日本旅行など"
                         />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label htmlFor="textbook" className="block text-xs font-bold text-[#534344] uppercase tracking-wider mb-1.5">
+                            <label htmlFor="textbook" className="block text-xs font-bold text-[#484550] uppercase tracking-wider mb-1.5">
                                 使用教材
                             </label>
                             <input
@@ -159,12 +159,12 @@ export function EditStudentForm({ student }: EditStudentFormProps) {
                                 name="textbook"
                                 value={formData.textbook}
                                 onChange={handleChange}
-                                className="w-full px-3 py-2 border border-[#dccfc4] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9c4f5a] focus:border-transparent text-sm"
+                                className="w-full px-3 py-2 border border-[#d6cfe2] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6b5ca5] focus:border-transparent text-sm"
                                 placeholder="みんなの日本語"
                             />
                         </div>
                         <div>
-                            <label htmlFor="current_phase" className="block text-xs font-bold text-[#534344] uppercase tracking-wider mb-1.5">
+                            <label htmlFor="current_phase" className="block text-xs font-bold text-[#484550] uppercase tracking-wider mb-1.5">
                                 現在の進度
                             </label>
                             <input
@@ -173,14 +173,14 @@ export function EditStudentForm({ student }: EditStudentFormProps) {
                                 name="current_phase"
                                 value={formData.current_phase}
                                 onChange={handleChange}
-                                className="w-full px-3 py-2 border border-[#dccfc4] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9c4f5a] focus:border-transparent text-sm"
+                                className="w-full px-3 py-2 border border-[#d6cfe2] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6b5ca5] focus:border-transparent text-sm"
                                 placeholder="第5課"
                             />
                         </div>
                     </div>
 
                     <div>
-                        <label htmlFor="memo" className="block text-xs font-bold text-[#534344] uppercase tracking-wider mb-1.5">
+                        <label htmlFor="memo" className="block text-xs font-bold text-[#484550] uppercase tracking-wider mb-1.5">
                             補足メモ
                         </label>
                         <textarea
@@ -189,7 +189,7 @@ export function EditStudentForm({ student }: EditStudentFormProps) {
                             rows={4}
                             value={formData.memo}
                             onChange={handleChange}
-                            className="w-full px-3 py-2 border border-[#dccfc4] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9c4f5a] focus:border-transparent text-sm resize-none"
+                            className="w-full px-3 py-2 border border-[#d6cfe2] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6b5ca5] focus:border-transparent text-sm resize-none"
                             placeholder="性格、得意・苦手分野など"
                         />
                     </div>
@@ -198,14 +198,14 @@ export function EditStudentForm({ student }: EditStudentFormProps) {
                 <div className="flex items-center justify-between pt-2">
                     <Link
                         href={`/students/${student.id}`}
-                        className="text-sm text-[#534344] hover:text-[#3b2e2a] transition-colors"
+                        className="text-sm text-[#484550] hover:text-[#3a3350] transition-colors"
                     >
                         キャンセル
                     </Link>
                     <button
                         type="submit"
                         disabled={loading}
-                        className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#9c4f5a] text-white text-sm font-bold rounded-xl hover:opacity-90 transition-opacity shadow-[0_4px_15px_rgba(156,79,90,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#6b5ca5] text-white text-sm font-bold rounded-xl hover:opacity-90 transition-opacity shadow-[0_4px_15px_rgba(107,92,165,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {loading ? (
                             <>

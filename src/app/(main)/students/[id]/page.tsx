@@ -32,30 +32,30 @@ export default async function StudentDetailPage({ params }: Props) {
             <Link
                     prefetch
                 href="/students"
-                className="inline-flex items-center gap-1.5 text-sm text-[#534344] hover:text-[#3b2e2a] transition-colors"
+                className="inline-flex items-center gap-1.5 text-sm text-[#484550] hover:text-[#3a3350] transition-colors"
             >
                 <ArrowLeft size={16} />
                 生徒一覧に戻る
             </Link>
 
             {/* Hero card */}
-            <div className="bg-gradient-to-br from-[#f8e8e7] to-white rounded-2xl p-6 flex items-center gap-5 shadow-[0_0_60px_rgba(156,79,90,0.07)]">
-                <div className="w-16 h-16 rounded-full bg-[#9c4f5a] flex items-center justify-center text-2xl font-bold text-white flex-shrink-0">
+            <div className="bg-gradient-to-br from-[#efe9ff] to-white rounded-2xl p-6 flex items-center gap-5 shadow-[0_0_60px_rgba(107,92,165,0.07)]">
+                <div className="w-16 h-16 rounded-full bg-[#6b5ca5] flex items-center justify-center text-2xl font-bold text-white flex-shrink-0">
                     {student.name.charAt(0)}
                 </div>
                 <div className="flex-1 min-w-0">
-                    <h1 className="text-xl font-bold tracking-tight text-[#3b2e2a]">{student.name}</h1>
-                    <p className="text-sm text-[#534344] mt-0.5">
+                    <h1 className="text-xl font-bold tracking-tight text-[#3a3350]">{student.name}</h1>
+                    <p className="text-sm text-[#484550] mt-0.5">
                         {[student.nationality, student.jlpt_level].filter(Boolean).join(' · ')}
                     </p>
                     <div className="flex flex-wrap gap-2 mt-2">
                         {student.jlpt_level && (
-                            <span className="px-2.5 py-0.5 bg-[#f8e8e7] text-[#9c4f5a] text-xs font-bold rounded-full">
+                            <span className="px-2.5 py-0.5 bg-[#efe9ff] text-[#6b5ca5] text-xs font-bold rounded-full">
                                 {student.jlpt_level}
                             </span>
                         )}
                         {student.goal_text && (
-                            <span className="px-2.5 py-0.5 bg-[#f1e7da] text-[#7a5a3a] text-xs font-medium rounded-full truncate max-w-[200px]">
+                            <span className="px-2.5 py-0.5 bg-[#fbe7ed] text-[#a8475f] text-xs font-medium rounded-full truncate max-w-[200px]">
                                 {student.goal_text.slice(0, 30)}{student.goal_text.length > 30 ? '...' : ''}
                             </span>
                         )}
@@ -65,7 +65,7 @@ export default async function StudentDetailPage({ params }: Props) {
                     <Link
                     prefetch
                         href={`/students/${student.id}/edit`}
-                        className="p-2 text-[#534344] hover:text-[#9c4f5a] hover:bg-[#f8e8e7] rounded-full transition-colors"
+                        className="p-2 text-[#484550] hover:text-[#6b5ca5] hover:bg-[#efe9ff] rounded-full transition-colors"
                         title="生徒情報を編集"
                     >
                         <Pencil size={16} />
@@ -79,19 +79,19 @@ export default async function StudentDetailPage({ params }: Props) {
                 <Link
                     prefetch
                     href={`/students/${student.id}/lessons/prepare`}
-                    className="group flex flex-col items-center gap-2.5 p-4 bg-white rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.06)] hover:shadow-[0_8px_40px_rgba(156,79,90,0.12)] hover:-translate-y-1 transition-all text-center"
+                    className="group flex flex-col items-center gap-2.5 p-4 bg-white rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] hover:shadow-[0_8px_40px_rgba(107,92,165,0.12)] hover:-translate-y-1 transition-all text-center"
                 >
-                    <div className="w-11 h-11 rounded-xl bg-[#f8e8e7] flex items-center justify-center text-xl">
+                    <div className="w-11 h-11 rounded-xl bg-[#efe9ff] flex items-center justify-center text-xl">
                         📋
                     </div>
-                    <span className="text-xs font-bold text-[#3b2e2a]">準備する</span>
-                    <span className="text-[10px] text-[#534344] -mt-1">次回の計画</span>
+                    <span className="text-xs font-bold text-[#3a3350]">準備する</span>
+                    <span className="text-[10px] text-[#484550] -mt-1">次回の計画</span>
                 </Link>
 
                 <Link
                     prefetch
                     href={`/students/${student.id}/lessons/live`}
-                    className="group flex flex-col items-center gap-2.5 p-4 bg-[#9c4f5a] rounded-2xl shadow-[0_4px_20px_rgba(156,79,90,0.25)] hover:-translate-y-1 transition-all text-center"
+                    className="group flex flex-col items-center gap-2.5 p-4 bg-[#6b5ca5] rounded-2xl shadow-[0_4px_20px_rgba(107,92,165,0.25)] hover:-translate-y-1 transition-all text-center"
                 >
                     <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-xl">
                         ▶
@@ -103,25 +103,25 @@ export default async function StudentDetailPage({ params }: Props) {
                 <Link
                     prefetch
                     href={`/students/${student.id}/lessons/new`}
-                    className="group flex flex-col items-center gap-2.5 p-4 bg-white rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.06)] hover:shadow-[0_8px_40px_rgba(156,79,90,0.12)] hover:-translate-y-1 transition-all text-center"
+                    className="group flex flex-col items-center gap-2.5 p-4 bg-white rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] hover:shadow-[0_8px_40px_rgba(107,92,165,0.12)] hover:-translate-y-1 transition-all text-center"
                 >
-                    <div className="w-11 h-11 rounded-xl bg-[#f1e7da] flex items-center justify-center text-xl">
+                    <div className="w-11 h-11 rounded-xl bg-[#fbe7ed] flex items-center justify-center text-xl">
                         📝
                     </div>
-                    <span className="text-xs font-bold text-[#3b2e2a]">レッスン記録</span>
-                    <span className="text-[10px] text-[#534344] -mt-1">授業後に記録</span>
+                    <span className="text-xs font-bold text-[#3a3350]">レッスン記録</span>
+                    <span className="text-[10px] text-[#484550] -mt-1">授業後に記録</span>
                 </Link>
 
                 <Link
                     prefetch
                     href={`/students/${student.id}/roadmap`}
-                    className="group flex flex-col items-center gap-2.5 p-4 bg-white rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.06)] hover:shadow-[0_8px_40px_rgba(156,79,90,0.12)] hover:-translate-y-1 transition-all text-center"
+                    className="group flex flex-col items-center gap-2.5 p-4 bg-white rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] hover:shadow-[0_8px_40px_rgba(107,92,165,0.12)] hover:-translate-y-1 transition-all text-center"
                 >
                     <div className="w-11 h-11 rounded-xl bg-[#d7f8e4] flex items-center justify-center">
                         <Map size={20} className="text-[#1a7a44]" />
                     </div>
-                    <span className="text-xs font-bold text-[#3b2e2a]">ロードマップ</span>
-                    <span className="text-[10px] text-[#534344] -mt-1">学習計画</span>
+                    <span className="text-xs font-bold text-[#3a3350]">ロードマップ</span>
+                    <span className="text-[10px] text-[#484550] -mt-1">学習計画</span>
                 </Link>
             </div>
 
@@ -130,23 +130,23 @@ export default async function StudentDetailPage({ params }: Props) {
                 {/* Left: profile + AI */}
                 <div className="md:col-span-2 space-y-5">
                     {/* Basic info */}
-                    <div className="bg-white p-6 rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.06)]">
-                        <h2 className="text-sm font-bold text-[#3b2e2a] mb-4 flex items-center gap-2">
-                            <Target size={16} className="text-[#9c4f5a]" />
+                    <div className="bg-white p-6 rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)]">
+                        <h2 className="text-sm font-bold text-[#3a3350] mb-4 flex items-center gap-2">
+                            <Target size={16} className="text-[#6b5ca5]" />
                             学習情報
                         </h2>
                         <div className="grid grid-cols-2 gap-y-4 gap-x-6">
                             <div>
-                                <span className="text-[10px] font-bold text-[#534344] uppercase tracking-wider block mb-1">使用教材</span>
-                                <p className="text-sm font-medium text-[#3b2e2a]">{student.textbook || '未設定'}</p>
+                                <span className="text-[10px] font-bold text-[#484550] uppercase tracking-wider block mb-1">使用教材</span>
+                                <p className="text-sm font-medium text-[#3a3350]">{student.textbook || '未設定'}</p>
                             </div>
                             <div>
-                                <span className="text-[10px] font-bold text-[#534344] uppercase tracking-wider block mb-1">現在の進度</span>
-                                <p className="text-sm font-medium text-[#3b2e2a]">{student.current_phase || '未設定'}</p>
+                                <span className="text-[10px] font-bold text-[#484550] uppercase tracking-wider block mb-1">現在の進度</span>
+                                <p className="text-sm font-medium text-[#3a3350]">{student.current_phase || '未設定'}</p>
                             </div>
                             <div className="col-span-2">
-                                <span className="text-[10px] font-bold text-[#534344] uppercase tracking-wider block mb-1">学習目的</span>
-                                <p className="text-sm text-[#3b2e2a]">{student.goal_text || '-'}</p>
+                                <span className="text-[10px] font-bold text-[#484550] uppercase tracking-wider block mb-1">学習目的</span>
+                                <p className="text-sm text-[#3a3350]">{student.goal_text || '-'}</p>
                             </div>
                         </div>
                     </div>
@@ -162,21 +162,21 @@ export default async function StudentDetailPage({ params }: Props) {
 
                     {/* Memo */}
                     {student.memo && (
-                        <div className="bg-white p-6 rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.06)]">
-                            <h2 className="text-sm font-bold text-[#3b2e2a] mb-3 flex items-center gap-2">
-                                <StickyNote size={16} className="text-[#9c4f5a]" />
+                        <div className="bg-white p-6 rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)]">
+                            <h2 className="text-sm font-bold text-[#3a3350] mb-3 flex items-center gap-2">
+                                <StickyNote size={16} className="text-[#6b5ca5]" />
                                 補足メモ
                             </h2>
-                            <p className="text-sm text-[#3b2e2a] whitespace-pre-wrap leading-relaxed">{student.memo}</p>
+                            <p className="text-sm text-[#3a3350] whitespace-pre-wrap leading-relaxed">{student.memo}</p>
                         </div>
                     )}
                 </div>
 
                 {/* Right: scheduler + AI initial hearing + lesson list */}
                 <div className="space-y-5">
-                    <div className="bg-white p-5 rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.06)]">
-                        <h2 className="text-sm font-bold text-[#3b2e2a] mb-3 flex items-center gap-2">
-                            <Sparkles size={16} className="text-[#9c4f5a]" />
+                    <div className="bg-white p-5 rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)]">
+                        <h2 className="text-sm font-bold text-[#3a3350] mb-3 flex items-center gap-2">
+                            <Sparkles size={16} className="text-[#6b5ca5]" />
                             AIサポート
                         </h2>
                         <div className="space-y-2">
@@ -199,7 +199,7 @@ export default async function StudentDetailPage({ params }: Props) {
                                 <Link
                     prefetch
                                     href={`/students/${student.id}/initial-hearing`}
-                                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-[#9c4f5a] text-white text-sm font-bold rounded-xl hover:scale-[1.01] transition-transform"
+                                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-[#6b5ca5] text-white text-sm font-bold rounded-xl hover:scale-[1.01] transition-transform"
                                 >
                                     <MessageCircleQuestion size={15} />
                                     体験レッスン → ロードマップ
@@ -208,7 +208,7 @@ export default async function StudentDetailPage({ params }: Props) {
                             <Link
                     prefetch
                                 href={`/students/${student.id}/lessons/prepare`}
-                                className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-[#f8e8e7] text-[#9c4f5a] text-sm font-bold rounded-xl hover:bg-[#f3dcdb] transition-colors"
+                                className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-[#efe9ff] text-[#6b5ca5] text-sm font-bold rounded-xl hover:bg-[#e7deff] transition-colors"
                             >
                                 <Sparkles size={15} />
                                 レッスン準備 (AI)
@@ -219,7 +219,7 @@ export default async function StudentDetailPage({ params }: Props) {
                     <LessonScheduler studentId={student.id} studentName={student.name} />
 
                     <Suspense fallback={
-                        <div className="bg-white p-6 rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.06)] h-48 flex items-center justify-center text-[#534344] text-sm">
+                        <div className="bg-white p-6 rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] h-48 flex items-center justify-center text-[#484550] text-sm">
                             読み込み中...
                         </div>
                     }>

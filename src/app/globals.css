@@ -1,32 +1,32 @@
 @import "tailwindcss";
 
 :root {
-  /* 色＝D 上質な手帳（くすみローズ・生成り）／書体＝E 丸ゴシック（2026-09-11 かずき決定） */
-  --background: #f7f3ec;
-  --foreground: #3b2e2a;
+  /* 色＝E やわらかパステル（くすみラベンダー＋ミント＋ピンク）／書体＝E 丸ゴシック（2026-09-12 かずき指示：色だけEにした版） */
+  --background: #f6f3fb;
+  --foreground: #3a3350;
 
-  /* Primary — くすみローズ */
-  --primary: #9c4f5a;
-  --primary-container: #d9a7ae;
-  --primary-fixed: #f8e8e7;
+  /* Primary — くすみラベンダー */
+  --primary: #6b5ca5;
+  --primary-container: #ccbeff;
+  --primary-fixed: #efe9ff;
 
   /* Secondary */
-  --secondary: #6b5b8c;
-  --secondary-container: #ece8f3;
-  --on-secondary-container: #2e2540;
+  --secondary: #2a6f5a;
+  --secondary-container: #dff1ea;
+  --on-secondary-container: #1b4d3f;
 
-  /* Tertiary — ベージュ */
-  --tertiary: #7a5a3a;
-  --tertiary-container: #f1e7da;
-  --on-tertiary-container: #3b2e2a;
+  /* Tertiary — やさしいピンク */
+  --tertiary: #a8475f;
+  --tertiary-container: #fbe7ed;
+  --on-tertiary-container: #3f0016;
 
   /* Surface */
-  --surface: #f7f3ec;
-  --surface-low: #f1ebe1;
+  --surface: #f6f3fb;
+  --surface-low: #f0ebf8;
   --surface-lowest: #ffffff;
-  --on-surface: #3b2e2a;
-  --on-surface-variant: #534344;
-  --outline-variant: #dccfc4;
+  --on-surface: #3a3350;
+  --on-surface-variant: #484550;
+  --outline-variant: #d6cfe2;
 
   /* Error */
   --error: #ba1a1a;

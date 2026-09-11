@@ -303,7 +303,7 @@ ${typeInstructions[selectedType]}
     if (loading) {
         return (
             <div className="flex h-screen items-center justify-center">
-                <Loader2 className="animate-spin text-[#9c4f5a]" size={32} />
+                <Loader2 className="animate-spin text-[#6b5ca5]" size={32} />
             </div>
         );
     }
@@ -316,48 +316,48 @@ ${typeInstructions[selectedType]}
             <div className="flex items-center gap-3">
                 <Link
                     href={`/students/${studentId}`}
-                    className="inline-flex items-center gap-1.5 text-sm text-[#534344] hover:text-[#3b2e2a] transition-colors"
+                    className="inline-flex items-center gap-1.5 text-sm text-[#484550] hover:text-[#3a3350] transition-colors"
                 >
                     <ArrowLeft size={16} />
                     {student?.name ?? '生徒詳細'}
                 </Link>
             </div>
             <div>
-                <h1 className="text-2xl font-bold tracking-tight text-[#3b2e2a]">レッスン準備</h1>
-                <p className="text-sm text-[#534344] mt-0.5">AIが最適な授業プランと専用教材を提案します</p>
+                <h1 className="text-2xl font-bold tracking-tight text-[#3a3350]">レッスン準備</h1>
+                <p className="text-sm text-[#484550] mt-0.5">AIが最適な授業プランと専用教材を提案します</p>
             </div>
 
             {/* ── 前回の記録 ── */}
-            <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.06)] p-5">
-                <h2 className="text-xs font-bold text-[#534344] uppercase tracking-wider mb-4">
+            <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] p-5">
+                <h2 className="text-xs font-bold text-[#484550] uppercase tracking-wider mb-4">
                     前回の記録（{lastLesson ? new Date(lastLesson.date).toLocaleDateString('ja-JP') : '記録なし'}）
                 </h2>
 
                 {lastLesson ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="bg-[#f1ebe1] p-4 rounded-xl">
-                            <h3 className="text-xs font-bold text-[#3b2e2a] flex items-center gap-1.5 mb-2">
+                        <div className="bg-[#f0ebf8] p-4 rounded-xl">
+                            <h3 className="text-xs font-bold text-[#3a3350] flex items-center gap-1.5 mb-2">
                                 <Brain size={14} className="text-[#ba1a1a]" /> つまずき・弱点
                             </h3>
-                            <p className="text-sm text-[#534344]">{lastLesson.mistakes || '特になし'}</p>
+                            <p className="text-sm text-[#484550]">{lastLesson.mistakes || '特になし'}</p>
                         </div>
-                        <div className="bg-[#f1ebe1] p-4 rounded-xl">
-                            <h3 className="text-xs font-bold text-[#3b2e2a] flex items-center gap-1.5 mb-2">
-                                <BookOpen size={14} className="text-[#9c4f5a]" /> 宿題・課題
+                        <div className="bg-[#f0ebf8] p-4 rounded-xl">
+                            <h3 className="text-xs font-bold text-[#3a3350] flex items-center gap-1.5 mb-2">
+                                <BookOpen size={14} className="text-[#6b5ca5]" /> 宿題・課題
                             </h3>
-                            <p className="text-sm text-[#534344]">{lastLesson.homework || '特になし'}</p>
+                            <p className="text-sm text-[#484550]">{lastLesson.homework || '特になし'}</p>
                         </div>
                         <div className="sm:col-span-2 px-1">
-                            <p className="text-xs text-[#534344]/70">次回の目標：{lastLesson.next_goal || '未設定'}</p>
+                            <p className="text-xs text-[#484550]/70">次回の目標：{lastLesson.next_goal || '未設定'}</p>
                         </div>
                     </div>
                 ) : (
                     <div className="text-center py-8">
-                        <p className="text-sm text-[#534344] mb-1">前回のレッスン記録が見つかりません。</p>
-                        <p className="text-xs text-[#534344]/60 mb-6">初回レッスンの場合は、直接ライブ授業を開始できます。</p>
+                        <p className="text-sm text-[#484550] mb-1">前回のレッスン記録が見つかりません。</p>
+                        <p className="text-xs text-[#484550]/60 mb-6">初回レッスンの場合は、直接ライブ授業を開始できます。</p>
                         <button
                             onClick={startLiveMode}
-                            className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#9c4f5a] text-white font-bold text-sm rounded-full hover:scale-[1.02] transition-transform shadow-[0_4px_20px_rgba(156,79,90,0.25)]"
+                            className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#6b5ca5] text-white font-bold text-sm rounded-full hover:scale-[1.02] transition-transform shadow-[0_4px_20px_rgba(107,92,165,0.25)]"
                         >
                             ライブ授業を開始する
                             <ArrowRight size={16} />
@@ -368,27 +368,27 @@ ${typeInstructions[selectedType]}
 
             {/* ── 準備プラン生成（既存機能） ── */}
             {lastLesson && (
-                <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.06)] overflow-hidden">
+                <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] overflow-hidden">
                     <button
                         onClick={() => setPrepExpanded(v => !v)}
                         className="w-full px-5 py-4 flex items-center justify-between text-left"
                     >
                         <div className="flex items-center gap-2">
-                            <Sparkles size={16} className="text-[#9c4f5a]" />
-                            <span className="font-bold text-sm text-[#3b2e2a]">準備プランを作成</span>
-                            <span className="text-xs text-[#534344]/60">復習クイズ・導入トーク</span>
+                            <Sparkles size={16} className="text-[#6b5ca5]" />
+                            <span className="font-bold text-sm text-[#3a3350]">準備プランを作成</span>
+                            <span className="text-xs text-[#484550]/60">復習クイズ・導入トーク</span>
                         </div>
-                        {prepExpanded ? <ChevronUp size={16} className="text-[#534344]" /> : <ChevronDown size={16} className="text-[#534344]" />}
+                        {prepExpanded ? <ChevronUp size={16} className="text-[#484550]" /> : <ChevronDown size={16} className="text-[#484550]" />}
                     </button>
 
                     {prepExpanded && (
-                        <div className="px-5 pb-5 border-t border-[#f1ebe1]">
+                        <div className="px-5 pb-5 border-t border-[#f0ebf8]">
                             {!prepContent ? (
                                 <div className="flex justify-center pt-5">
                                     <button
                                         onClick={handleGeneratePlan}
                                         disabled={generating}
-                                        className="flex items-center gap-2 px-6 py-2.5 bg-[#f8e8e7] text-[#9c4f5a] font-bold text-sm rounded-full hover:bg-[#ece8f3] hover:-translate-y-0.5 transition-all disabled:opacity-50"
+                                        className="flex items-center gap-2 px-6 py-2.5 bg-[#efe9ff] text-[#6b5ca5] font-bold text-sm rounded-full hover:bg-[#dff1ea] hover:-translate-y-0.5 transition-all disabled:opacity-50"
                                     >
                                         {generating ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
                                         {generating ? 'AIが考え中...' : 'AIで準備プランを作成'}
@@ -398,14 +398,14 @@ ${typeInstructions[selectedType]}
                                 <div className="space-y-4 pt-4">
                                     {/* 復習クイズ */}
                                     <div>
-                                        <h3 className="text-xs font-bold text-[#534344] uppercase tracking-wider mb-3 border-l-2 border-[#9c4f5a] pl-2">
+                                        <h3 className="text-xs font-bold text-[#484550] uppercase tracking-wider mb-3 border-l-2 border-[#6b5ca5] pl-2">
                                             復習クイズ
                                         </h3>
                                         <div className="space-y-2">
                                             {prepContent.review_quiz.map((q, i) => (
-                                                <div key={i} className="bg-[#f1ebe1] p-3.5 rounded-xl">
-                                                    <p className="font-bold text-sm text-[#3b2e2a] mb-1">Q{i + 1}. {q.question}</p>
-                                                    <p className="text-sm text-[#534344] pl-3 border-l-2 border-[#dccfc4]">A. {q.answer}</p>
+                                                <div key={i} className="bg-[#f0ebf8] p-3.5 rounded-xl">
+                                                    <p className="font-bold text-sm text-[#3a3350] mb-1">Q{i + 1}. {q.question}</p>
+                                                    <p className="text-sm text-[#484550] pl-3 border-l-2 border-[#d6cfe2]">A. {q.answer}</p>
                                                 </div>
                                             ))}
                                         </div>
@@ -413,18 +413,18 @@ ${typeInstructions[selectedType]}
 
                                     {/* 導入トーク */}
                                     <div>
-                                        <h3 className="text-xs font-bold text-[#534344] uppercase tracking-wider mb-3 border-l-2 border-[#9c4f5a] pl-2">
+                                        <h3 className="text-xs font-bold text-[#484550] uppercase tracking-wider mb-3 border-l-2 border-[#6b5ca5] pl-2">
                                             導入トーク
                                         </h3>
-                                        <div className="bg-[#f8e8e7]/40 p-4 rounded-xl text-sm text-[#3b2e2a] leading-relaxed whitespace-pre-wrap">
+                                        <div className="bg-[#efe9ff]/40 p-4 rounded-xl text-sm text-[#3a3350] leading-relaxed whitespace-pre-wrap">
                                             {prepContent.intro_topic}
                                         </div>
                                     </div>
 
                                     {/* アドバイス */}
-                                    <div className="bg-[#f1ebe1] p-4 rounded-xl">
-                                        <p className="text-xs font-bold text-[#534344] mb-1">💡 アドバイス</p>
-                                        <p className="text-sm text-[#534344] italic">{prepContent.advice}</p>
+                                    <div className="bg-[#f0ebf8] p-4 rounded-xl">
+                                        <p className="text-xs font-bold text-[#484550] mb-1">💡 アドバイス</p>
+                                        <p className="text-sm text-[#484550] italic">{prepContent.advice}</p>
                                     </div>
                                 </div>
                             )}
@@ -434,13 +434,13 @@ ${typeInstructions[selectedType]}
             )}
 
             {/* ── 教材生成（新機能）────────────────── */}
-            <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(156,79,90,0.06)] p-5 space-y-4">
+            <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] p-5 space-y-4">
                 <div>
-                    <h2 className="font-bold text-sm text-[#3b2e2a] flex items-center gap-2">
-                        <BookOpen size={16} className="text-[#9c4f5a]" />
+                    <h2 className="font-bold text-sm text-[#3a3350] flex items-center gap-2">
+                        <BookOpen size={16} className="text-[#6b5ca5]" />
                         今日の教材を生成
                     </h2>
-                    <p className="text-xs text-[#534344]/70 mt-0.5">
+                    <p className="text-xs text-[#484550]/70 mt-0.5">
                         {student?.name}さんのレベル・目標・つまずきをもとにAIが専用教材を作成します
                     </p>
                 </div>
@@ -458,8 +458,8 @@ ${typeInstructions[selectedType]}
                                 }}
                                 className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center ${
                                     selectedType === key
-                                        ? 'border-[#9c4f5a] bg-[#f8e8e7] text-[#9c4f5a]'
-                                        : 'border-[#dccfc4]/30 hover:border-[#dccfc4] text-[#534344]'
+                                        ? 'border-[#6b5ca5] bg-[#efe9ff] text-[#6b5ca5]'
+                                        : 'border-[#d6cfe2]/30 hover:border-[#d6cfe2] text-[#484550]'
                                 }`}
                             >
                                 {meta.icon}
@@ -474,13 +474,13 @@ ${typeInstructions[selectedType]}
                 {!generatedMaterial && (
                     <div className="flex items-center justify-between px-1">
                         <div>
-                            <p className="text-xs font-semibold text-[#3b2e2a]">コミュニティに共有する</p>
-                            <p className="text-[10px] text-[#534344]/70">他の先生も閲覧できる公開教材として保存します</p>
+                            <p className="text-xs font-semibold text-[#3a3350]">コミュニティに共有する</p>
+                            <p className="text-[10px] text-[#484550]/70">他の先生も閲覧できる公開教材として保存します</p>
                         </div>
                         <button
                             type="button"
                             onClick={() => setShareToCommuntiy(v => !v)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${shareToCommunity ? 'bg-[#9c4f5a]' : 'bg-[#dccfc4]'}`}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${shareToCommunity ? 'bg-[#6b5ca5]' : 'bg-[#d6cfe2]'}`}
                         >
                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${shareToCommunity ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>
@@ -492,7 +492,7 @@ ${typeInstructions[selectedType]}
                     <button
                         onClick={handleGenerateMaterial}
                         disabled={generatingMaterial}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#9c4f5a] text-white font-bold text-sm rounded-full hover:scale-[1.01] transition-transform shadow-[0_4px_20px_rgba(156,79,90,0.25)] disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#6b5ca5] text-white font-bold text-sm rounded-full hover:scale-[1.01] transition-transform shadow-[0_4px_20px_rgba(107,92,165,0.25)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {generatingMaterial ? (
                             <>
@@ -512,7 +512,7 @@ ${typeInstructions[selectedType]}
                 {generatedMaterial && (
                     <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-400">
                         <div className="flex items-center justify-between">
-                            <h3 className="font-bold text-sm text-[#3b2e2a]">{generatedMaterial.title}</h3>
+                            <h3 className="font-bold text-sm text-[#3a3350]">{generatedMaterial.title}</h3>
                             {materialSaved && (
                                 <span className="inline-flex items-center gap-1 text-xs font-bold text-[#386a20] bg-[#c3efad]/40 px-2.5 py-1 rounded-full">
                                     <CheckCircle2 size={12} />
@@ -527,16 +527,16 @@ ${typeInstructions[selectedType]}
                                 {generatedMaterial.cards.map((card, i) => (
                                     <div
                                         key={i}
-                                        className="bg-[#f1ebe1] hover:bg-[#f8e8e7] transition-colors rounded-xl p-3 cursor-default"
+                                        className="bg-[#f0ebf8] hover:bg-[#efe9ff] transition-colors rounded-xl p-3 cursor-default"
                                     >
-                                        <p className="font-bold text-sm text-[#3b2e2a] mb-1">{card.front}</p>
-                                        <p className="text-xs text-[#534344]">{card.back}</p>
+                                        <p className="font-bold text-sm text-[#3a3350] mb-1">{card.front}</p>
+                                        <p className="text-xs text-[#484550]">{card.back}</p>
                                     </div>
                                 ))}
                             </div>
                         ) : (
                             /* 穴埋め・会話練習 */
-                            <div className="bg-[#f1ebe1] p-4 rounded-xl text-sm text-[#3b2e2a] leading-relaxed whitespace-pre-wrap max-h-80 overflow-y-auto">
+                            <div className="bg-[#f0ebf8] p-4 rounded-xl text-sm text-[#3a3350] leading-relaxed whitespace-pre-wrap max-h-80 overflow-y-auto">
                                 {generatedMaterial.content}
                             </div>
                         )}
@@ -547,7 +547,7 @@ ${typeInstructions[selectedType]}
                                 setGeneratedMaterial(null);
                                 setMaterialSaved(false);
                             }}
-                            className="text-xs text-[#9c4f5a] hover:text-[#534344] transition-colors underline underline-offset-2"
+                            className="text-xs text-[#6b5ca5] hover:text-[#484550] transition-colors underline underline-offset-2"
                         >
                             別のパターンで再生成する
                         </button>
@@ -559,7 +559,7 @@ ${typeInstructions[selectedType]}
             <div className="flex justify-end pt-2">
                 <button
                     onClick={startLiveMode}
-                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#9c4f5a] text-white font-bold text-sm rounded-full hover:scale-[1.02] transition-transform shadow-[0_4px_20px_rgba(156,79,90,0.25)]"
+                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#6b5ca5] text-white font-bold text-sm rounded-full hover:scale-[1.02] transition-transform shadow-[0_4px_20px_rgba(107,92,165,0.25)]"
                 >
                     ライブ授業を開始する
                     <ArrowRight size={16} />

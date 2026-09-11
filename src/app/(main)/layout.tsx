@@ -1,7 +1,7 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { SupportWidget } from "@/components/support/support-widget";
 
-// 画面案（2026-09-11 かずき決定：色＝D・書体＝E）に合わせ、上の帯は置かない。
+// 画面案（2026-09-11 かずき決定：色＝E・書体＝E）に合わせ、上の帯は置かない。
 // 先生の名前とログアウトは左のナビの下にある。
 export default function MainLayout({
     children,

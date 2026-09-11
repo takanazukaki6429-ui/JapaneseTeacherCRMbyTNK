@@ -1010,24 +1010,24 @@ export default function LiveLessonPage() {
         { name: '設定', href: '/settings', Icon: Settings },
     ];
     const ASK_BUTTONS = [
-        { key: 'illust', title: '絵で見せる', hint: 'いまの内容を1枚の絵に', Icon: ImageIcon, tile: 'bg-[#f9f0f2] text-[#9c4f5a] group-hover:bg-[#9c4f5a]',
+        { key: 'illust', title: '絵で見せる', hint: 'いまの内容を1枚の絵に', Icon: ImageIcon, tile: 'bg-[#ede8fa] text-[#6b5ca5] group-hover:bg-[#6b5ca5]',
           busy: illustBusy, disabled: illustBusy, onClick: generateIllustration, tip: 'いまの会話と課に合う絵を約10秒で作る。文字まできれいな版も自動で用意' },
-        { key: 'examples', title: '例文', hint: MATERIAL_MODES.examples.hint, Icon: BookOpen, tile: 'bg-[#ece8f3] text-[#6b5b8c] group-hover:bg-[#6b5b8c]',
+        { key: 'examples', title: '例文', hint: MATERIAL_MODES.examples.hint, Icon: BookOpen, tile: 'bg-[#dff1ea] text-[#2a6f5a] group-hover:bg-[#2a6f5a]',
           busy: materialBusy === 'examples', disabled: materialBusy !== null, onClick: () => makeMaterial('examples'), tip: MATERIAL_MODES.examples.hint },
-        { key: 'exercises', title: '練習問題', hint: MATERIAL_MODES.exercises.hint, Icon: PencilLine, tile: 'bg-[#f4ede2] text-[#7f3843] group-hover:bg-[#7f3843]',
+        { key: 'exercises', title: '練習問題', hint: MATERIAL_MODES.exercises.hint, Icon: PencilLine, tile: 'bg-[#efe9f8] text-[#55488a] group-hover:bg-[#55488a]',
           busy: materialBusy === 'exercises', disabled: materialBusy !== null, onClick: () => makeMaterial('exercises'), tip: MATERIAL_MODES.exercises.hint },
-        { key: 'explain', title: 'やさしく言い換え', hint: MATERIAL_MODES.explain.hint, Icon: Repeat2, tile: 'bg-[#ece8f3] text-[#6b5b8c] group-hover:bg-[#6b5b8c]',
+        { key: 'explain', title: 'やさしく言い換え', hint: MATERIAL_MODES.explain.hint, Icon: Repeat2, tile: 'bg-[#dff1ea] text-[#2a6f5a] group-hover:bg-[#2a6f5a]',
           busy: materialBusy === 'explain', disabled: materialBusy !== null, onClick: () => makeMaterial('explain'), tip: MATERIAL_MODES.explain.hint },
     ];
 
     return (
-        <div className="fixed inset-0 z-50 flex flex-row overflow-hidden bg-[#f7f3ec] text-[#3b2e2a]">
+        <div className="fixed inset-0 z-50 flex flex-row overflow-hidden bg-[#f6f3fb] text-[#3a3350]">
 
             {/* 左の細いナビ */}
-            <aside className="hidden md:flex w-20 bg-[#faf3e7] border-r border-[#e2dbcf] flex-col justify-between items-center py-6 px-2 shrink-0">
+            <aside className="hidden md:flex w-20 bg-[#f8f1ff] border-r border-[#e4ddf0] flex-col justify-between items-center py-6 px-2 shrink-0">
                 <div className="flex flex-col items-center gap-1">
-                    <span className="text-[20px] leading-[30px] font-semibold tracking-wider text-[#7f3843]">ASTA</span>
-                    <span className="w-4 h-px bg-[#9c4f5a] opacity-30 mt-0.5" />
+                    <span className="text-[20px] leading-[30px] font-semibold tracking-wider text-[#55488a]">ASTA</span>
+                    <span className="w-4 h-px bg-[#6b5ca5] opacity-30 mt-0.5" />
                 </div>
                 <nav className="flex flex-col items-center gap-6 w-full">
                     {RAIL.map(({ name, href, Icon }) => {
@@ -1038,8 +1038,8 @@ export default function LiveLessonPage() {
                                 href={href}
                                 aria-current={active ? 'page' : undefined}
                                 className={`w-full flex flex-col items-center justify-center py-2.5 rounded-lg transition-colors ${active
-                                    ? 'text-[#7f3843] bg-[#ffd9dc]/60 font-semibold'
-                                    : 'text-[#534344] hover:text-[#7f3843] hover:bg-[#f4ede2]'}`}
+                                    ? 'text-[#55488a] bg-[#e7deff]/60 font-semibold'
+                                    : 'text-[#484550] hover:text-[#55488a] hover:bg-[#efe9f8]'}`}
                             >
                                 <Icon size={24} strokeWidth={1.6} />
                                 <span className="text-[15px] mt-1">{name}</span>
@@ -1053,21 +1053,21 @@ export default function LiveLessonPage() {
             <main className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden">
 
                 {/* 上の帯 */}
-                <header className="h-16 px-6 bg-[#fcfbf9] border-b border-[#e2dbcf] flex items-center justify-between gap-4 shrink-0">
+                <header className="h-16 px-6 bg-[#fbfaff] border-b border-[#e4ddf0] flex items-center justify-between gap-4 shrink-0">
                     <div className="flex items-center gap-4 min-w-0">
-                        <button onClick={() => router.back()} title="戻る" className="w-9 h-9 flex items-center justify-center rounded-lg border border-[#e2dbcf] text-[#3b2e2a] hover:bg-[#f4ede2] transition-colors shrink-0">
+                        <button onClick={() => router.back()} title="戻る" className="w-9 h-9 flex items-center justify-center rounded-lg border border-[#e4ddf0] text-[#3a3350] hover:bg-[#efe9f8] transition-colors shrink-0">
                             <ArrowLeft size={18} />
                         </button>
                         <h1 className="text-[26px] leading-[36px] font-semibold tracking-wide whitespace-nowrap">授業中</h1>
-                        <div className="h-5 w-px bg-[#e2dbcf] mx-1 shrink-0" />
+                        <div className="h-5 w-px bg-[#e4ddf0] mx-1 shrink-0" />
 
                         {/* 状態はこの信号1つに集約。押すと録音の一時停止/再開 */}
                         <button
                             onClick={isListening ? stopListening : startListening}
                             title={isListening ? '押すと録音を一時停止' : '押すと録音を再開'}
-                            className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#f9f0f2] border border-[#d8c1c2] text-[#9c4f5a] hover:bg-[#ffd9dc]/40 transition-colors whitespace-nowrap shrink-0"
+                            className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#ede8fa] border border-[#cfc6ea] text-[#6b5ca5] hover:bg-[#e7deff]/40 transition-colors whitespace-nowrap shrink-0"
                         >
-                            <span className={`w-2.5 h-2.5 rounded-full ${isListening ? 'bg-[#9c4f5a] animate-pulse' : 'bg-[#d8c1c2]'}`} />
+                            <span className={`w-2.5 h-2.5 rounded-full ${isListening ? 'bg-[#6b5ca5] animate-pulse' : 'bg-[#cfc6ea]'}`} />
                             <span className="text-[14px] font-medium tracking-wide">{isListening ? '録音中' : '一時停止中'}</span>
                         </button>
                         {isListening && micLabel && (
@@ -1075,15 +1075,15 @@ export default function LiveLessonPage() {
                                 title="先生の音声認識が使っているマイク"
                                 className={`flex items-center gap-1.5 text-[15px] whitespace-nowrap min-w-0 ${IPHONE_MIC.test(micLabel)
                                     ? 'px-2.5 py-1 rounded-md bg-amber-100 text-[#5a3d00] border border-amber-300'
-                                    : 'text-[#3b2e2a]'}`}
+                                    : 'text-[#3a3350]'}`}
                             >
                                 <Mic size={15} className="shrink-0" />
                                 <span className="truncate max-w-[200px]">{micLabel}</span>
                             </span>
                         )}
                         {isTranslationMode && (
-                            <span className="px-2.5 py-1 rounded-md bg-[#ece8f3] text-[#6b5b8c] border border-[#d8cfe5] text-[13px] font-medium flex items-center gap-1 whitespace-nowrap shrink-0">
-                                <span className="w-1.5 h-1.5 rounded-full bg-[#6b5b8c]" />
+                            <span className="px-2.5 py-1 rounded-md bg-[#dff1ea] text-[#2a6f5a] border border-[#bfe3d4] text-[13px] font-medium flex items-center gap-1 whitespace-nowrap shrink-0">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#2a6f5a]" />
                                 生徒の画面に翻訳を表示中
                             </span>
                         )}
@@ -1095,8 +1095,8 @@ export default function LiveLessonPage() {
                                 onClick={isTranslationMode ? stopTranslationMode : startTranslationMode}
                                 title={isTranslationMode ? '翻訳を止める' : '画面共有の音声から翻訳を始める'}
                                 className={`px-3.5 py-1.5 rounded-lg border bg-white text-[15px] font-medium transition-colors whitespace-nowrap ${isTranslationMode
-                                    ? 'border-[#d8cfe5] text-[#6b5b8c] hover:bg-[#ece8f3]'
-                                    : 'border-[#d8c1c2] text-[#9c4f5a] hover:bg-[#f9f0f2]'}`}
+                                    ? 'border-[#bfe3d4] text-[#2a6f5a] hover:bg-[#dff1ea]'
+                                    : 'border-[#cfc6ea] text-[#6b5ca5] hover:bg-[#ede8fa]'}`}
                             >
                                 {isTranslationMode ? '翻訳を止める' : '翻訳を始める'}
                             </button>
@@ -1108,7 +1108,7 @@ export default function LiveLessonPage() {
                                 value={studentNativeLanguage}
                                 onChange={e => setStudentNativeLanguage(e.target.value)}
                                 title="生徒の母国語（翻訳して見せる言語）"
-                                className="appearance-none bg-white border border-[#e2dbcf] text-[#3b2e2a] text-[15px] font-medium rounded-lg pl-3.5 pr-8 py-1.5 focus:outline-none focus:border-[#9c4f5a] focus:ring-1 focus:ring-[#9c4f5a] cursor-pointer"
+                                className="appearance-none bg-white border border-[#e4ddf0] text-[#3a3350] text-[15px] font-medium rounded-lg pl-3.5 pr-8 py-1.5 focus:outline-none focus:border-[#6b5ca5] focus:ring-1 focus:ring-[#6b5ca5] cursor-pointer"
                             >
                                 <option value="English">英語</option>
                                 <option value="Spanish">スペイン語</option>
@@ -1121,7 +1121,7 @@ export default function LiveLessonPage() {
                                 <option value="Vietnamese">ベトナム語</option>
                                 <option value="Indonesian">インドネシア語</option>
                             </select>
-                            <ChevronDown size={16} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#3b2e2a]" />
+                            <ChevronDown size={16} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#3a3350]" />
                         </div>
 
                         {/* 共有モード：オン＝生徒と見る画面（道具をしまう）。Zoomで画面共有するときはオン */}
@@ -1132,17 +1132,17 @@ export default function LiveLessonPage() {
                             title={toolsOut
                                 ? '押すと共有モード（生徒と見る画面）。Zoomで画面共有するときはこの状態で'
                                 : '押すと準備モード（先生の道具を出す）'}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#e2dbcf] bg-white text-[#3b2e2a] whitespace-nowrap"
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#e4ddf0] bg-white text-[#3a3350] whitespace-nowrap"
                         >
                             <span className="text-[15px] font-medium">共有モード</span>
-                            <span className={`w-9 h-5 rounded-full flex items-center p-0.5 transition-colors ${!toolsOut ? 'bg-[#9c4f5a] justify-end' : 'bg-[#d8c1c2] justify-start'}`}>
+                            <span className={`w-9 h-5 rounded-full flex items-center p-0.5 transition-colors ${!toolsOut ? 'bg-[#6b5ca5] justify-end' : 'bg-[#cfc6ea] justify-start'}`}>
                                 <span className="w-4 h-4 bg-white rounded-full shadow-sm" />
                             </span>
                         </button>
 
                         <button
                             onClick={finishLesson}
-                            className="px-4 py-2 rounded-lg bg-[#9c4f5a] hover:bg-[#7f3843] text-white text-[15px] font-medium shadow-sm transition-colors active:scale-[0.98] whitespace-nowrap"
+                            className="px-4 py-2 rounded-lg bg-[#6b5ca5] hover:bg-[#55488a] text-white text-[15px] font-medium shadow-sm transition-colors active:scale-[0.98] whitespace-nowrap"
                         >
                             授業を終える
                         </button>
@@ -1169,9 +1169,9 @@ export default function LiveLessonPage() {
                     />
 
                     {/* 右：授業の流れ（会話とASTAの提案・生成物が時系列で並ぶ） */}
-                    <section className="flex-1 flex flex-col justify-between overflow-hidden bg-[#f7f3ec]">
+                    <section className="flex-1 flex flex-col justify-between overflow-hidden bg-[#f6f3fb]">
                         {/* ヘッドホン推奨の案内（2026-09-06 かずき決定・運用案内）。画面案では常に上の帯の下に出す */}
-                        <div className="px-6 py-2 bg-[#f4ede2] border-b border-[#e2dbcf] flex items-center justify-center gap-2 text-[13px] text-[#534344] shrink-0">
+                        <div className="px-6 py-2 bg-[#efe9f8] border-b border-[#e4ddf0] flex items-center justify-center gap-2 text-[13px] text-[#484550] shrink-0">
                             <Headphones size={15} />
                             <span>ヘッドホン推奨：スピーカーだと、生徒の声が先生の吹き出しに混ざることがあります</span>
                         </div>
@@ -1189,11 +1189,11 @@ export default function LiveLessonPage() {
                         <div className="flex-1 overflow-y-auto p-6 space-y-5">
                             {flow.length === 0 && (
                                 <div className="h-full flex flex-col items-center justify-center text-center py-12 gap-2">
-                                    <Mic size={32} className={isListening ? 'text-[#9c4f5a] animate-pulse' : 'text-[#d8c1c2]'} />
-                                    <p className="text-[16px] font-bold text-[#3b2e2a]">
+                                    <Mic size={32} className={isListening ? 'text-[#6b5ca5] animate-pulse' : 'text-[#cfc6ea]'} />
+                                    <p className="text-[16px] font-bold text-[#3a3350]">
                                         {isListening ? '聞いています' : '生徒情報を読み込み中…'}
                                     </p>
-                                    <p className="text-[13px] text-[#534344] max-w-sm leading-relaxed">
+                                    <p className="text-[13px] text-[#484550] max-w-sm leading-relaxed">
                                         授業の会話がここに流れます。困った場面ではASTAが自分から提案を出します。
                                         自分から頼みたい時は下のボタンを押してください。
                                     </p>
@@ -1206,13 +1206,13 @@ export default function LiveLessonPage() {
                                     {item.kind === 'said' && (
                                         <div className="flex flex-col items-start max-w-[85%]">
                                             <div className="flex items-center gap-1.5 mb-1 px-1">
-                                                <span className="text-[13px] font-medium text-[#534344]">先生</span>
-                                                <span className="text-[12px] text-[#6f5d5b]">{timeOf(item.ts)}</span>
+                                                <span className="text-[13px] font-medium text-[#484550]">先生</span>
+                                                <span className="text-[12px] text-[#635d70]">{timeOf(item.ts)}</span>
                                             </div>
-                                            <div className="bg-[#fcfbf9] border border-[#e2dbcf] rounded-2xl rounded-tl-sm p-4 shadow-sm">
-                                                <p className={`${toolsOut ? 'text-[20px] leading-[32px]' : 'text-[24px] leading-[38px]'} font-medium text-[#3b2e2a]`}>{readable(item.text ?? '')}</p>
+                                            <div className="bg-[#fbfaff] border border-[#e4ddf0] rounded-2xl rounded-tl-sm p-4 shadow-sm">
+                                                <p className={`${toolsOut ? 'text-[20px] leading-[32px]' : 'text-[24px] leading-[38px]'} font-medium text-[#3a3350]`}>{readable(item.text ?? '')}</p>
                                                 {item.translation && (
-                                                    <p className={`${toolsOut ? 'text-[14px]' : 'text-[18px]'} leading-relaxed text-[#6b5b8c] mt-1.5 border-t border-[#e2dbcf]/50 pt-1.5`}>{item.translation}</p>
+                                                    <p className={`${toolsOut ? 'text-[14px]' : 'text-[18px]'} leading-relaxed text-[#2a6f5a] mt-1.5 border-t border-[#e4ddf0]/50 pt-1.5`}>{item.translation}</p>
                                                 )}
                                             </div>
                                         </div>
@@ -1221,13 +1221,13 @@ export default function LiveLessonPage() {
                                     {item.kind === 'student-said' && (
                                         <div className="flex flex-col items-end ml-auto max-w-[85%]">
                                             <div className="flex items-center gap-1.5 mb-1 px-1">
-                                                <span className="text-[12px] text-[#6f5d5b]">{timeOf(item.ts)}</span>
-                                                <span className="text-[13px] font-medium text-[#6b5b8c]">{studentName ? `${studentName}さん` : '生徒'}</span>
+                                                <span className="text-[12px] text-[#635d70]">{timeOf(item.ts)}</span>
+                                                <span className="text-[13px] font-medium text-[#2a6f5a]">{studentName ? `${studentName}さん` : '生徒'}</span>
                                             </div>
-                                            <div className="bg-[#ece8f3] border border-[#d8cfe5] rounded-2xl rounded-tr-sm p-4 shadow-sm">
-                                                <p className={`${toolsOut ? 'text-[20px] leading-[32px]' : 'text-[24px] leading-[38px]'} font-medium text-[#3b2e2a]`}>{item.text}</p>
+                                            <div className="bg-[#dff1ea] border border-[#bfe3d4] rounded-2xl rounded-tr-sm p-4 shadow-sm">
+                                                <p className={`${toolsOut ? 'text-[20px] leading-[32px]' : 'text-[24px] leading-[38px]'} font-medium text-[#3a3350]`}>{item.text}</p>
                                                 {item.translation && (
-                                                    <p className={`${toolsOut ? 'text-[14px]' : 'text-[18px]'} leading-relaxed text-[#534344] mt-1.5 border-t border-[#d8cfe5]/60 pt-1.5`}>{item.translation}</p>
+                                                    <p className={`${toolsOut ? 'text-[14px]' : 'text-[18px]'} leading-relaxed text-[#484550] mt-1.5 border-t border-[#bfe3d4]/60 pt-1.5`}>{item.translation}</p>
                                                 )}
                                             </div>
                                         </div>
@@ -1240,53 +1240,53 @@ export default function LiveLessonPage() {
                                     )}
 
                                     {(item.kind === 'suggest' || item.kind === 'translate-help') && (
-                                        <div className="bg-[#fcfbf9] border border-[#e2dbcf] border-l-4 border-l-[#9c4f5a] rounded-xl p-4 shadow-sm flex items-start gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-[#f9f0f2] flex items-center justify-center shrink-0 text-[#9c4f5a] mt-0.5">
+                                        <div className="bg-[#fbfaff] border border-[#e4ddf0] border-l-4 border-l-[#6b5ca5] rounded-xl p-4 shadow-sm flex items-start gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-[#ede8fa] flex items-center justify-center shrink-0 text-[#6b5ca5] mt-0.5">
                                                 <Lightbulb size={16} />
                                             </div>
                                             <div className="min-w-0">
                                                 <div className="flex items-center gap-2 mb-0.5">
-                                                    <span className="text-[12px] font-bold text-[#9c4f5a] tracking-wider">ASTA</span>
-                                                    <span className="text-[12px] text-[#6f5d5b]">{item.title}</span>
-                                                    <span className="text-[12px] text-[#6f5d5b]">{timeOf(item.ts)}</span>
+                                                    <span className="text-[12px] font-bold text-[#6b5ca5] tracking-wider">ASTA</span>
+                                                    <span className="text-[12px] text-[#635d70]">{item.title}</span>
+                                                    <span className="text-[12px] text-[#635d70]">{timeOf(item.ts)}</span>
                                                 </div>
-                                                <p className="text-[16px] leading-[26px] text-[#3b2e2a] whitespace-pre-wrap">{readable(item.text ?? '')}</p>
+                                                <p className="text-[16px] leading-[26px] text-[#3a3350] whitespace-pre-wrap">{readable(item.text ?? '')}</p>
                                             </div>
                                         </div>
                                     )}
 
                                     {item.kind === 'asked' && (
-                                        <div className="w-fit ml-auto max-w-[75%] bg-[#9c4f5a] text-white rounded-2xl rounded-tr-sm px-4 py-2.5">
+                                        <div className="w-fit ml-auto max-w-[75%] bg-[#6b5ca5] text-white rounded-2xl rounded-tr-sm px-4 py-2.5">
                                             <p className="text-[15px] leading-relaxed">{readable(item.text ?? '')}</p>
                                             <p className="text-[12px] text-white/85 mt-0.5">あなたの質問 · {timeOf(item.ts)}</p>
                                         </div>
                                     )}
 
                                     {(item.kind === 'answer' || item.kind === 'material') && (
-                                        <div className="bg-white border border-[#e2dbcf] rounded-xl p-5 shadow-sm">
+                                        <div className="bg-white border border-[#e4ddf0] rounded-xl p-5 shadow-sm">
                                             <div className="flex items-center justify-between gap-2 mb-3">
                                                 <div className="flex items-center gap-2 min-w-0">
-                                                    <span className="w-2 h-2 rounded-full bg-[#9c4f5a] shrink-0" />
-                                                    <h3 className="text-[17px] font-bold text-[#3b2e2a] truncate">{item.title}</h3>
+                                                    <span className="w-2 h-2 rounded-full bg-[#6b5ca5] shrink-0" />
+                                                    <h3 className="text-[17px] font-bold text-[#3a3350] truncate">{item.title}</h3>
                                                 </div>
-                                                <span className="text-[12px] text-[#6f5d5b] shrink-0">{timeOf(item.ts)}</span>
+                                                <span className="text-[12px] text-[#635d70] shrink-0">{timeOf(item.ts)}</span>
                                             </div>
-                                            <div className="bg-[#faf3e7]/50 p-4 rounded-lg border border-[#e2dbcf]/70">
-                                                <p className="text-[16px] leading-[26px] text-[#3b2e2a] whitespace-pre-wrap">{readable(item.text ?? '')}</p>
+                                            <div className="bg-[#f8f1ff]/50 p-4 rounded-lg border border-[#e4ddf0]/70">
+                                                <p className="text-[16px] leading-[26px] text-[#3a3350] whitespace-pre-wrap">{readable(item.text ?? '')}</p>
                                             </div>
                                         </div>
                                     )}
 
                                     {item.kind === 'textbook' && (
-                                        <div className="bg-white border border-[#e2dbcf] rounded-xl p-5 shadow-sm relative overflow-hidden">
-                                            <div className="absolute top-0 right-8 w-6 h-8 bg-[#ece8f3] border-b border-x border-[#d8cfe5] rounded-b-sm" />
+                                        <div className="bg-white border border-[#e4ddf0] rounded-xl p-5 shadow-sm relative overflow-hidden">
+                                            <div className="absolute top-0 right-8 w-6 h-8 bg-[#dff1ea] border-b border-x border-[#bfe3d4] rounded-b-sm" />
                                             <div className="flex items-center gap-2 mb-3 pr-12">
-                                                <span className="w-2 h-2 rounded-full bg-[#9c4f5a] shrink-0" />
-                                                <h3 className="text-[17px] font-bold text-[#3b2e2a]">{item.title}</h3>
+                                                <span className="w-2 h-2 rounded-full bg-[#6b5ca5] shrink-0" />
+                                                <h3 className="text-[17px] font-bold text-[#3a3350]">{item.title}</h3>
                                             </div>
                                             {/* 教科書の原文は生徒向け（ふりがな付き）のまま、生徒も読める大きさで */}
-                                            <div className="bg-[#faf3e7]/50 p-4 rounded-lg border border-[#e2dbcf]/70">
-                                                <p className={`${toolsOut ? 'text-[16px] leading-[26px]' : 'text-[20px] leading-[34px]'} text-[#3b2e2a] whitespace-pre-wrap`}>
+                                            <div className="bg-[#f8f1ff]/50 p-4 rounded-lg border border-[#e4ddf0]/70">
+                                                <p className={`${toolsOut ? 'text-[16px] leading-[26px]' : 'text-[20px] leading-[34px]'} text-[#3a3350] whitespace-pre-wrap`}>
                                                     {readable((item.text ?? '').split('\n').filter(l => !l.trim().startsWith('![')).join('\n')).trim().slice(0, 1200)}
                                                 </p>
                                             </div>
@@ -1302,21 +1302,21 @@ export default function LiveLessonPage() {
                                     )}
 
                                     {item.kind === 'illust' && (
-                                        <div className="bg-white border border-[#e2dbcf] rounded-xl p-5 shadow-sm">
+                                        <div className="bg-white border border-[#e4ddf0] rounded-xl p-5 shadow-sm">
                                             <div className="flex items-center justify-between gap-2 mb-3">
                                                 <div className="flex items-center gap-2 min-w-0">
-                                                    <span className="w-2 h-2 rounded-full bg-[#9c4f5a] shrink-0" />
-                                                    <h3 className="text-[17px] font-bold text-[#3b2e2a] truncate">{item.title}</h3>
+                                                    <span className="w-2 h-2 rounded-full bg-[#6b5ca5] shrink-0" />
+                                                    <h3 className="text-[17px] font-bold text-[#3a3350] truncate">{item.title}</h3>
                                                 </div>
                                                 {item.img && (
                                                     <a href={item.img} download="asta-illustration.png"
-                                                        className="inline-flex items-center gap-1 text-[13px] text-[#9c4f5a] hover:underline shrink-0">
+                                                        className="inline-flex items-center gap-1 text-[13px] text-[#6b5ca5] hover:underline shrink-0">
                                                         <Download size={13} />保存
                                                     </a>
                                                 )}
                                             </div>
                                             {!item.img && (
-                                                <div className="flex items-center gap-2 py-4 justify-center text-[#9c4f5a]">
+                                                <div className="flex items-center gap-2 py-4 justify-center text-[#6b5ca5]">
                                                     <Loader2 size={16} className="animate-spin" />
                                                     <span className="text-[13px]">授業を続けながらお待ちください</span>
                                                 </div>
@@ -1331,11 +1331,11 @@ export default function LiveLessonPage() {
                                                     onClick={() => patchFlow(item.id, { img: item.imgQuality, imgQuality: undefined })}
                                                     className="w-full mt-2 text-left text-[13px] bg-[#fdf6e7] border border-[#ecd9a8] text-[#8a6d1f] rounded-lg px-3 py-2 hover:bg-[#fbefd2] transition-colors"
                                                 >
-                                                    <b className="text-[#9c4f5a]">文字まできれいな版</b>ができました → 押すと差し替えます
+                                                    <b className="text-[#6b5ca5]">文字まできれいな版</b>ができました → 押すと差し替えます
                                                 </button>
                                             )}
                                             {item.img && !item.imgQuality && item.title?.includes('できた絵') && (
-                                                <p className="text-[12px] text-[#534344] mt-2">
+                                                <p className="text-[12px] text-[#484550] mt-2">
                                                     ※ AIが作った画像です。文字が正しいか目で確かめてから生徒さんに見せてください。
                                                 </p>
                                             )}
@@ -1346,15 +1346,15 @@ export default function LiveLessonPage() {
 
                             {/* 認識途中の文字（うすく表示） */}
                             {interimText && (
-                                <p className="text-[13px] text-[#6f5d5b] italic px-1">{interimText}…</p>
+                                <p className="text-[13px] text-[#635d70] italic px-1">{interimText}…</p>
                             )}
                             {(isAnalyzing || streamingText) && (
-                                <div className="bg-[#fcfbf9] border border-[#e2dbcf] border-l-4 border-l-[#9c4f5a] rounded-xl p-4 shadow-sm">
-                                    <p className="text-[12px] font-bold text-[#9c4f5a] mb-1 flex items-center gap-1">
+                                <div className="bg-[#fbfaff] border border-[#e4ddf0] border-l-4 border-l-[#6b5ca5] rounded-xl p-4 shadow-sm">
+                                    <p className="text-[12px] font-bold text-[#6b5ca5] mb-1 flex items-center gap-1">
                                         <Sparkles size={12} /> ASTAが考えています…
                                     </p>
                                     {streamingText && (
-                                        <p className="text-[15px] text-[#3b2e2a] whitespace-pre-wrap leading-relaxed">{streamingText}</p>
+                                        <p className="text-[15px] text-[#3a3350] whitespace-pre-wrap leading-relaxed">{streamingText}</p>
                                     )}
                                 </div>
                             )}
@@ -1362,7 +1362,7 @@ export default function LiveLessonPage() {
                         </div>
 
                         {/* 下：自分から頼む4ボタン＋聞きたい時の入力欄（共有モードでは小さくし、入力欄はしまう） */}
-                        <div className={`bg-[#fcfbf9] border-t border-[#e2dbcf] shrink-0 flex flex-col gap-3 ${toolsOut ? 'p-4' : 'px-4 py-2'}`}>
+                        <div className={`bg-[#fbfaff] border-t border-[#e4ddf0] shrink-0 flex flex-col gap-3 ${toolsOut ? 'p-4' : 'px-4 py-2'}`}>
                             {illustError && (
                                 <p className="text-[13px] text-[#ba1a1a] bg-[#fff0f0] border border-[#f4b8b8] rounded-lg px-3 py-1.5">
                                     {illustError}
@@ -1377,14 +1377,14 @@ export default function LiveLessonPage() {
                                             onClick={b.onClick}
                                             disabled={b.disabled}
                                             title={b.tip}
-                                            className={`group flex items-center gap-3 bg-white hover:bg-[#faf3e7] border border-[#e2dbcf] rounded-xl text-left transition-colors shadow-sm active:scale-[0.99] disabled:opacity-50 ${toolsOut ? 'p-3' : 'px-3 py-1.5'}`}
+                                            className={`group flex items-center gap-3 bg-white hover:bg-[#f8f1ff] border border-[#e4ddf0] rounded-xl text-left transition-colors shadow-sm active:scale-[0.99] disabled:opacity-50 ${toolsOut ? 'p-3' : 'px-3 py-1.5'}`}
                                         >
                                             <span className={`${toolsOut ? 'w-10 h-10' : 'w-8 h-8'} rounded-lg flex items-center justify-center shrink-0 transition-colors group-hover:text-white ${b.tile}`}>
                                                 {b.busy ? <Loader2 size={18} className="animate-spin" /> : <Icon size={20} strokeWidth={1.8} />}
                                             </span>
                                             <span className="min-w-0">
-                                                <span className="block text-[16px] font-bold text-[#3b2e2a]">{b.title}</span>
-                                                {toolsOut && <span className="block text-[12px] text-[#6a5852] truncate">{b.hint}</span>}
+                                                <span className="block text-[16px] font-bold text-[#3a3350]">{b.title}</span>
+                                                {toolsOut && <span className="block text-[12px] text-[#5d5868] truncate">{b.hint}</span>}
                                             </span>
                                         </button>
                                     );
@@ -1399,12 +1399,12 @@ export default function LiveLessonPage() {
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
                                     placeholder="聞きたいことがあれば（画面共有中は生徒にも見えます）"
-                                    className="flex-1 min-w-0 bg-[#f7f3ec] border border-[#e2dbcf] rounded-lg px-4 py-2.5 text-[15px] text-[#3b2e2a] placeholder:text-[#6f5d5b] focus:outline-none focus:border-[#9c4f5a] focus:ring-1 focus:ring-[#9c4f5a]"
+                                    className="flex-1 min-w-0 bg-[#f6f3fb] border border-[#e4ddf0] rounded-lg px-4 py-2.5 text-[15px] text-[#3a3350] placeholder:text-[#635d70] focus:outline-none focus:border-[#6b5ca5] focus:ring-1 focus:ring-[#6b5ca5]"
                                 />
                                 <button
                                     type="submit"
                                     disabled={!input.trim() || isTyping}
-                                    className="px-6 py-2.5 bg-[#9c4f5a] hover:bg-[#7f3843] text-white text-[15px] font-medium rounded-lg shadow-sm transition-colors flex items-center gap-1.5 active:scale-[0.98] disabled:opacity-40 shrink-0"
+                                    className="px-6 py-2.5 bg-[#6b5ca5] hover:bg-[#55488a] text-white text-[15px] font-medium rounded-lg shadow-sm transition-colors flex items-center gap-1.5 active:scale-[0.98] disabled:opacity-40 shrink-0"
                                 >
                                     {isTyping ? <Loader2 size={15} className="animate-spin" /> : null}
                                     <span>送信</span>

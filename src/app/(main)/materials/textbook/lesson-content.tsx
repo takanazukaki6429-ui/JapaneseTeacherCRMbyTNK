@@ -29,12 +29,12 @@ export function LessonContent({ contentMd, imageBaseUrl }: Props) {
                 <table className="min-w-full text-sm border-collapse">
                     <tbody>
                         {[head, ...body].map((row, ri) => (
-                            <tr key={ri} className={ri === 0 ? 'bg-[#f1ebe1]' : ''}>
+                            <tr key={ri} className={ri === 0 ? 'bg-[#f0ebf8]' : ''}>
                                 {row.map((cell, ci) => (
                                     <td
                                         key={ci}
-                                        className={`border border-[#dccfc4]/40 px-3 py-2 align-top ${
-                                            ri === 0 ? 'font-bold text-[#3b2e2a]' : 'text-[#534344]'
+                                        className={`border border-[#d6cfe2]/40 px-3 py-2 align-top ${
+                                            ri === 0 ? 'font-bold text-[#3a3350]' : 'text-[#484550]'
                                         }`}
                                     >
                                         {cell}
@@ -80,7 +80,7 @@ export function LessonContent({ contentMd, imageBaseUrl }: Props) {
                     src={src}
                     alt=""
                     loading="lazy"
-                    className="my-4 w-full max-w-2xl rounded-xl border border-[#dccfc4]/30 mx-auto"
+                    className="my-4 w-full max-w-2xl rounded-xl border border-[#d6cfe2]/30 mx-auto"
                 />
             );
             return;
@@ -89,7 +89,7 @@ export function LessonContent({ contentMd, imageBaseUrl }: Props) {
         // 「1. 見出し」「2-1. 小見出し」形式は見出しとして扱う
         if (/^[0-9０-９]{1,2}([\.．\-][0-9０-９]{0,2})?[\.．]?\s*\S/.test(line) && line.length <= 40) {
             blocks.push(
-                <h3 key={`h${i}`} className="text-sm font-bold text-[#9c4f5a] mt-5 mb-1.5">
+                <h3 key={`h${i}`} className="text-sm font-bold text-[#6b5ca5] mt-5 mb-1.5">
                     {line}
                 </h3>
             );
@@ -99,7 +99,7 @@ export function LessonContent({ contentMd, imageBaseUrl }: Props) {
         // 箇条書き
         if (/^[・･]/.test(line)) {
             blocks.push(
-                <p key={`l${i}`} className="text-sm text-[#534344] leading-relaxed pl-4 -indent-4">
+                <p key={`l${i}`} className="text-sm text-[#484550] leading-relaxed pl-4 -indent-4">
                     {line}
                 </p>
             );
@@ -107,7 +107,7 @@ export function LessonContent({ contentMd, imageBaseUrl }: Props) {
         }
 
         blocks.push(
-            <p key={`p${i}`} className="text-sm text-[#3b2e2a] leading-relaxed whitespace-pre-wrap">
+            <p key={`p${i}`} className="text-sm text-[#3a3350] leading-relaxed whitespace-pre-wrap">
                 {line}
             </p>
         );

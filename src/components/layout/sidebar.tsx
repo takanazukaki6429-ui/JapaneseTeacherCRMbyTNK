@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * 左のナビ（画面案 2026-09-11：色＝D・書体＝E、ホーム＝Eの配置）
+ * 左のナビ（画面案 2026-09-11：色＝E・書体＝E、ホーム＝Eの配置）
  * 上：文字の「ASTA」／中：ホーム・生徒・教材・設定の4つ／下：先生の名前とログアウト
  */
 import React from 'react';
@@ -21,7 +21,7 @@ const navItems = [
 
 const itemClass = (active: boolean) => cn(
     'flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] leading-[22px] transition-all duration-200',
-    active ? 'bg-[#faf3e7] text-[#7f3843] font-semibold' : 'text-[#534344] font-medium hover:bg-[#faf3e7]/60'
+    active ? 'bg-[#f8f1ff] text-[#6b5ca5] font-semibold' : 'text-[#484550] font-medium hover:bg-[#f8f1ff]/60'
 );
 
 export function Sidebar() {
@@ -64,22 +64,22 @@ export function Sidebar() {
                 onClick={() => setIsMobileOpen(!isMobileOpen)}
                 aria-label="メニュー"
             >
-                <Menu size={22} className="text-[#7f3843]" />
+                <Menu size={22} className="text-[#6b5ca5]" />
             </button>
 
             <aside
                 className={cn(
-                    'fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-[0_10px_30px_-5px_rgba(156,79,90,0.08)]',
+                    'fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-[0_10px_30px_-5px_rgba(107,92,165,0.08)]',
                     'transition-transform duration-300 ease-in-out md:translate-x-0',
                     isMobileOpen ? 'translate-x-0' : '-translate-x-full'
                 )}
             >
-                <div className="h-full p-6 flex flex-col justify-between border-r border-[#e9e2d7]/40">
+                <div className="h-full p-6 flex flex-col justify-between border-r border-[#e8ddff]/40">
                     <div>
                         <div className="px-3 pt-2 pb-8">
-                            <Link href="/" className="text-[20px] leading-[30px] font-bold tracking-wide text-[#7f3843] select-none inline-flex items-center gap-2">
+                            <Link href="/" className="text-[20px] leading-[30px] font-bold tracking-wide text-[#6b5ca5] select-none inline-flex items-center gap-2">
                                 ASTA
-                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#d1bdf5]" />
+                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#8bd5bb]" />
                             </Link>
                         </div>
                         <nav className="space-y-2">
@@ -104,7 +104,7 @@ export function Sidebar() {
 
                         {isAdmin && (
                             <div className="mt-6 space-y-2">
-                                <p className="text-xs font-bold text-[#534344] px-4">管理</p>
+                                <p className="text-xs font-bold text-[#484550] px-4">管理</p>
                                 {[
                                     { href: '/admin/dashboard', name: 'ダッシュボード', Icon: LayoutDashboard },
                                     { href: '/admin/invite-codes', name: '招待コード', Icon: KeyRound },
@@ -124,14 +124,14 @@ export function Sidebar() {
                         )}
                     </div>
 
-                    <div className="pt-6 border-t border-[#e9e2d7]/40 space-y-1">
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-xl text-[#1e1b15]">
-                            <CircleUserRound size={28} strokeWidth={1.4} className="text-[#7f3843]/80 shrink-0" />
+                    <div className="pt-6 border-t border-[#e8ddff]/40 space-y-1">
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-xl text-[#3a3350]">
+                            <CircleUserRound size={28} strokeWidth={1.4} className="text-[#6b5ca5]/80 shrink-0" />
                             <span className="text-[15px] leading-[22px] font-bold truncate">{teacherLabel}</span>
                         </div>
                         <button
                             onClick={handleLogout}
-                            className="flex items-center gap-3 px-3 py-2 w-full text-sm text-[#534344] rounded-xl hover:bg-red-50 hover:text-red-600 transition-colors"
+                            className="flex items-center gap-3 px-3 py-2 w-full text-sm text-[#484550] rounded-xl hover:bg-red-50 hover:text-red-600 transition-colors"
                         >
                             <LogOut size={16} />
                             ログアウト
@@ -142,7 +142,7 @@ export function Sidebar() {
 
             {isMobileOpen && (
                 <div
-                    className="fixed inset-0 z-30 bg-[#3b2e2a]/20 backdrop-blur-sm md:hidden"
+                    className="fixed inset-0 z-30 bg-[#3a3350]/20 backdrop-blur-sm md:hidden"
                     onClick={() => setIsMobileOpen(false)}
                 />
             )}

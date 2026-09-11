@@ -35,36 +35,36 @@ export function AskAsta() {
 
     return (
         <section className="w-full pt-4 pb-4">
-            <div className="bg-white rounded-3xl p-6 lg:p-7 shadow-[0_10px_30px_-5px_rgba(156,79,90,0.08)] border border-[#e9e2d7]/40 flex flex-col gap-3">
-                <div className="flex items-center gap-2 text-[#7f3843]">
+            <div className="bg-white rounded-3xl p-6 lg:p-7 shadow-[0_10px_30px_-5px_rgba(107,92,165,0.08)] border border-[#e8ddff]/40 flex flex-col gap-3">
+                <div className="flex items-center gap-2 text-[#6b5ca5]">
                     <MessagesSquare size={24} strokeWidth={1.5} />
-                    <h2 className="text-[18px] leading-[28px] font-bold text-[#1e1b15]">ASTAに聞く</h2>
+                    <h2 className="text-[18px] leading-[28px] font-bold text-[#3a3350]">ASTAに聞く</h2>
                 </div>
                 <form onSubmit={ask} className="relative flex items-center mt-1">
                     <input
                         value={prompt}
                         onChange={e => setPrompt(e.target.value)}
                         placeholder="聞きたいことを書いてください（例：て形の教え方は？）"
-                        className="w-full h-14 pl-5 pr-36 bg-[#fff8f0] rounded-2xl border border-[#7f3843]/20 text-[15px] text-[#1e1b15] placeholder:text-[#8a7672] focus:outline-none focus:ring-4 focus:ring-[#7f3843]/10 focus:border-[#7f3843] shadow-inner"
+                        className="w-full h-14 pl-5 pr-36 bg-[#fdf7ff] rounded-2xl border border-[#6b5ca5]/20 text-[15px] text-[#3a3350] placeholder:text-[#7d7789] focus:outline-none focus:ring-4 focus:ring-[#6b5ca5]/10 focus:border-[#6b5ca5] shadow-inner"
                     />
                     <button
                         type="submit"
                         disabled={loading || !prompt.trim()}
-                        className="absolute right-2 top-2 bottom-2 bg-[#7f3843] text-white hover:opacity-95 active:scale-[0.97] transition-all px-5 rounded-xl text-[15px] leading-[22px] font-semibold flex items-center gap-1.5 shadow-sm disabled:opacity-60"
+                        className="absolute right-2 top-2 bottom-2 bg-[#6b5ca5] text-white hover:opacity-95 active:scale-[0.97] transition-all px-5 rounded-xl text-[15px] leading-[22px] font-semibold flex items-center gap-1.5 shadow-sm disabled:opacity-60"
                     >
                         {loading ? <Loader2 size={18} className="animate-spin" /> : null}
                         <span>質問する</span>
                         {!loading && <Send size={16} strokeWidth={1.8} />}
                     </button>
                 </form>
-                {loading && <p className="text-[15px] text-[#534344]">ASTAが考えています…</p>}
+                {loading && <p className="text-[15px] text-[#484550]">ASTAが考えています…</p>}
                 {answer && (
-                    <div className="relative bg-[#faf3e7] rounded-2xl p-5 pr-12 border border-[#e9e2d7]/40">
-                        <button type="button" onClick={() => setAnswer('')} aria-label="答えを閉じる" className="absolute top-3 right-3 p-1.5 text-[#534344] hover:text-[#1e1b15] rounded-full">
+                    <div className="relative bg-[#f8f1ff] rounded-2xl p-5 pr-12 border border-[#e8ddff]/40">
+                        <button type="button" onClick={() => setAnswer('')} aria-label="答えを閉じる" className="absolute top-3 right-3 p-1.5 text-[#484550] hover:text-[#3a3350] rounded-full">
                             <X size={16} />
                         </button>
-                        <p className="text-[12px] leading-[18px] font-bold text-[#7f3843] mb-2">ASTAの答え</p>
-                        <p className="text-[15px] leading-[26px] text-[#1e1b15] whitespace-pre-wrap">{answer}</p>
+                        <p className="text-[12px] leading-[18px] font-bold text-[#6b5ca5] mb-2">ASTAの答え</p>
+                        <p className="text-[15px] leading-[26px] text-[#3a3350] whitespace-pre-wrap">{answer}</p>
                     </div>
                 )}
             </div>

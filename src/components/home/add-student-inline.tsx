@@ -20,8 +20,8 @@ const LEVELS = [
     { value: 'N1', label: '最上級（N1）' },
 ];
 
-const FIELD = 'w-full h-[46px] rounded-xl border border-[#7f3843]/20 bg-[#fff8f0] px-3.5 text-[15px] text-[#1e1b15] placeholder:text-[#8a7672] focus:outline-none focus:ring-2 focus:ring-[#7f3843]/20 focus:border-[#7f3843]';
-const LABEL = 'block text-[12px] leading-[18px] text-[#534344] mb-1 font-medium';
+const FIELD = 'w-full h-[46px] rounded-xl border border-[#6b5ca5]/20 bg-[#fdf7ff] px-3.5 text-[15px] text-[#3a3350] placeholder:text-[#7d7789] focus:outline-none focus:ring-2 focus:ring-[#6b5ca5]/20 focus:border-[#6b5ca5]';
+const LABEL = 'block text-[12px] leading-[18px] text-[#484550] mb-1 font-medium';
 
 export function AddStudentInline({ openByDefault = false }: { openByDefault?: boolean }) {
     const router = useRouter();
@@ -58,21 +58,21 @@ export function AddStudentInline({ openByDefault = false }: { openByDefault?: bo
     };
 
     return (
-        <div className="mt-2 bg-white/80 rounded-3xl border-2 border-dashed border-[#7f3843]/20 p-5 transition-all">
+        <div className="mt-2 bg-white/80 rounded-3xl border-2 border-dashed border-[#6b5ca5]/20 p-5 transition-all">
             <button
                 type="button"
                 onClick={() => setOpen(v => !v)}
                 aria-expanded={open}
-                className="w-full flex items-center justify-between text-[#7f3843] select-none font-semibold text-[15px] leading-[22px]"
+                className="w-full flex items-center justify-between text-[#6b5ca5] select-none font-semibold text-[15px] leading-[22px]"
             >
                 <span className="flex items-center gap-2">
                     <PlusCircle size={20} strokeWidth={1.6} /> 生徒を追加
                 </span>
-                {!open && <span className="text-[12px] leading-[18px] font-normal text-[#534344]">その場で登録できます</span>}
+                {!open && <span className="text-[12px] leading-[18px] font-normal text-[#484550]">その場で登録できます</span>}
                 <ChevronDown size={20} strokeWidth={1.6} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
             </button>
             {open && (
-                <form onSubmit={submit} className="pt-5 mt-4 border-t border-[#e9e2d7]/40 space-y-4">
+                <form onSubmit={submit} className="pt-5 mt-4 border-t border-[#e8ddff]/40 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div>
                             <label className={LABEL} htmlFor="add-name">お名前（必須）</label>
@@ -103,7 +103,7 @@ export function AddStudentInline({ openByDefault = false }: { openByDefault?: bo
                         <button
                             type="submit"
                             disabled={saving || !name.trim()}
-                            className="bg-[#7f3843] text-white px-6 py-2.5 rounded-xl text-[15px] leading-[22px] font-semibold hover:opacity-95 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                            className="bg-[#6b5ca5] text-white px-6 py-2.5 rounded-xl text-[15px] leading-[22px] font-semibold hover:opacity-95 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                             {saving && <Loader2 size={16} className="animate-spin" />} 登録する
                         </button>

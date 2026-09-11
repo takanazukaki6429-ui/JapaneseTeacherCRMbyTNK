@@ -1,5 +1,5 @@
 /**
- * ホーム（2026-09-11 かずき決定：配置＝E、色＝D、書体＝E）
+ * ホーム（2026-09-11 かずき決定：配置＝E、色＝E、書体＝E）
  * 画面案 strategy/デザイン案_色D書体E_2026-09-11/ホーム_色D書体E.html をそのまま写し、中身を本物のデータにつないだもの。
  *
  * 役目：開いた瞬間に「生徒の様子」と「やり残し」が分かる（画面の要素一覧_2026-09-10.md 画面1）
@@ -23,7 +23,7 @@ const SHOW_STUDENTS = 6;
 const SHOW_NOTICES = 5;
 
 // 画面案の「カードの影」「押せるカードの動き」
-const CARD = 'bg-white border border-[#e9e2d7]/30 shadow-[0_10px_30px_-5px_rgba(156,79,90,0.08)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_-4px_rgba(156,79,90,0.12)]';
+const CARD = 'bg-white border border-[#e8ddff]/30 shadow-[0_10px_30px_-5px_rgba(107,92,165,0.08)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_-4px_rgba(107,92,165,0.12)]';
 const CHIP = 'text-[12px] leading-[18px] px-2.5 py-0.5 rounded-full';
 
 type StudentRow = {
@@ -115,18 +115,18 @@ const NOTICE_ICON = { next: CalendarClock, homework: ListChecks, plan: Clipboard
 function Decorations() {
     return (
         <div aria-hidden className="fixed inset-0 pointer-events-none z-0 overflow-hidden opacity-30">
-            <svg className="absolute -top-12 -right-12 w-96 h-96 text-[#7f3843] stroke-current fill-none" strokeWidth="0.75" viewBox="0 0 200 200">
+            <svg className="absolute -top-12 -right-12 w-96 h-96 text-[#6b5ca5] stroke-current fill-none" strokeWidth="0.75" viewBox="0 0 200 200">
                 <path d="M120,20 C140,60 170,80 180,120 C190,160 150,180 110,180 C70,180 30,150 40,100 C50,50 100,-20 120,20 Z" strokeDasharray="3 3" />
                 <path d="M140,50 Q160,90 120,130 Q100,100 140,50" />
-                <circle cx="165" cy="85" fill="#9c4f5a" opacity="0.4" r="3" />
-                <circle cx="95" cy="140" fill="#9c4f5a" opacity="0.3" r="2.5" />
+                <circle cx="165" cy="85" fill="#6b5ca5" opacity="0.4" r="3" />
+                <circle cx="95" cy="140" fill="#6b5ca5" opacity="0.3" r="2.5" />
             </svg>
-            <svg className="absolute bottom-10 left-72 w-80 h-80 text-[#7f3843] stroke-current fill-none" strokeWidth="0.6" viewBox="0 0 200 200">
+            <svg className="absolute bottom-10 left-72 w-80 h-80 text-[#6b5ca5] stroke-current fill-none" strokeWidth="0.6" viewBox="0 0 200 200">
                 <path d="M30,160 Q80,120 70,70 Q100,100 130,90 Q90,140 30,160" />
                 <path d="M70,70 Q60,40 40,50 Q50,70 70,70" />
-                <circle cx="135" cy="85" fill="#9c4f5a" opacity="0.4" r="2" />
+                <circle cx="135" cy="85" fill="#6b5ca5" opacity="0.4" r="2" />
             </svg>
-            <svg className="absolute top-1/2 right-1/4 w-32 h-32 text-[#7f3843] stroke-current fill-none" strokeWidth="0.8" viewBox="0 0 100 100">
+            <svg className="absolute top-1/2 right-1/4 w-32 h-32 text-[#6b5ca5] stroke-current fill-none" strokeWidth="0.8" viewBox="0 0 100 100">
                 <path d="M50,15 L53,35 L73,38 L55,48 L60,68 L45,55 L30,68 L35,48 L17,38 L37,35 Z" opacity="0.25" />
             </svg>
         </div>
@@ -144,23 +144,23 @@ export default async function Home() {
             <Decorations />
             <div className="relative z-10 max-w-[1160px] flex flex-col">
                 <header className="mb-8">
-                    <p className="text-[12px] leading-[18px] text-[#7f3843] font-medium tracking-wide">{today}</p>
-                    <h1 className="text-[24px] leading-[36px] font-semibold text-[#1e1b15] mt-1">{teacherName}、お疲れさまです</h1>
+                    <p className="text-[12px] leading-[18px] text-[#6b5ca5] font-medium tracking-wide">{today}</p>
+                    <h1 className="text-[24px] leading-[36px] font-semibold text-[#3a3350] mt-1">{teacherName}、お疲れさまです</h1>
                 </header>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-10">
                     {/* 左：生徒の様子 */}
                     <section className={`${notices.length > 0 ? 'lg:col-span-7' : 'lg:col-span-12'} flex flex-col gap-5`}>
-                        <h2 className="text-[20px] leading-[30px] font-bold text-[#1e1b15] flex items-center gap-2">
+                        <h2 className="text-[20px] leading-[30px] font-bold text-[#3a3350] flex items-center gap-2">
                             生徒の様子
-                            <span className="inline-block w-2 h-2 rounded-full bg-[#7f3843]/40" />
+                            <span className="inline-block w-2 h-2 rounded-full bg-[#6b5ca5]/40" />
                         </h2>
 
                         <div className="space-y-4">
                             {total === 0 && (
                                 <article className={`${CARD} rounded-3xl p-6`}>
-                                    <p className="text-[18px] leading-[28px] font-bold text-[#1e1b15]">まず生徒を1人登録しましょう</p>
-                                    <p className="text-[15px] leading-[26px] text-[#534344] mt-1">下の「生徒を追加」から、この画面のまま登録できます。</p>
+                                    <p className="text-[18px] leading-[28px] font-bold text-[#3a3350]">まず生徒を1人登録しましょう</p>
+                                    <p className="text-[15px] leading-[26px] text-[#484550] mt-1">下の「生徒を追加」から、この画面のまま登録できます。</p>
                                 </article>
                             )}
 
@@ -169,40 +169,40 @@ export default async function Home() {
                                     <div className="flex items-start justify-between gap-4">
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2 flex-wrap">
-                                                <Link href={`/students/${st.id}`} className="text-[18px] leading-[28px] font-bold text-[#1e1b15] hover:text-[#7f3843]">
+                                                <Link href={`/students/${st.id}`} className="text-[18px] leading-[28px] font-bold text-[#3a3350] hover:text-[#6b5ca5]">
                                                     {st.name}さん
                                                 </Link>
-                                                {st.nationality && <span className={`${CHIP} text-[#534344] bg-[#f4ede2]`}>{st.nationality}</span>}
-                                                {st.jlpt_level && <span className={`${CHIP} font-semibold bg-[#ece8f3] text-[#6b5b8c]`}>{st.jlpt_level}</span>}
+                                                {st.nationality && <span className={`${CHIP} text-[#484550] bg-[#f2eaff]`}>{st.nationality}</span>}
+                                                {st.jlpt_level && <span className={`${CHIP} font-semibold bg-[#dff1ea] text-[#2a6f5a]`}>{st.jlpt_level}</span>}
                                                 {marks.map(m => (
-                                                    <span key={m.text} className={`${CHIP} font-semibold ${m.tone === 'beige' ? 'bg-[#f1e7da] text-[#664928]' : 'bg-[#eee7dc] text-[#7f3843]'}`}>{m.text}</span>
+                                                    <span key={m.text} className={`${CHIP} font-semibold ${m.tone === 'beige' ? 'bg-[#fbe7ed] text-[#a8475f]' : 'bg-[#ede4ff] text-[#6b5ca5]'}`}>{m.text}</span>
                                                 ))}
                                             </div>
-                                            <p className="text-[15px] leading-[26px] text-[#534344] mt-2">
-                                                <span className="font-medium text-[#7f3843]">今の課：</span>{st.textbook || '未設定'}
+                                            <p className="text-[15px] leading-[26px] text-[#484550] mt-2">
+                                                <span className="font-medium text-[#6b5ca5]">今の課：</span>{st.textbook || '未設定'}
                                             </p>
                                         </div>
                                         <Link
                                             href={`/students/${st.id}/lessons/live`}
-                                            className="shrink-0 bg-[#7f3843] text-white hover:opacity-95 active:scale-[0.98] transition-all px-5 py-2.5 rounded-2xl text-[15px] leading-[22px] font-semibold shadow-sm"
+                                            className="shrink-0 bg-[#6b5ca5] text-white hover:opacity-95 active:scale-[0.98] transition-all px-5 py-2.5 rounded-2xl text-[15px] leading-[22px] font-semibold shadow-sm"
                                         >
                                             授業を始める
                                         </Link>
                                     </div>
-                                    <div className="bg-[#faf3e7] rounded-2xl p-3.5 space-y-1.5 border border-[#e9e2d7]/20">
+                                    <div className="bg-[#f8f1ff] rounded-2xl p-3.5 space-y-1.5 border border-[#e8ddff]/20">
                                         {last?.mistakes?.trim() ? (
-                                            <p className="text-[15px] leading-[26px] text-[#1e1b15] line-clamp-2">
-                                                <span className="text-[12px] leading-[18px] font-medium text-[#7f3843] block sm:inline">前回のつまずき：</span>
+                                            <p className="text-[15px] leading-[26px] text-[#3a3350] line-clamp-2">
+                                                <span className="text-[12px] leading-[18px] font-medium text-[#6b5ca5] block sm:inline">前回のつまずき：</span>
                                                 {last.mistakes.trim()}
                                             </p>
                                         ) : (
-                                            <p className="text-[15px] leading-[26px] text-[#534344]">
+                                            <p className="text-[15px] leading-[26px] text-[#484550]">
                                                 {last ? '前回の記録に、つまずきの記入はありません' : '授業の記録はまだありません'}
                                             </p>
                                         )}
                                         {last && (
-                                            <div className="text-[12px] leading-[18px] text-[#534344] flex items-center gap-1.5 pt-1 border-t border-[#e9e2d7]/30">
-                                                <CalendarDays size={15} className="text-[#7f3843]/70" />
+                                            <div className="text-[12px] leading-[18px] text-[#484550] flex items-center gap-1.5 pt-1 border-t border-[#e8ddff]/30">
+                                                <CalendarDays size={15} className="text-[#6b5ca5]/70" />
                                                 <span>最終授業日：{jpDate(last.date)}（{daysSince === 0 ? '今日' : `${daysSince}日前`}）</span>
                                             </div>
                                         )}
@@ -211,7 +211,7 @@ export default async function Home() {
                             ))}
 
                             {total > SHOW_STUDENTS && (
-                                <Link href="/students" className="block text-center text-[15px] font-semibold text-[#7f3843] hover:underline">
+                                <Link href="/students" className="block text-center text-[15px] font-semibold text-[#6b5ca5] hover:underline">
                                     ほかの{total - SHOW_STUDENTS}人の生徒を見る
                                 </Link>
                             )}
@@ -223,9 +223,9 @@ export default async function Home() {
                     {/* 右：ASTAからの声かけ（0件なら出さない） */}
                     {notices.length > 0 && (
                         <section className="lg:col-span-5 flex flex-col gap-5">
-                            <h2 className="text-[20px] leading-[30px] font-bold text-[#1e1b15] flex items-center gap-2">
+                            <h2 className="text-[20px] leading-[30px] font-bold text-[#3a3350] flex items-center gap-2">
                                 ASTAからの声かけ
-                                <span className="inline-block w-2 h-2 rounded-full bg-[#665687]" />
+                                <span className="inline-block w-2 h-2 rounded-full bg-[#1b6a55]" />
                             </h2>
                             <div className="space-y-4">
                                 {notices.map(n => {
@@ -233,15 +233,15 @@ export default async function Home() {
                                     return (
                                         <article key={n.key} className={`${CARD} rounded-3xl p-5 flex flex-col gap-3.5`}>
                                             <div className="flex items-start gap-3">
-                                                <Icon size={24} strokeWidth={1.5} className="text-[#7f3843] mt-0.5 shrink-0" />
-                                                <p className="text-[15px] leading-relaxed text-[#1e1b15]">{n.text}</p>
+                                                <Icon size={24} strokeWidth={1.5} className="text-[#6b5ca5] mt-0.5 shrink-0" />
+                                                <p className="text-[15px] leading-relaxed text-[#3a3350]">{n.text}</p>
                                             </div>
                                             <div className="flex justify-end">
                                                 <Link
                                                     href={n.href}
                                                     className={n.tone === 'lavender'
-                                                        ? 'bg-[#ece8f3] text-[#6b5b8c] hover:bg-[#e0daec] active:scale-[0.98] transition-all px-4 py-2.5 rounded-xl text-[15px] leading-[22px] font-medium'
-                                                        : 'bg-[#f4ede2] hover:bg-[#eee7dc] text-[#7f3843] active:scale-[0.98] transition-all px-4 py-2.5 rounded-xl text-[15px] leading-[22px] font-medium'}
+                                                        ? 'bg-[#dff1ea] text-[#2a6f5a] hover:bg-[#cfebd0] active:scale-[0.98] transition-all px-4 py-2.5 rounded-xl text-[15px] leading-[22px] font-medium'
+                                                        : 'bg-[#f2eaff] hover:bg-[#ede4ff] text-[#6b5ca5] active:scale-[0.98] transition-all px-4 py-2.5 rounded-xl text-[15px] leading-[22px] font-medium'}
                                                 >
                                                     {n.label}
                                                 </Link>

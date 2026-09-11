@@ -41,13 +41,13 @@ function PricingContent() {
     };
 
     return (
-        <div className="min-h-screen bg-[#f1ebe1] flex flex-col items-center justify-center px-4 py-16">
+        <div className="min-h-screen bg-[#f0ebf8] flex flex-col items-center justify-center px-4 py-16">
             {/* ロゴ */}
             <div className="mb-10 text-center">
-                <p className="text-[10px] font-black tracking-[0.3em] text-[#9c4f5a]/60 uppercase mb-2">
+                <p className="text-[10px] font-black tracking-[0.3em] text-[#6b5ca5]/60 uppercase mb-2">
                     Nihongo Teacher CRM
                 </p>
-                <h1 className="text-3xl font-black text-[#3b2e2a] tracking-tight">
+                <h1 className="text-3xl font-black text-[#3a3350] tracking-tight">
                     ASTA
                 </h1>
             </div>
@@ -59,24 +59,24 @@ function PricingContent() {
             )}
 
             {/* 料金カード */}
-            <div className="bg-white rounded-3xl shadow-[0_0_60px_rgba(156,79,90,0.12)] p-8 w-full max-w-md">
+            <div className="bg-white rounded-3xl shadow-[0_0_60px_rgba(107,92,165,0.12)] p-8 w-full max-w-md">
                 <div className="flex items-start justify-between mb-6">
                     <div>
-                        <span className="text-xs font-bold text-[#9c4f5a] bg-[#f8e8e7] px-3 py-1 rounded-full uppercase tracking-wider">
+                        <span className="text-xs font-bold text-[#6b5ca5] bg-[#efe9ff] px-3 py-1 rounded-full uppercase tracking-wider">
                             プロプラン
                         </span>
                         <div className="mt-3 flex items-end gap-1">
-                            <span className="text-4xl font-black text-[#3b2e2a]">{PLAN_PRICE_LABEL}</span>
-                            <span className="text-sm text-[#534344] mb-1">/月（税込）</span>
+                            <span className="text-4xl font-black text-[#3a3350]">{PLAN_PRICE_LABEL}</span>
+                            <span className="text-sm text-[#484550] mb-1">/月（税込）</span>
                         </div>
                     </div>
-                    <Sparkles className="text-[#d9a7ae] mt-1" size={28} />
+                    <Sparkles className="text-[#ccbeff] mt-1" size={28} />
                 </div>
 
                 <ul className="space-y-3 mb-8">
                     {FEATURES.map((f) => (
-                        <li key={f} className="flex items-start gap-2.5 text-sm text-[#3b2e2a]">
-                            <Check size={16} className="text-[#9c4f5a] mt-0.5 flex-shrink-0" />
+                        <li key={f} className="flex items-start gap-2.5 text-sm text-[#3a3350]">
+                            <Check size={16} className="text-[#6b5ca5] mt-0.5 flex-shrink-0" />
                             {f}
                         </li>
                     ))}
@@ -89,7 +89,7 @@ function PricingContent() {
                 <button
                     onClick={handleCheckout}
                     disabled={loading}
-                    className="w-full py-3.5 bg-[#9c4f5a] text-white font-bold rounded-2xl hover:scale-[1.02] transition-transform shadow-[0_4px_24px_rgba(156,79,90,0.30)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
+                    className="w-full py-3.5 bg-[#6b5ca5] text-white font-bold rounded-2xl hover:scale-[1.02] transition-transform shadow-[0_4px_24px_rgba(107,92,165,0.30)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
                 >
                     {loading ? (
                         <><Loader2 size={18} className="animate-spin" />決済ページへ移動中…</>
@@ -98,14 +98,14 @@ function PricingContent() {
                     )}
                 </button>
 
-                <p className="text-center text-xs text-[#534344]/50 mt-4">
+                <p className="text-center text-xs text-[#484550]/50 mt-4">
                     クレジットカード決済・いつでもキャンセル可能
                 </p>
             </div>
 
-            <p className="mt-8 text-xs text-[#534344]/40">
+            <p className="mt-8 text-xs text-[#484550]/40">
                 すでにアカウントをお持ちの方は
-                <a href="/login" className="text-[#9c4f5a] underline ml-1">ログイン</a>
+                <a href="/login" className="text-[#6b5ca5] underline ml-1">ログイン</a>
             </p>
         </div>
     );
@@ -113,7 +113,7 @@ function PricingContent() {
 
 export default function PricingPage() {
     return (
-        <Suspense fallback={<div className="min-h-screen bg-[#f1ebe1] flex items-center justify-center"><Loader2 className="animate-spin text-[#9c4f5a]" size={28} /></div>}>
+        <Suspense fallback={<div className="min-h-screen bg-[#f0ebf8] flex items-center justify-center"><Loader2 className="animate-spin text-[#6b5ca5]" size={28} /></div>}>
             <PricingContent />
         </Suspense>
     );

@@ -96,23 +96,23 @@ export function MfaSection() {
     };
 
     if (loading) {
-        return <div className="flex items-center gap-2 text-sm text-[#534344]"><Loader2 size={14} className="animate-spin" />読み込み中…</div>;
+        return <div className="flex items-center gap-2 text-sm text-[#484550]"><Loader2 size={14} className="animate-spin" />読み込み中…</div>;
     }
 
     return (
-        <div className="py-3 border-b border-[#f1ebe1] last:border-0">
+        <div className="py-3 border-b border-[#f0ebf8] last:border-0">
             <div className="flex items-center justify-between">
                 <div>
-                    <p className="text-sm font-semibold text-[#3b2e2a] flex items-center gap-1.5">
-                        <ShieldCheck size={14} className={enrolled ? 'text-[#1a7f37]' : 'text-[#534344]'} />
+                    <p className="text-sm font-semibold text-[#3a3350] flex items-center gap-1.5">
+                        <ShieldCheck size={14} className={enrolled ? 'text-[#1a7f37]' : 'text-[#484550]'} />
                         二要素認証（MFA）
                         {enrolled && <span className="text-[10px] bg-[#f0fdf4] text-[#1a7f37] px-2 py-0.5 rounded-full font-bold">有効</span>}
                     </p>
-                    <p className="text-xs text-[#534344] mt-0.5">認証アプリ（Google Authenticator等）で保護</p>
+                    <p className="text-xs text-[#484550] mt-0.5">認証アプリ（Google Authenticator等）で保護</p>
                 </div>
                 {!enrolled && !enrolling && (
                     <button onClick={startEnroll} disabled={busy}
-                        className="text-xs bg-[#f1ebe1] text-[#534344] px-3 py-1.5 rounded-lg hover:bg-[#f8e8e7] hover:text-[#9c4f5a] transition-colors disabled:opacity-50 flex items-center gap-1">
+                        className="text-xs bg-[#f0ebf8] text-[#484550] px-3 py-1.5 rounded-lg hover:bg-[#efe9ff] hover:text-[#6b5ca5] transition-colors disabled:opacity-50 flex items-center gap-1">
                         {busy && <Loader2 size={12} className="animate-spin" />}有効にする
                     </button>
                 )}
@@ -125,9 +125,9 @@ export function MfaSection() {
             </div>
 
             {enrolling && (
-                <div className="mt-4 bg-[#f1ebe1] rounded-2xl p-5">
-                    <p className="text-sm font-bold text-[#3b2e2a] mb-3">認証アプリで登録</p>
-                    <ol className="text-xs text-[#534344] space-y-1.5 mb-4 list-decimal pl-4">
+                <div className="mt-4 bg-[#f0ebf8] rounded-2xl p-5">
+                    <p className="text-sm font-bold text-[#3a3350] mb-3">認証アプリで登録</p>
+                    <ol className="text-xs text-[#484550] space-y-1.5 mb-4 list-decimal pl-4">
                         <li>Google Authenticator等のアプリでQRコードをスキャン</li>
                         <li>表示された6桁のコードを下に入力</li>
                     </ol>
@@ -136,7 +136,7 @@ export function MfaSection() {
                         <img src={qrCode} alt="MFA QRコード" className="w-44 h-44 mx-auto bg-white rounded-xl p-2 mb-3" />
                     )}
                     {secret && (
-                        <p className="text-[11px] text-[#534344] text-center mb-3">
+                        <p className="text-[11px] text-[#484550] text-center mb-3">
                             手入力用キー: <code className="bg-white px-1.5 py-0.5 rounded font-mono">{secret}</code>
                         </p>
                     )}
@@ -147,16 +147,16 @@ export function MfaSection() {
                         value={code}
                         onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
                         placeholder="6桁のコード"
-                        className="w-full text-center text-lg tracking-[0.3em] font-mono px-3 py-2.5 rounded-xl border border-[#d9a7ae]/40 focus:outline-none focus:ring-2 focus:ring-[#d9a7ae] bg-white mb-2"
+                        className="w-full text-center text-lg tracking-[0.3em] font-mono px-3 py-2.5 rounded-xl border border-[#ccbeff]/40 focus:outline-none focus:ring-2 focus:ring-[#ccbeff] bg-white mb-2"
                     />
                     {error && <p className="text-xs text-[#ba1a1a] mb-2">{error}</p>}
                     <div className="flex gap-2">
                         <button onClick={() => { setEnrolling(false); setError(''); setCode(''); }}
-                            className="text-xs px-4 py-2 rounded-xl bg-white text-[#534344] border border-[#d9a7ae]/30 hover:bg-[#f8e8e7] transition-colors">
+                            className="text-xs px-4 py-2 rounded-xl bg-white text-[#484550] border border-[#ccbeff]/30 hover:bg-[#efe9ff] transition-colors">
                             キャンセル
                         </button>
                         <button onClick={verifyEnroll} disabled={code.length < 6 || busy}
-                            className="text-xs px-4 py-2 rounded-xl bg-[#9c4f5a] text-white font-bold hover:scale-[1.02] transition-transform disabled:opacity-50 flex items-center gap-1.5">
+                            className="text-xs px-4 py-2 rounded-xl bg-[#6b5ca5] text-white font-bold hover:scale-[1.02] transition-transform disabled:opacity-50 flex items-center gap-1.5">
                             {busy && <Loader2 size={12} className="animate-spin" />}確認して有効化
                         </button>
                     </div>
