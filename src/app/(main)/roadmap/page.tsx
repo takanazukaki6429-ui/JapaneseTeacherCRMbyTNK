@@ -79,7 +79,7 @@ export default function JapaneseRoadmapPage() {
             const file = new File([blob], "japanese_roadmap.png", { type: "image/png" });
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 try {
-                    await navigator.share({ files: [file], title: t.title, text: `${periodMonths}${t.months} +${(targetLevel - currentLevel)}Lv` });
+                    await navigator.share({ files: [file], title: t.title, text: `${periodMonths}${t.months}: ${getLevelDescription(currentLevel, t)} → ${getLevelDescription(targetLevel, t)}` });
                     toast.success(t.shareOpened);
                 } catch (err) { console.error("Share failed", err); }
             } else {
@@ -180,16 +180,9 @@ export default function JapaneseRoadmapPage() {
                         <div className="flex justify-between items-center">
                             <div>
                                 <label className="text-sm font-bold text-slate-700">{t.currentLevel}</label>
-                                <p className="text-xs text-slate-500 mt-0.5">{getLevelDescription(currentLevel, t)}</p>
                             </div>
-                            <div className="flex items-baseline gap-1 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-                                <Input
-                                    type="number"
-                                    value={currentLevel}
-                                    onChange={(e) => setCurrentLevel(Math.min(100, Math.max(0, Number(e.target.value))))}
-                                    className="w-12 text-right font-bold text-lg h-auto p-0 border-none bg-transparent focus-visible:ring-0 text-slate-800"
-                                />
-                                <span className="text-xs text-slate-400 font-medium">Lv</span>
+                            <div className="bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+                                <span className="font-bold text-lg text-slate-800">{getLevelDescription(currentLevel, t)}</span>
                             </div>
                         </div>
                         <Slider
@@ -280,16 +273,9 @@ export default function JapaneseRoadmapPage() {
                         <div className="flex justify-between items-center">
                             <div>
                                 <label className="text-sm font-bold text-slate-700">{t.targetLevel}</label>
-                                <p className="text-xs text-slate-500 mt-0.5">{getLevelDescription(targetLevel, t)}</p>
                             </div>
-                            <div className="flex items-baseline gap-1 bg-teal-50 px-3 py-1.5 rounded-lg border border-teal-100">
-                                <Input
-                                    type="number"
-                                    value={targetLevel}
-                                    onChange={(e) => setTargetLevel(Math.min(100, Math.max(0, Number(e.target.value))))}
-                                    className="w-12 text-right font-bold text-lg h-auto p-0 border-none bg-transparent focus-visible:ring-0 text-teal-700"
-                                />
-                                <span className="text-xs text-teal-500 font-medium">Lv</span>
+                            <div className="bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+                                <span className="font-bold text-lg text-teal-600">{getLevelDescription(targetLevel, t)}</span>
                             </div>
                         </div>
                         <Slider
@@ -402,7 +388,7 @@ export default function JapaneseRoadmapPage() {
                                     <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} />
                                     <Tooltip
                                         contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
-                                        formatter={(value) => [`Lv.${value}`, t.level]}
+                                        formatter={(value) => [getLevelDescription(Number(value), t), t.level]}
                                     />
                                     <ReferenceLine y={targetLevel} stroke="#10B981" strokeDasharray="3 3" />
                                     <Line type="monotone" dataKey="level" stroke="url(#colorGradient)" strokeWidth={3} dot={{ fill: '#2563eb', r: 4, strokeWidth: 2, stroke: '#fff' }} />

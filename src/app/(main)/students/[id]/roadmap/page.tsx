@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { Student } from '@/types/student';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { generateMilestones } from '@/lib/roadmap/generators';
+import { generateMilestones, getLevelDescription } from '@/lib/roadmap/generators';
 import { ja } from '@/app/(main)/roadmap/ja';
 import { toast } from 'sonner';
 
@@ -143,7 +143,6 @@ export default function StudentRoadmapPage() {
                                 <div className="text-center">
                                     <p className="text-xs text-white/60 mb-1">現在</p>
                                     <span className="text-2xl font-bold">{student.jlpt_level}</span>
-                                    <p className="text-xs text-white/60">Lv.{currentScore}</p>
                                 </div>
                                 <div className="flex-1">
                                     <div className="h-2 bg-white/20 rounded-full overflow-hidden">
@@ -155,8 +154,7 @@ export default function StudentRoadmapPage() {
                                 </div>
                                 <div className="text-center">
                                     <p className="text-xs text-white/60 mb-1">目標</p>
-                                    <span className="text-2xl font-bold">{milestones[milestones.length - 1]?.jlpt ?? `Lv.${targetLevel}`}</span>
-                                    <p className="text-xs text-white/60">Lv.{targetLevel}</p>
+                                    <span className="text-2xl font-bold">{milestones[milestones.length - 1]?.jlpt ?? getLevelDescription(targetLevel ?? 0, ja)}</span>
                                 </div>
                             </div>
                         </div>
@@ -209,7 +207,7 @@ export default function StudentRoadmapPage() {
                                                 </div>
                                                 <div>
                                                     <p className="font-bold text-[#1a1c1e]">{milestone.month}ヶ月目</p>
-                                                    <p className="text-xs text-[#4b454e]">目標レベル: Lv.{milestone.level}</p>
+                                                    <p className="text-xs text-[#4b454e]">目標レベル: {getLevelDescription(milestone.level, ja)}</p>
                                                 </div>
                                             </div>
                                             <Badge className="text-white" style={{ backgroundColor: milestone.jlptColor }}>
