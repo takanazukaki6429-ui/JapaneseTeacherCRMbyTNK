@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { checkPasswordStrength } from '@/lib/password-policy';
 import { checkRateLimit, getRequestIdentifier } from '@/lib/rate-limit';
 import { logAudit } from '@/lib/audit';
+import { notifyAdmin } from '@/lib/notify';
 
 const signUpSchema = z.object({
     email: z.string().email(),
@@ -129,6 +130,13 @@ export async function POST(req: NextRequest) {
             resourceId: codeData.id,
             outcome: 'success',
             req,
+        });
+
+        // 運営者（かずき）へ通知：招待コードで新しい先生が登録した＝売上の動き（2026-09-11）
+        await notifyAdmin({
+            level: 'info',
+            title: '新しい先生が登録しました',
+            body: `メール: ${email}\n招待コード: ${inviteCode}`,
         });
 
         return NextResponse.json({
