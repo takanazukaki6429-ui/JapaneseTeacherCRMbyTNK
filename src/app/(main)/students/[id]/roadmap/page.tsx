@@ -3,28 +3,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { ArrowLeft, Loader2, Map, Target, BookText, CheckCircle2, Sparkles, BookOpen, Clock } from 'lucide-react';
+import { ArrowLeft, Loader2, Map, Target, BookText, CheckCircle2, Sparkles, BookOpen, Clock, Send, Copy, Check, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { Student } from '@/types/student';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { generateMilestones, getLevelDescription } from '@/lib/roadmap/generators';
+import { JLPT_TO_SCORE, parseCurrentPhase, roadmapInputFromStudent, roadmapLocaleForNationality } from '@/lib/roadmap/from-student';
+import { locales, type Locale } from '@/app/(main)/roadmap/i18n';
 import { ja } from '@/app/(main)/roadmap/ja';
 import { toast } from 'sonner';
-
-const JLPT_TO_SCORE: Record<string, number> = {
-    N5: 15, N4: 30, N3: 50, N2: 70, N1: 90,
-};
-
-function parseCurrentPhase(phase: string | null | undefined) {
-    if (!phase) return {};
-    const lvMatch = phase.match(/目標Lv\.(\d+)/);
-    const moMatch = phase.match(/(\d+)ヶ月/);
-    return {
-        targetLevel: lvMatch ? parseInt(lvMatch[1], 10) : undefined,
-        periodMonths: moMatch ? parseInt(moMatch[1], 10) : undefined,
-    };
-}
 
 function extractSection(memo: string, heading: string): string | null {
     const regex = new RegExp(`■ ${heading}\\n([\\s\\S]*?)(?:\\n\\n|■|【|$)`);
@@ -45,6 +33,42 @@ export default function StudentRoadmapPage() {
     const [loading, setLoading] = useState(true);
     const [student, setStudent] = useState<Student | null>(null);
 
+    // 生徒に渡すリンク
+    const [shareOpen, setShareOpen] = useState(false);
+    const [shareLocale, setShareLocale] = useState<Locale>('en');
+    const [shareUrl, setShareUrl] = useState('');
+    const [shareLoading, setShareLoading] = useState(false);
+    const [shareError, setShareError] = useState('');
+    const [copied, setCopied] = useState(false);
+
+    useEffect(() => {
+        if (student) setShareLocale(roadmapLocaleForNationality(student.nationality));
+    }, [student]);
+
+    const createShareLink = async () => {
+        setShareLoading(true); setShareError(''); setShareUrl(''); setCopied(false);
+        try {
+            const res = await fetch('/api/roadmap/share', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ studentId, locale: shareLocale }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'リンクを作れませんでした');
+            setShareUrl(data.url);
+        } catch (e) {
+            setShareError(e instanceof Error ? e.message : 'リンクを作れませんでした');
+        } finally {
+            setShareLoading(false);
+        }
+    };
+
+    const copyShareUrl = async () => {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopied(true);
+        toast.success('リンクをコピーしました。LINEなどで生徒に送ってください');
+    };
+
     useEffect(() => {
         if (!studentId) return;
         supabase.from('students').select('*').eq('id', studentId).single()
@@ -56,11 +80,15 @@ export default function StudentRoadmapPage() {
 
     const { targetLevel, periodMonths } = parseCurrentPhase(student?.current_phase);
     const currentScore = student?.jlpt_level ? JLPT_TO_SCORE[student.jlpt_level] : undefined;
+    const purposeIds = useMemo(
+        () => roadmapInputFromStudent(student as (Student & { purposes?: string | null }) | null)?.purposeIds ?? [],
+        [student]
+    );
 
     const milestones = useMemo(() => {
         if (!currentScore || !targetLevel || !periodMonths) return [];
-        return generateMilestones(currentScore, targetLevel, periodMonths, [], ja);
-    }, [currentScore, targetLevel, periodMonths]);
+        return generateMilestones(currentScore, targetLevel, periodMonths, purposeIds, ja);
+    }, [currentScore, targetLevel, periodMonths, purposeIds]);
 
     if (loading) return (
         <div className="flex h-screen items-center justify-center">
@@ -97,16 +125,73 @@ export default function StudentRoadmapPage() {
                             {student.name}さんのロードマップ
                         </h1>
                     </div>
-                    <Link
-                        href={`/students/${studentId}/initial-hearing`}
-                        className="text-xs font-bold text-[#6f5385] bg-[#f2daff] hover:bg-[#e8c8ff] px-3 py-1.5 rounded-xl transition-colors"
-                    >
-                        再作成
-                    </Link>
+                    <div className="flex items-center gap-2">
+                        {hasRoadmap && (
+                            <button
+                                type="button"
+                                onClick={() => setShareOpen(v => !v)}
+                                className="text-xs font-bold text-white bg-[#6f5385] hover:opacity-90 px-3 py-1.5 rounded-xl transition-opacity flex items-center gap-1"
+                            >
+                                <Send size={12} /> 生徒に渡す
+                            </button>
+                        )}
+                        <Link
+                            href={`/students/${studentId}/initial-hearing`}
+                            className="text-xs font-bold text-[#6f5385] bg-[#f2daff] hover:bg-[#e8c8ff] px-3 py-1.5 rounded-xl transition-colors"
+                        >
+                            再作成
+                        </Link>
+                    </div>
                 </div>
             </div>
 
             <div className="max-w-2xl mx-auto p-4 md:p-6 space-y-5">
+
+                {hasRoadmap && shareOpen && (
+                    <div className="bg-white rounded-2xl p-5 shadow-[0_0_40px_rgba(111,83,133,0.06)] space-y-3">
+                        <div>
+                            <p className="text-sm font-bold text-[#1a1c1e]">{student.name}さんに渡すリンク</p>
+                            <p className="text-xs text-[#4b454e] mt-1 leading-relaxed">
+                                生徒はログインせずに、選んだ言語でこのロードマップを見られます（生徒の画面でも言語を切り替えられます）。
+                                先生が授業で今のレベルを更新すると、リンク先も最新の内容に変わります。リンクの有効期限は180日です。
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <label htmlFor="share-locale" className="text-xs font-bold text-[#4b454e]">表示する言語</label>
+                            <select
+                                id="share-locale"
+                                value={shareLocale}
+                                onChange={e => { setShareLocale(e.target.value as Locale); setShareUrl(''); }}
+                                className="text-sm border border-[#e4e1e8] rounded-lg px-2 py-1.5 bg-white"
+                            >
+                                {(Object.entries(locales) as [Locale, { flag: string; name: string }][]).map(([key, val]) => (
+                                    <option key={key} value={key}>{val.flag} {val.name}</option>
+                                ))}
+                            </select>
+                            <button
+                                type="button"
+                                onClick={createShareLink}
+                                disabled={shareLoading}
+                                className="text-sm font-bold text-white bg-[#6f5385] hover:opacity-90 disabled:opacity-50 px-4 py-1.5 rounded-lg flex items-center gap-1.5"
+                            >
+                                {shareLoading && <Loader2 size={14} className="animate-spin" />}
+                                リンクを作る
+                            </button>
+                        </div>
+                        {shareUrl && (
+                            <div className="flex items-center gap-2">
+                                <input readOnly value={shareUrl} onFocus={e => e.target.select()} className="flex-1 min-w-0 text-xs border border-[#e4e1e8] rounded-lg px-2 py-2 bg-[#faf9fd] text-[#1a1c1e]" />
+                                <button type="button" onClick={copyShareUrl} className="text-xs font-bold text-[#6f5385] bg-[#f2daff] hover:bg-[#e8c8ff] px-3 py-2 rounded-lg flex items-center gap-1 whitespace-nowrap">
+                                    {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? 'コピーしました' : 'コピー'}
+                                </button>
+                                <a href={shareUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-[#4b454e] hover:text-[#1a1c1e] px-2 py-2 flex items-center gap-1 whitespace-nowrap">
+                                    <ExternalLink size={12} /> 開いて確認
+                                </a>
+                            </div>
+                        )}
+                        {shareError && <p className="text-xs text-red-600">{shareError}</p>}
+                    </div>
+                )}
 
                 {!hasRoadmap ? (
                     <div className="bg-white rounded-2xl p-8 text-center shadow-[0_0_40px_rgba(111,83,133,0.06)]">
