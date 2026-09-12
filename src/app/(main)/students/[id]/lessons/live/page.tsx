@@ -219,6 +219,7 @@ export default function LiveLessonPage() {
     // しまう＝生徒と見る配分（先生の道具を最小化・文字を大きく）。
     // どちらの状態でも全部見えて安全な設計なので、押し忘れても事故にならない
     const [toolsOut, setToolsOut] = useState(true);
+    const [showHints, setShowHints] = useState(true);   // ASTAのヒント（進め方・ことば・考え中）を画面に出すか。生徒に画面を見せるときはオフ
 
 
     // ── 生徒向け翻訳（先生 → 生徒方向）──
@@ -1124,6 +1125,20 @@ export default function LiveLessonPage() {
                             <ChevronDown size={16} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#3a3350]" />
                         </div>
 
+                        {/* ASTAのヒント：オン＝ヒント（進め方・ことば・考え中）を出す。生徒に画面を見せるときはオフ（オフの間に出たヒントも、オンに戻すと見える） */}
+                        <button
+                            onClick={() => setShowHints(v => !v)}
+                            role="switch"
+                            aria-checked={showHints}
+                            title={showHints ? '押すとASTAのヒントを隠す（生徒に画面を見せるとき）' : '押すとASTAのヒントを出す'}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#e4ddf0] bg-white text-[#3a3350] whitespace-nowrap"
+                        >
+                            <span className="text-[15px] font-medium">ASTAのヒント</span>
+                            <span className={`w-9 h-5 rounded-full flex items-center p-0.5 transition-colors ${showHints ? 'bg-[#6b5ca5] justify-end' : 'bg-[#cfc6ea] justify-start'}`}>
+                                <span className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                            </span>
+                        </button>
+
                         {/* 共有モード：オン＝生徒と見る画面（道具をしまう）。Zoomで画面共有するときはオン */}
                         <button
                             onClick={() => setToolsOut(v => !v)}
@@ -1239,7 +1254,7 @@ export default function LiveLessonPage() {
                                         </div>
                                     )}
 
-                                    {(item.kind === 'suggest' || item.kind === 'translate-help') && (
+                                    {showHints && (item.kind === 'suggest' || item.kind === 'translate-help') && (
                                         <div className="bg-[#fbfaff] border border-[#e4ddf0] border-l-4 border-l-[#6b5ca5] rounded-xl p-4 shadow-sm flex items-start gap-3">
                                             <div className="w-8 h-8 rounded-full bg-[#ede8fa] flex items-center justify-center shrink-0 text-[#6b5ca5] mt-0.5">
                                                 <Lightbulb size={16} />
@@ -1348,7 +1363,7 @@ export default function LiveLessonPage() {
                             {interimText && (
                                 <p className="text-[13px] text-[#635d70] italic px-1">{interimText}…</p>
                             )}
-                            {(isAnalyzing || streamingText) && (
+                            {showHints && (isAnalyzing || streamingText) && (
                                 <div className="bg-[#fbfaff] border border-[#e4ddf0] border-l-4 border-l-[#6b5ca5] rounded-xl p-4 shadow-sm">
                                     <p className="text-[12px] font-bold text-[#6b5ca5] mb-1 flex items-center gap-1">
                                         <Sparkles size={12} /> ASTAが考えています…
