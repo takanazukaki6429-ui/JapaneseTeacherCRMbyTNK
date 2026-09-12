@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { AI_USAGE_TYPE, OUTSIDE_GENERAL_BUCKET } from '@/lib/ai-usage';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -55,11 +56,11 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // [Rate Limiting] 直近1時間の利用回数で制限する。
-        // 用途ごとに発生頻度が桁違いなので枠を分ける（同じ枠にすると授業中に即枯れる）:
+        // [Rate Limiting] 先生1人ごとに、直近1時間の利用回数で制限する。
+        // 用途ごとに発生頻度が桁違いなので枠を分け、各枠は自分の機能の分だけを数える（2026-09-13 かずき決定：案A）:
         //   - student_translation: 教師の発話ごとに生徒向け翻訳が飛ぶ。50分授業で数百回想定 → 600/時
-        //   - それ以外（教材生成・ヒアリング解析・手動チャット等）: 20/時
-        //   - transcribe（2.5秒チャンク）は /api/ai/transcribe 側の別枠なので常に除外
+        //   - それ以外（相談・準備・記録・体験レッスンなど）: 20/時。ほかの呼び出し先が自分の枠で数えている分
+        //     （文字起こし・生徒向け翻訳・授業中のヒント・4つのボタン・絵・記録からの抜き出し）は入れない（lib/ai-usage.ts）
         const isStudentTranslation = type === 'student_translation';
         const hourlyLimit = isStudentTranslation ? 600 : 20;
 
@@ -68,12 +69,11 @@ export async function POST(req: NextRequest) {
             .from('ai_usage_log')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
-            .neq('prompt_type', 'transcribe')
             .gte('created_at', oneHourAgo);
 
         usageQuery = isStudentTranslation
-            ? usageQuery.eq('prompt_type', 'student_translation')
-            : usageQuery.neq('prompt_type', 'student_translation');
+            ? usageQuery.eq('prompt_type', AI_USAGE_TYPE.studentTranslation)
+            : usageQuery.not('prompt_type', 'in', OUTSIDE_GENERAL_BUCKET);
 
         const { count, error: usageError } = await usageQuery;
 
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json(
                 {
                     error: 'Rate limit exceeded',
-                    details: `You have reached the limit of ${hourlyLimit} AI requests per hour for this feature. Please try again later.`
+                    details: `この機能の利用が1時間あたりの上限（${hourlyLimit}回）に達しました。しばらく置いてからお試しください。`
                 },
                 { status: 429 }
             );
