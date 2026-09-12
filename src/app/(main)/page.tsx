@@ -5,7 +5,7 @@
  * 役目：開いた瞬間に「生徒の様子」と「やり残し」が分かる（画面の要素一覧_2026-09-10.md 画面1）
  * - 左：生徒カード。授業が空いている生徒を上に（記録がまだ → 最終授業日が古い順）
  * - 右：ASTAからの声かけ（次の授業の準備／宿題を出していない／学習計画がまだ）。0件なら出さない
- * - 下：ASTAに聞く
+ * - 上：ASTAに聞く（授業の相談）。あいさつのすぐ下。使い方の質問は右下の「使い方ヘルプ」
  * - 出さない：先生の実績数字（コマ数・理解度など。目的とズレるため・かずき決定）
  * - 「記録が下書きのまま」は授業記録の自動下書き（B）ができてから足す
  */
@@ -147,6 +147,8 @@ export default async function Home() {
                     <p className="text-[12px] leading-[18px] text-[#7f3843] font-medium tracking-wide">{today}</p>
                     <h1 className="text-[24px] leading-[36px] font-semibold text-[#1e1b15] mt-1">{teacherName}、お疲れさまです</h1>
                 </header>
+                {/* 上：ASTAに聞く（授業の相談）。2026-09-12 かずき指示で最上段へ */}
+                <AskAsta />
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-10">
                     {/* 左：生徒の様子 */}
@@ -254,8 +256,6 @@ export default async function Home() {
                     )}
                 </div>
 
-                {/* 下：ASTAに聞く */}
-                <AskAsta />
             </div>
         </>
     );

@@ -1,7 +1,8 @@
 /**
  * v1.0 工程表 4.8: ユーザー向けAIサポート（フローティングウィジェット）
  *
- * 全ページ右下に表示。クリックでAIヘルプチャットを開く。
+ * 全ページ右下に表示。クリックで「使い方ヘルプ」（ASTAの使い方を答えるAI）を開く。
+ * 授業や教え方の相談はホームの「ASTAに聞く（授業の相談）」が受け持つ（2026-09-12 かずき決定：案A）。
  */
 'use client';
 
@@ -49,7 +50,8 @@ export function SupportWidget() {
             {!open && (
                 <button
                     onClick={() => setOpen(true)}
-                    aria-label="ヘルプ"
+                    aria-label="使い方ヘルプ"
+                    title="使い方ヘルプ（ASTAの使い方を聞く）"
                     className="fixed bottom-5 right-5 z-50 w-13 h-13 p-3.5 bg-[#9c4f5a] text-white rounded-full shadow-[0_4px_24px_rgba(156,79,90,0.4)] hover:scale-105 transition-transform"
                 >
                     <MessageCircleQuestion size={24} />
@@ -63,7 +65,7 @@ export function SupportWidget() {
                     <div className="flex items-center justify-between px-4 py-3 bg-[#9c4f5a] text-white shrink-0">
                         <div className="flex items-center gap-2">
                             <Sparkles size={16} />
-                            <h2 className="font-bold text-sm">AIヘルプ</h2>
+                            <h2 className="font-bold text-sm">使い方ヘルプ</h2>
                         </div>
                         <button onClick={() => setOpen(false)} className="p-1 hover:bg-white/20 rounded-full transition-colors">
                             <X size={18} />
@@ -77,7 +79,7 @@ export function SupportWidget() {
                                 <MessageCircleQuestion size={36} className="mx-auto text-[#d9a7ae] mb-3" />
                                 <p className="text-sm text-[#3b2e2a] font-medium">ASTAの使い方を聞いてください</p>
                                 <p className="text-xs text-[#534344] mt-1.5 leading-relaxed">
-                                    例：「字幕PiPの使い方は？」<br />「マイクが動かない時は？」
+                                    例：「生徒の画面に翻訳を出すには？」<br />「マイクが動かない時は？」
                                 </p>
                             </div>
                         )}

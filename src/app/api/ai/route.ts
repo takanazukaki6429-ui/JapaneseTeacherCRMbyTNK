@@ -25,6 +25,18 @@ const initialHearingSchema = z.object({
     clarification_questions: z.array(z.string())
 });
 // Ensure GEMINI_API_KEY is set in .env.local
+
+// ホームの「ASTAに聞く（授業の相談）」への指示（2026-09-12 かずき指示：ふつうのAIでなく日本語教師の相談相手として答える）
+const HOME_ASK_INSTRUCTIONS = `あなたは「ASTA」。日本語教師の授業づくりを助ける相談相手です。
+相談してくるのは、オンラインで外国人に日本語を教える日本人の先生です。教えるのが初めての先生も多いので、専門用語は避け、使うときは短く言い換えてください。
+
+# 答え方
+- 結論から。すぐ次の授業で使える形で答える（先生の言い方の例・例文・進める順番・時間の目安など）
+- 要点は3〜5個まで。1つの要点は2文以内
+- 相談に生徒の名前が出てきたら、下の「この先生の生徒」の情報（レベル・今の課・前回のつまずき）を踏まえて答える
+- 生徒の情報に書かれていないことは推測で断定しない。分からない時は、先生が生徒に確かめるとよいことを挙げる
+- ASTAの画面の操作方法を聞かれたら「画面右下の『？』（使い方ヘルプ）で聞いてください」と案内する
+- 記号（** や #）は使わない。箇条書きは「・」で始める`;
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
@@ -202,6 +214,27 @@ ${conversation_notes}
   "teaching_strategy": "この生徒への指導方針や接し方（性格や目的に合わせる）"
 }
 `;
+        } else if (type === 'home_ask') {
+            // ホームの「ASTAに聞く（授業の相談）」：先生の生徒の情報をこの場で集めて、相談相手として答える
+            if (!prompt) {
+                return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
+            }
+            const [studentsResult, lessonsResult] = await Promise.all([
+                supabase.from('students').select('id, name, nationality, jlpt_level, textbook').eq('user_id', user.id).limit(40),
+                supabase.from('lessons').select('student_id, date, mistakes, students!inner(user_id)')
+                    .eq('students.user_id', user.id).order('date', { ascending: false }).limit(300),
+            ]);
+            const now = Date.now();
+            const lastLesson = new Map<string, { date: string; mistakes: string | null }>();
+            for (const l of (lessonsResult.data ?? []) as { student_id: string; date: string; mistakes: string | null }[]) {
+                if (!lastLesson.has(l.student_id) && new Date(l.date).getTime() <= now) lastLesson.set(l.student_id, l);
+            }
+            const students = (studentsResult.data ?? []) as { id: string; name: string; nationality: string | null; jlpt_level: string | null; textbook: string | null }[];
+            const roster = students.map(st => {
+                const last = lastLesson.get(st.id);
+                return `- ${st.name}さん／国：${st.nationality ?? '不明'}／レベル：${st.jlpt_level ?? '不明'}／今の課：${st.textbook ?? '未設定'}／前回のつまずき：${last?.mistakes?.trim() || '記録なし'}／最終授業日：${last ? last.date.slice(0, 10) : 'なし'}`;
+            }).join('\n');
+            finalPrompt = `${HOME_ASK_INSTRUCTIONS}\n\n# この先生の生徒（${students.length}人）\n${roster || '（まだ生徒が登録されていません）'}\n\n# 先生からの相談\n${prompt}`;
         } else {
             // Default/Legacy behavior
             if (!prompt) {
