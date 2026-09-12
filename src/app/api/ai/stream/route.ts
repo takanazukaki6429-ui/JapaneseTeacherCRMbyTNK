@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { AI_USAGE_TYPE } from '@/lib/ai-usage';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@/lib/supabase/server';
 
@@ -25,14 +26,14 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'transcript is required' }, { status: 400 });
         }
 
-        // レート制限（1時間あたり40リクエスト：ライブ授業は通常より上限を高く）
-        // transcribe（2.5秒チャンクの翻訳）は別枠のため集計から除外
+        // レート制限（先生1人・1時間あたり40回）。授業中のヒントの分だけを数える（2026-09-13 かずき決定：案A）。
+        // 以前は文字起こし以外を全部数えていたため、生徒向け翻訳が40回を超えるとヒントが止まっていた
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
         const { count } = await supabase
             .from('ai_usage_log')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
-            .neq('prompt_type', 'transcribe')
+            .eq('prompt_type', AI_USAGE_TYPE.liveAssistant)
             .gte('created_at', oneHourAgo);
 
         if (count !== null && count >= 40) {
