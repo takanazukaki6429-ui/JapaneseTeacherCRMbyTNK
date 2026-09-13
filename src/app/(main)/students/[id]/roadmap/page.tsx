@@ -3,28 +3,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { ArrowLeft, Loader2, Map, Target, BookText, CheckCircle2, Sparkles, BookOpen, Clock } from 'lucide-react';
+import { ArrowLeft, Loader2, Map, Target, BookText, CheckCircle2, Sparkles, BookOpen, Clock, Send, Copy, Check, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { Student } from '@/types/student';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { generateMilestones } from '@/lib/roadmap/generators';
+import { generateMilestones, getLevelDescription } from '@/lib/roadmap/generators';
+import { JLPT_TO_SCORE, parseCurrentPhase, roadmapInputFromStudent, roadmapLocaleForNationality } from '@/lib/roadmap/from-student';
+import { locales, type Locale } from '@/app/(main)/roadmap/i18n';
 import { ja } from '@/app/(main)/roadmap/ja';
 import { toast } from 'sonner';
-
-const JLPT_TO_SCORE: Record<string, number> = {
-    N5: 15, N4: 30, N3: 50, N2: 70, N1: 90,
-};
-
-function parseCurrentPhase(phase: string | null | undefined) {
-    if (!phase) return {};
-    const lvMatch = phase.match(/目標Lv\.(\d+)/);
-    const moMatch = phase.match(/(\d+)ヶ月/);
-    return {
-        targetLevel: lvMatch ? parseInt(lvMatch[1], 10) : undefined,
-        periodMonths: moMatch ? parseInt(moMatch[1], 10) : undefined,
-    };
-}
 
 function extractSection(memo: string, heading: string): string | null {
     const regex = new RegExp(`■ ${heading}\\n([\\s\\S]*?)(?:\\n\\n|■|【|$)`);
@@ -45,6 +33,42 @@ export default function StudentRoadmapPage() {
     const [loading, setLoading] = useState(true);
     const [student, setStudent] = useState<Student | null>(null);
 
+    // 生徒に渡すリンク
+    const [shareOpen, setShareOpen] = useState(false);
+    const [shareLocale, setShareLocale] = useState<Locale>('en');
+    const [shareUrl, setShareUrl] = useState('');
+    const [shareLoading, setShareLoading] = useState(false);
+    const [shareError, setShareError] = useState('');
+    const [copied, setCopied] = useState(false);
+
+    useEffect(() => {
+        if (student) setShareLocale(roadmapLocaleForNationality(student.nationality));
+    }, [student]);
+
+    const createShareLink = async () => {
+        setShareLoading(true); setShareError(''); setShareUrl(''); setCopied(false);
+        try {
+            const res = await fetch('/api/roadmap/share', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ studentId, locale: shareLocale }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'リンクを作れませんでした');
+            setShareUrl(data.url);
+        } catch (e) {
+            setShareError(e instanceof Error ? e.message : 'リンクを作れませんでした');
+        } finally {
+            setShareLoading(false);
+        }
+    };
+
+    const copyShareUrl = async () => {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopied(true);
+        toast.success('リンクをコピーしました。LINEなどで生徒に送ってください');
+    };
+
     useEffect(() => {
         if (!studentId) return;
         supabase.from('students').select('*').eq('id', studentId).single()
@@ -56,15 +80,19 @@ export default function StudentRoadmapPage() {
 
     const { targetLevel, periodMonths } = parseCurrentPhase(student?.current_phase);
     const currentScore = student?.jlpt_level ? JLPT_TO_SCORE[student.jlpt_level] : undefined;
+    const purposeIds = useMemo(
+        () => roadmapInputFromStudent(student as (Student & { purposes?: string | null }) | null)?.purposeIds ?? [],
+        [student]
+    );
 
     const milestones = useMemo(() => {
         if (!currentScore || !targetLevel || !periodMonths) return [];
-        return generateMilestones(currentScore, targetLevel, periodMonths, [], ja);
-    }, [currentScore, targetLevel, periodMonths]);
+        return generateMilestones(currentScore, targetLevel, periodMonths, purposeIds, ja);
+    }, [currentScore, targetLevel, periodMonths, purposeIds]);
 
     if (loading) return (
         <div className="flex h-screen items-center justify-center">
-            <Loader2 className="animate-spin text-[#6b5ca5]" size={32} />
+            <Loader2 className="animate-spin text-[#6f5385]" size={32} />
         </div>
     );
     if (!student) return <div>Student not found</div>;
@@ -81,41 +109,98 @@ export default function StudentRoadmapPage() {
         ? Math.round(((currentScore! - 10) / (targetLevel! - 10)) * 100)
         : 0;
 
-    const targetJlptColor = milestones.length > 0 ? milestones[milestones.length - 1].jlptColor : '#6b5ca5';
+    const targetJlptColor = milestones.length > 0 ? milestones[milestones.length - 1].jlptColor : '#6f5385';
 
     return (
-        <div className="min-h-screen bg-[#f6f3fb]">
+        <div className="min-h-screen bg-[#faf9fd]">
             {/* ヘッダー */}
-            <div className="bg-white border-b border-[#f0ebf8] sticky top-0 z-50">
+            <div className="bg-white border-b border-[#f4f3f7] sticky top-0 z-50">
                 <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <Link href={`/students/${studentId}`} className="p-2 text-[#484550] hover:text-[#3a3350] hover:bg-[#f0ebf8] rounded-full transition-colors">
+                        <Link href={`/students/${studentId}`} className="p-2 text-[#4b454e] hover:text-[#1a1c1e] hover:bg-[#f4f3f7] rounded-full transition-colors">
                             <ArrowLeft size={18} />
                         </Link>
-                        <h1 className="font-bold text-[#3a3350] flex items-center gap-2 text-sm">
-                            <Map size={15} className="text-[#6b5ca5]" />
+                        <h1 className="font-bold text-[#1a1c1e] flex items-center gap-2 text-sm">
+                            <Map size={15} className="text-[#6f5385]" />
                             {student.name}さんのロードマップ
                         </h1>
                     </div>
-                    <Link
-                        href={`/students/${studentId}/initial-hearing`}
-                        className="text-xs font-bold text-[#6b5ca5] bg-[#efe9ff] hover:bg-[#e7deff] px-3 py-1.5 rounded-xl transition-colors"
-                    >
-                        再作成
-                    </Link>
+                    <div className="flex items-center gap-2">
+                        {hasRoadmap && (
+                            <button
+                                type="button"
+                                onClick={() => setShareOpen(v => !v)}
+                                className="text-xs font-bold text-white bg-[#6f5385] hover:opacity-90 px-3 py-1.5 rounded-xl transition-opacity flex items-center gap-1"
+                            >
+                                <Send size={12} /> 生徒に渡す
+                            </button>
+                        )}
+                        <Link
+                            href={`/students/${studentId}/initial-hearing`}
+                            className="text-xs font-bold text-[#6f5385] bg-[#f2daff] hover:bg-[#e8c8ff] px-3 py-1.5 rounded-xl transition-colors"
+                        >
+                            再作成
+                        </Link>
+                    </div>
                 </div>
             </div>
 
             <div className="max-w-2xl mx-auto p-4 md:p-6 space-y-5">
 
+                {hasRoadmap && shareOpen && (
+                    <div className="bg-white rounded-2xl p-5 shadow-[0_0_40px_rgba(111,83,133,0.06)] space-y-3">
+                        <div>
+                            <p className="text-sm font-bold text-[#1a1c1e]">{student.name}さんに渡すリンク</p>
+                            <p className="text-xs text-[#4b454e] mt-1 leading-relaxed">
+                                生徒はログインせずに、選んだ言語でこのロードマップを見られます（生徒の画面でも言語を切り替えられます）。
+                                先生が授業で今のレベルを更新すると、リンク先も最新の内容に変わります。リンクの有効期限は180日です。
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <label htmlFor="share-locale" className="text-xs font-bold text-[#4b454e]">表示する言語</label>
+                            <select
+                                id="share-locale"
+                                value={shareLocale}
+                                onChange={e => { setShareLocale(e.target.value as Locale); setShareUrl(''); }}
+                                className="text-sm border border-[#e4e1e8] rounded-lg px-2 py-1.5 bg-white"
+                            >
+                                {(Object.entries(locales) as [Locale, { flag: string; name: string }][]).map(([key, val]) => (
+                                    <option key={key} value={key}>{val.flag} {val.name}</option>
+                                ))}
+                            </select>
+                            <button
+                                type="button"
+                                onClick={createShareLink}
+                                disabled={shareLoading}
+                                className="text-sm font-bold text-white bg-[#6f5385] hover:opacity-90 disabled:opacity-50 px-4 py-1.5 rounded-lg flex items-center gap-1.5"
+                            >
+                                {shareLoading && <Loader2 size={14} className="animate-spin" />}
+                                リンクを作る
+                            </button>
+                        </div>
+                        {shareUrl && (
+                            <div className="flex items-center gap-2">
+                                <input readOnly value={shareUrl} onFocus={e => e.target.select()} className="flex-1 min-w-0 text-xs border border-[#e4e1e8] rounded-lg px-2 py-2 bg-[#faf9fd] text-[#1a1c1e]" />
+                                <button type="button" onClick={copyShareUrl} className="text-xs font-bold text-[#6f5385] bg-[#f2daff] hover:bg-[#e8c8ff] px-3 py-2 rounded-lg flex items-center gap-1 whitespace-nowrap">
+                                    {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? 'コピーしました' : 'コピー'}
+                                </button>
+                                <a href={shareUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-[#4b454e] hover:text-[#1a1c1e] px-2 py-2 flex items-center gap-1 whitespace-nowrap">
+                                    <ExternalLink size={12} /> 開いて確認
+                                </a>
+                            </div>
+                        )}
+                        {shareError && <p className="text-xs text-red-600">{shareError}</p>}
+                    </div>
+                )}
+
                 {!hasRoadmap ? (
-                    <div className="bg-white rounded-2xl p-8 text-center shadow-[0_0_40px_rgba(107,92,165,0.06)]">
-                        <Map size={32} className="text-[#ccbeff] mx-auto mb-3" />
-                        <p className="text-sm font-bold text-[#3a3350] mb-1">ロードマップがまだ作成されていません</p>
-                        <p className="text-xs text-[#484550] mb-4">体験レッスンのヒアリングから自動生成できます</p>
+                    <div className="bg-white rounded-2xl p-8 text-center shadow-[0_0_40px_rgba(111,83,133,0.06)]">
+                        <Map size={32} className="text-[#c9a8e0] mx-auto mb-3" />
+                        <p className="text-sm font-bold text-[#1a1c1e] mb-1">ロードマップがまだ作成されていません</p>
+                        <p className="text-xs text-[#4b454e] mb-4">体験レッスンのヒアリングから自動生成できます</p>
                         <Link
                             href={`/students/${studentId}/initial-hearing`}
-                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#6b5ca5] text-white text-sm font-bold rounded-xl hover:opacity-90 transition-opacity"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#6f5385] to-[#c9a8e0] text-white text-sm font-bold rounded-xl hover:opacity-90 transition-opacity"
                         >
                             体験レッスン → ロードマップ作成
                         </Link>
@@ -123,7 +208,7 @@ export default function StudentRoadmapPage() {
                 ) : (
                     <>
                         {/* ヒーローカード */}
-                        <div className="bg-[#6b5ca5] rounded-2xl p-6 text-white shadow-[0_8px_32px_rgba(107,92,165,0.25)]">
+                        <div className="bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] rounded-2xl p-6 text-white shadow-[0_8px_32px_rgba(111,83,133,0.25)]">
                             <div className="flex items-center justify-between mb-5">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold text-lg">
@@ -143,7 +228,6 @@ export default function StudentRoadmapPage() {
                                 <div className="text-center">
                                     <p className="text-xs text-white/60 mb-1">現在</p>
                                     <span className="text-2xl font-bold">{student.jlpt_level}</span>
-                                    <p className="text-xs text-white/60">Lv.{currentScore}</p>
                                 </div>
                                 <div className="flex-1">
                                     <div className="h-2 bg-white/20 rounded-full overflow-hidden">
@@ -155,36 +239,35 @@ export default function StudentRoadmapPage() {
                                 </div>
                                 <div className="text-center">
                                     <p className="text-xs text-white/60 mb-1">目標</p>
-                                    <span className="text-2xl font-bold">{milestones[milestones.length - 1]?.jlpt ?? `Lv.${targetLevel}`}</span>
-                                    <p className="text-xs text-white/60">Lv.{targetLevel}</p>
+                                    <span className="text-2xl font-bold">{milestones[milestones.length - 1]?.jlpt ?? getLevelDescription(targetLevel ?? 0, ja)}</span>
                                 </div>
                             </div>
                         </div>
 
                         {/* 体験レッスンAI分析 */}
                         {(aiSummary || focusAreas.length > 0) && (
-                            <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] p-5 space-y-4">
-                                <h2 className="text-sm font-bold text-[#3a3350] flex items-center gap-2">
-                                    <BookOpen size={15} className="text-[#6b5ca5]" />
+                            <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] p-5 space-y-4">
+                                <h2 className="text-sm font-bold text-[#1a1c1e] flex items-center gap-2">
+                                    <BookOpen size={15} className="text-[#6f5385]" />
                                     体験レッスンAI分析
                                 </h2>
                                 {aiSummary && (
-                                    <p className="text-sm text-[#3a3350] leading-relaxed bg-[#f6f3fb] rounded-xl p-4">{aiSummary}</p>
+                                    <p className="text-sm text-[#1a1c1e] leading-relaxed bg-[#faf9fd] rounded-xl p-4">{aiSummary}</p>
                                 )}
                                 {focusAreas.length > 0 && (
                                     <div>
-                                        <p className="text-xs font-bold text-[#484550] mb-2">重点項目</p>
+                                        <p className="text-xs font-bold text-[#4b454e] mb-2">重点項目</p>
                                         <div className="flex flex-wrap gap-2">
                                             {focusAreas.map((area, i) => (
-                                                <span key={i} className="px-2.5 py-1 bg-[#efe9ff] text-[#6b5ca5] text-xs font-medium rounded-full">{area}</span>
+                                                <span key={i} className="px-2.5 py-1 bg-[#f2daff] text-[#6f5385] text-xs font-medium rounded-full">{area}</span>
                                             ))}
                                         </div>
                                     </div>
                                 )}
                                 {convNotes && (
                                     <div>
-                                        <p className="text-xs font-bold text-[#484550] mb-2">会話メモ（原文）</p>
-                                        <p className="text-xs text-[#484550] leading-relaxed bg-[#f6f3fb] rounded-xl p-3 whitespace-pre-wrap">{convNotes}</p>
+                                        <p className="text-xs font-bold text-[#4b454e] mb-2">会話メモ（原文）</p>
+                                        <p className="text-xs text-[#4b454e] leading-relaxed bg-[#faf9fd] rounded-xl p-3 whitespace-pre-wrap">{convNotes}</p>
                                     </div>
                                 )}
                             </div>
@@ -192,13 +275,13 @@ export default function StudentRoadmapPage() {
 
                         {/* 月別マイルストーン（全件・フル表示） */}
                         <div className="space-y-4">
-                            <h2 className="text-sm font-bold text-[#3a3350] flex items-center gap-2 px-1">
-                                <Target size={15} className="text-[#6b5ca5]" />
+                            <h2 className="text-sm font-bold text-[#1a1c1e] flex items-center gap-2 px-1">
+                                <Target size={15} className="text-[#6f5385]" />
                                 月別ロードマップ
                             </h2>
 
                             {milestones.map((milestone) => (
-                                <Card key={milestone.month} className="bg-white shadow-sm overflow-hidden border-0 shadow-[0_0_40px_rgba(107,92,165,0.06)]">
+                                <Card key={milestone.month} className="bg-white shadow-sm overflow-hidden border-0 shadow-[0_0_40px_rgba(111,83,133,0.06)]">
                                     <div className="h-1" style={{ backgroundColor: milestone.jlptColor }} />
                                     <CardContent className="p-4 space-y-3">
                                         {/* ヘッダー */}
@@ -208,8 +291,8 @@ export default function StudentRoadmapPage() {
                                                     {milestone.month}
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold text-[#3a3350]">{milestone.month}ヶ月目</p>
-                                                    <p className="text-xs text-[#484550]">目標レベル: Lv.{milestone.level}</p>
+                                                    <p className="font-bold text-[#1a1c1e]">{milestone.month}ヶ月目</p>
+                                                    <p className="text-xs text-[#4b454e]">目標レベル: {getLevelDescription(milestone.level, ja)}</p>
                                                 </div>
                                             </div>
                                             <Badge className="text-white" style={{ backgroundColor: milestone.jlptColor }}>
@@ -221,13 +304,13 @@ export default function StudentRoadmapPage() {
                                         {milestone.purposeMilestone && (
                                             <div className="p-3 rounded-xl flex items-start gap-2" style={{ backgroundColor: `${milestone.jlptColor}15` }}>
                                                 <Sparkles className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: milestone.jlptColor }} />
-                                                <p className="text-sm text-[#3a3350]">{milestone.purposeMilestone}</p>
+                                                <p className="text-sm text-[#1a1c1e]">{milestone.purposeMilestone}</p>
                                             </div>
                                         )}
 
                                         {/* 学習内容 */}
                                         <div className="space-y-1.5">
-                                            <p className="text-xs font-bold text-[#484550]">学習内容</p>
+                                            <p className="text-xs font-bold text-[#4b454e]">学習内容</p>
                                             <div className="flex flex-wrap gap-1.5">
                                                 {milestone.focus.map((item: string, i: number) => (
                                                     <Badge key={i} variant="secondary" className="text-xs">{item}</Badge>
@@ -237,10 +320,10 @@ export default function StudentRoadmapPage() {
 
                                         {/* 習得スキル */}
                                         <div className="space-y-1.5">
-                                            <p className="text-xs font-bold text-[#484550]">習得スキル</p>
+                                            <p className="text-xs font-bold text-[#4b454e]">習得スキル</p>
                                             <ul className="space-y-1">
                                                 {milestone.skills.map((skill: string, i: number) => (
-                                                    <li key={i} className="flex items-center gap-2 text-sm text-[#484550]">
+                                                    <li key={i} className="flex items-center gap-2 text-sm text-[#4b454e]">
                                                         <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
                                                         {skill}
                                                     </li>
@@ -249,22 +332,22 @@ export default function StudentRoadmapPage() {
                                         </div>
 
                                         {/* 理由 */}
-                                        <div className="p-3 bg-[#f6f3fb] rounded-xl">
-                                            <p className="text-sm text-[#484550]">
-                                                <strong className="text-[#3a3350]">この順番の理由：</strong><br />
+                                        <div className="p-3 bg-[#faf9fd] rounded-xl">
+                                            <p className="text-sm text-[#4b454e]">
+                                                <strong className="text-[#1a1c1e]">この順番の理由：</strong><br />
                                                 {milestone.reason}
                                             </p>
                                         </div>
 
                                         {/* 教材 */}
                                         {milestone.textbooks && milestone.textbooks.length > 0 && (
-                                            <div className="space-y-1.5 pt-2 border-t border-[#f0ebf8]">
-                                                <p className="text-xs font-bold text-[#484550] flex items-center gap-1.5">
-                                                    <BookText className="w-3.5 h-3.5 text-[#6b5ca5]" /> おすすめ教材
+                                            <div className="space-y-1.5 pt-2 border-t border-[#f4f3f7]">
+                                                <p className="text-xs font-bold text-[#4b454e] flex items-center gap-1.5">
+                                                    <BookText className="w-3.5 h-3.5 text-[#6f5385]" /> おすすめ教材
                                                 </p>
                                                 <div className="flex flex-wrap gap-1.5">
                                                     {milestone.textbooks.map((item: string, i: number) => (
-                                                        <Badge key={i} variant="outline" className="text-xs bg-white text-[#484550] border-[#e4ddf0]">{item}</Badge>
+                                                        <Badge key={i} variant="outline" className="text-xs bg-white text-[#4b454e] border-[#e2e8f0]">{item}</Badge>
                                                     ))}
                                                 </div>
                                             </div>
@@ -287,9 +370,9 @@ export default function StudentRoadmapPage() {
                                         )}
 
                                         {/* 推奨レッスン数 */}
-                                        <div className="flex items-center justify-between pt-2 border-t border-[#f0ebf8]">
-                                            <span className="text-sm text-[#484550]">推奨レッスン数</span>
-                                            <span className="font-bold text-[#6b5ca5]">{milestone.lessonsNeeded}回/月</span>
+                                        <div className="flex items-center justify-between pt-2 border-t border-[#f4f3f7]">
+                                            <span className="text-sm text-[#4b454e]">推奨レッスン数</span>
+                                            <span className="font-bold text-[#6f5385]">{milestone.lessonsNeeded}回/月</span>
                                         </div>
                                     </CardContent>
                                 </Card>

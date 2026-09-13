@@ -335,6 +335,9 @@ ${conversationNotes}`.trim();
             await supabase.from('students').update({
                 jlpt_level: result.estimated_jlpt_level,
                 goal_text: `${result.purpose_label}（AI判定）`,
+                // 目的の9択（あいちゃん依頼）のどれかを保存する。2026-09-11 まで保存しておらず、
+                // 生徒の目的の欄は全員空だった（本番で108人中0人）。ロードマップを生徒に渡す・作り直す時の元になる
+                purposes: data.purposeId,
                 current_phase: `目標Lv.${data.targetLevel} / ${data.periodMonths}ヶ月`,
                 memo: (student.memo ? student.memo + '\n\n' : '') + hearingSummary + '\n\n' + roadmapSummary,
                 initial_hearing_done: true,
