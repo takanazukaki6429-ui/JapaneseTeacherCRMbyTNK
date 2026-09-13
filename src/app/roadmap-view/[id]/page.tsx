@@ -23,10 +23,10 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 function NotAvailable() {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#faf9fd] p-6">
-            <div className="bg-white rounded-2xl p-8 text-center max-w-sm shadow-[0_0_40px_rgba(111,83,133,0.06)] space-y-2">
-                <p className="font-bold text-[#1a1c1e]">このリンクは期限切れか、見つかりません。</p>
-                <p className="text-sm text-[#4b454e]">This link has expired or cannot be found. Please ask your teacher for a new link.</p>
+        <div className="min-h-screen flex items-center justify-center bg-[#f6f3fb] p-6">
+            <div className="bg-white rounded-2xl p-8 text-center max-w-sm shadow-[0_0_40px_rgba(107,92,165,0.06)] space-y-2">
+                <p className="font-bold text-[#3a3350]">このリンクは期限切れか、見つかりません。</p>
+                <p className="text-sm text-[#484550]">This link has expired or cannot be found. Please ask your teacher for a new link.</p>
             </div>
         </div>
     );

@@ -285,7 +285,7 @@ export default function JapaneseRoadmapPage() {
                     {/* Removed some CTA parts that might be too much for a management tool, keeping Share */}
                     <Card
                         className="text-white border-none"
-                        style={{ backgroundColor: '#2563eb', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15)' }}
+                        style={{ backgroundColor: '#6b5ca5', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15)' }}
                     >
                         <CardContent className="p-6 text-center space-y-4">
                             <Button

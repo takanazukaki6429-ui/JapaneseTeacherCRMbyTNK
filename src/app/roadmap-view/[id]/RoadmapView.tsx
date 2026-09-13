@@ -21,7 +21,7 @@ export function RoadmapView({ studentName, teacherName, input, initialLocale }: 
     const t = getTranslations(locale);
 
     return (
-        <div className="min-h-screen bg-[#faf9fd]">
+        <div className="min-h-screen bg-[#f6f3fb]">
             <div className="max-w-2xl mx-auto p-4 md:p-6 space-y-6 pb-16">
                 <div className="flex justify-end">
                     <label htmlFor="roadmap-locale" className="sr-only">Language</label>
@@ -29,7 +29,7 @@ export function RoadmapView({ studentName, teacherName, input, initialLocale }: 
                         id="roadmap-locale"
                         value={locale}
                         onChange={e => setLocale(e.target.value as Locale)}
-                        className="text-sm border border-[#e4e1e8] rounded-full px-3 py-1.5 bg-white shadow-sm"
+                        className="text-sm border border-[#e4ddf0] rounded-full px-3 py-1.5 bg-white shadow-sm"
                     >
                         {(Object.entries(locales) as [Locale, { flag: string; name: string }][]).map(([key, val]) => (
                             <option key={key} value={key}>{val.flag} {val.name}</option>
@@ -38,9 +38,9 @@ export function RoadmapView({ studentName, teacherName, input, initialLocale }: 
                 </div>
 
                 <div className="text-center space-y-1">
-                    <p className="text-2xl font-bold text-[#020817]">{studentName}</p>
-                    <h1 className="text-lg font-bold text-[#2563eb]">{t.title}</h1>
-                    {teacherName && <p className="text-sm text-[#64748b]">🧑‍🏫 {teacherName}</p>}
+                    <p className="text-2xl font-bold text-[#3a3350]">{studentName}</p>
+                    <h1 className="text-lg font-bold text-[#6b5ca5]">{t.title}</h1>
+                    {teacherName && <p className="text-sm text-[#5d5868]">🧑‍🏫 {teacherName}</p>}
                 </div>
 
                 <RoadmapResult
