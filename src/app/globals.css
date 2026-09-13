@@ -1,32 +1,32 @@
 @import "tailwindcss";
 
 :root {
-  /* Ethereal Workspace — Dreamy Lilac */
-  --background: #faf9fd;
-  --foreground: #1a1c1e;
+  /* 色＝E やわらかパステル（くすみラベンダー＋ミント＋ピンク）／書体＝E 丸ゴシック（2026-09-12 かずき指示：色だけEにした版） */
+  --background: #f6f3fb;
+  --foreground: #3a3350;
 
-  /* Primary — Lilac */
-  --primary: #6f5385;
-  --primary-container: #c9a8e0;
-  --primary-fixed: #f2daff;
+  /* Primary — くすみラベンダー */
+  --primary: #6b5ca5;
+  --primary-container: #ccbeff;
+  --primary-fixed: #efe9ff;
 
   /* Secondary */
-  --secondary: #655a6f;
-  --secondary-container: #eddcf4;
-  --on-secondary-container: #211430;
+  --secondary: #2a6f5a;
+  --secondary-container: #dff1ea;
+  --on-secondary-container: #1b4d3f;
 
-  /* Tertiary — Blush Peach */
-  --tertiary: #805347;
-  --tertiary-container: #ffdbd1;
-  --on-tertiary-container: #321209;
+  /* Tertiary — やさしいピンク */
+  --tertiary: #a8475f;
+  --tertiary-container: #fbe7ed;
+  --on-tertiary-container: #3f0016;
 
   /* Surface */
-  --surface: #faf9fd;
-  --surface-low: #f4f3f7;
+  --surface: #f6f3fb;
+  --surface-low: #f0ebf8;
   --surface-lowest: #ffffff;
-  --on-surface: #1a1c1e;
-  --on-surface-variant: #4b454e;
-  --outline-variant: #cdc3ce;
+  --on-surface: #3a3350;
+  --on-surface-variant: #484550;
+  --outline-variant: #d6cfe2;
 
   /* Error */
   --error: #ba1a1a;
@@ -56,13 +56,13 @@
   --color-accent-foreground: var(--primary);
   --color-muted: var(--surface-low);
   --color-muted-foreground: var(--on-surface-variant);
-  --font-sans: var(--font-plus-jakarta);
+  --font-sans: var(--font-zen-maru);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Plus Jakarta Sans', "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+  font-family: var(--font-zen-maru), 'Zen Maru Gothic', "Hiragino Maru Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
   line-height: 1.6;
 }

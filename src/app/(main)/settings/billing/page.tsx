@@ -61,7 +61,7 @@ function BillingContent() {
     if (loading) {
         return (
             <div className="flex h-64 items-center justify-center">
-                <Loader2 className="animate-spin text-[#6f5385]" size={28} />
+                <Loader2 className="animate-spin text-[#6b5ca5]" size={28} />
             </div>
         );
     }
@@ -72,7 +72,7 @@ function BillingContent() {
 
     return (
         <div className="max-w-lg mx-auto space-y-6">
-            <h1 className="text-2xl font-bold text-[#1a1c1e]">プラン・お支払い</h1>
+            <h1 className="text-2xl font-bold text-[#3a3350]">プラン・お支払い</h1>
 
             {success && (
                 <div className="flex items-center gap-3 px-5 py-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-sm text-emerald-700">
@@ -81,19 +81,19 @@ function BillingContent() {
                 </div>
             )}
 
-            <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] p-6 space-y-5">
+            <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] p-6 space-y-5">
                 <div className="flex items-center justify-between">
                     <div>
-                        <p className="text-xs font-bold text-[#4b454e] uppercase tracking-wider mb-1">現在のプラン</p>
-                        <p className="text-lg font-bold text-[#1a1c1e]">
+                        <p className="text-xs font-bold text-[#484550] uppercase tracking-wider mb-1">現在のプラン</p>
+                        <p className="text-lg font-bold text-[#3a3350]">
                             {info?.is_free ? '無償プラン（招待）' : `プロプラン ${PLAN_PRICE_LABEL}/月`}
                         </p>
                     </div>
-                    <CreditCard size={24} className="text-[#6f5385]" />
+                    <CreditCard size={24} className="text-[#6b5ca5]" />
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-[#4b454e]">ステータス</span>
+                    <span className="text-xs font-bold text-[#484550]">ステータス</span>
                     <span className={`text-xs font-bold px-3 py-1 rounded-full border ${statusInfo.color}`}>
                         {info?.is_free ? '無償（永続）' : statusInfo.label}
                     </span>
@@ -109,15 +109,15 @@ function BillingContent() {
 
             {/* Stripe Customer Portal（キャンセル・カード変更） */}
             {info?.stripe_customer_id && !info?.is_free && (
-                <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] p-6">
-                    <p className="text-sm font-bold text-[#1a1c1e] mb-1">支払い情報の管理</p>
-                    <p className="text-xs text-[#4b454e] mb-4">
+                <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] p-6">
+                    <p className="text-sm font-bold text-[#3a3350] mb-1">支払い情報の管理</p>
+                    <p className="text-xs text-[#484550] mb-4">
                         カードの変更・サブスクリプションのキャンセルはStripeのポータルで行えます。
                     </p>
                     <button
                         onClick={handlePortal}
                         disabled={portalLoading}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#f4f3f7] text-[#1a1c1e] text-sm font-bold rounded-xl hover:bg-[#f2daff] transition-colors disabled:opacity-60"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#f0ebf8] text-[#3a3350] text-sm font-bold rounded-xl hover:bg-[#efe9ff] transition-colors disabled:opacity-60"
                     >
                         {portalLoading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
                         Stripeポータルを開く
@@ -128,7 +128,7 @@ function BillingContent() {
             {!isActive && !info?.is_free && (
                 <a
                     href="/pricing"
-                    className="block w-full text-center py-3.5 bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] text-white font-bold rounded-2xl hover:scale-[1.02] transition-transform shadow-[0_4px_24px_rgba(111,83,133,0.25)]"
+                    className="block w-full text-center py-3.5 bg-[#6b5ca5] text-white font-bold rounded-2xl hover:scale-[1.02] transition-transform shadow-[0_4px_24px_rgba(107,92,165,0.25)]"
                 >
                     プランに加入する
                 </a>
@@ -139,7 +139,7 @@ function BillingContent() {
 
 export default function BillingPage() {
     return (
-        <Suspense fallback={<div className="flex h-64 items-center justify-center"><Loader2 className="animate-spin text-[#6f5385]" size={28} /></div>}>
+        <Suspense fallback={<div className="flex h-64 items-center justify-center"><Loader2 className="animate-spin text-[#6b5ca5]" size={28} /></div>}>
             <BillingContent />
         </Suspense>
     );

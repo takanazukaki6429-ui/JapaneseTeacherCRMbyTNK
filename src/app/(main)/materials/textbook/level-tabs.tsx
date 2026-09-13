@@ -10,15 +10,15 @@ type Props = { current: JlptLevel; counts: Record<string, number> };
 export function LevelTabs({ current, counts }: Props) {
     const router = useRouter();
     return (
-        <div className="flex gap-1 bg-white p-1 rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] w-fit">
+        <div className="flex gap-1 bg-white p-1 rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] w-fit">
             {LEVELS.map(level => (
                 <button
                     key={level}
                     onClick={() => router.push(`/materials/textbook?level=${level}`)}
                     className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                         current === level
-                            ? 'bg-[#f2daff] text-[#6f5385] font-bold'
-                            : 'text-[#4b454e] hover:text-[#1a1c1e] hover:bg-[#f4f3f7]'
+                            ? 'bg-[#efe9ff] text-[#6b5ca5] font-bold'
+                            : 'text-[#484550] hover:text-[#3a3350] hover:bg-[#f0ebf8]'
                     }`}
                 >
                     {level}

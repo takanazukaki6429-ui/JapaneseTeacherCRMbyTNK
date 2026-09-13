@@ -63,18 +63,18 @@ export default function OnboardingPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f4f3f7] to-[#f2daff] p-4">
+        <div className="min-h-screen flex items-center justify-center bg-[#efe9ff] p-4">
             <div className="w-full max-w-md">
                 {/* フォームカード */}
-                <div className="bg-white rounded-2xl shadow-[0_8px_48px_rgba(111,83,133,0.15)] overflow-hidden">
-                    <div className="px-5 py-3.5 bg-[#f4f3f7] flex items-center gap-2">
-                        <p className="text-xs font-bold text-[#6f5385]">STEP 1 / 1</p>
-                        <p className="text-xs text-[#4b454e]">プロフィール設定</p>
+                <div className="bg-white rounded-2xl shadow-[0_8px_48px_rgba(107,92,165,0.15)] overflow-hidden">
+                    <div className="px-5 py-3.5 bg-[#f0ebf8] flex items-center gap-2">
+                        <p className="text-xs font-bold text-[#6b5ca5]">STEP 1 / 1</p>
+                        <p className="text-xs text-[#484550]">プロフィール設定</p>
                     </div>
                     <div className="p-6">
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="space-y-1.5">
-                                <label htmlFor="name" className="text-sm font-semibold text-[#1a1c1e]">
+                                <label htmlFor="name" className="text-sm font-semibold text-[#3a3350]">
                                     表示名 <span className="text-[#ba1a1a]">*</span>
                                 </label>
                                 <input
@@ -85,9 +85,9 @@ export default function OnboardingPage() {
                                     onChange={(e) => setName(e.target.value)}
                                     required
                                     autoFocus
-                                    className="w-full text-sm px-4 py-3 rounded-xl border border-[#c9a8e0]/40 focus:outline-none focus:ring-2 focus:ring-[#c9a8e0] bg-[#f4f3f7] placeholder:text-[#4b454e]/50"
+                                    className="w-full text-sm px-4 py-3 rounded-xl border border-[#ccbeff]/40 focus:outline-none focus:ring-2 focus:ring-[#ccbeff] bg-[#f0ebf8] placeholder:text-[#484550]/50"
                                 />
-                                <p className="text-xs text-[#4b454e]/70">※後から設定画面でいつでも変更できます</p>
+                                <p className="text-xs text-[#484550]/70">※後から設定画面でいつでも変更できます</p>
                             </div>
 
                             {error && (
@@ -99,7 +99,7 @@ export default function OnboardingPage() {
                             <button
                                 type="submit"
                                 disabled={loading || !name.trim()}
-                                className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] text-white font-bold text-sm rounded-xl hover:scale-[1.01] transition-transform shadow-[0_4px_20px_rgba(111,83,133,0.25)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                                className="w-full flex items-center justify-center gap-2 py-3 bg-[#6b5ca5] text-white font-bold text-sm rounded-xl hover:scale-[1.01] transition-transform shadow-[0_4px_20px_rgba(107,92,165,0.25)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                             >
                                 {loading ? (
                                     <><Loader2 size={16} className="animate-spin" /> 保存中...</>

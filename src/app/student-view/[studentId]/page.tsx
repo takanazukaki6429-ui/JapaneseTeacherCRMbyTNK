@@ -75,15 +75,15 @@ export default function StudentViewPage() {
     const latest = speeches.slice(-3);
 
     return (
-        <div className="h-screen bg-[#faf9fd] flex flex-col select-none overflow-hidden">
+        <div className="h-screen bg-[#f6f3fb] flex flex-col select-none overflow-hidden">
 
             {/* 上：課名だけの静かなヘッダー */}
-            <div className="flex items-center justify-between px-6 py-2.5 bg-white border-b border-[#ece9f1] shrink-0">
+            <div className="flex items-center justify-between px-6 py-2.5 bg-white border-b border-[#ece6f6] shrink-0">
                 <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-400 animate-pulse' : 'bg-[#cdc3ce]'}`} />
-                    <span className="text-[#6f5385] text-xs font-bold">ASTA</span>
+                    <span className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-400 animate-pulse' : 'bg-[#d6cfe2]'}`} />
+                    <span className="text-[#6b5ca5] text-xs font-bold">ASTA</span>
                     {page && (
-                        <span className="text-[#4b454e] text-sm font-bold ml-2">
+                        <span className="text-[#484550] text-sm font-bold ml-2">
                             {page.lessonLabel}　{page.stepTitle}
                         </span>
                     )}
@@ -91,7 +91,7 @@ export default function StudentViewPage() {
                 {shown && (
                     <button
                         onClick={() => setShown(null)}
-                        className="text-[11px] text-[#6f5385] hover:bg-[#f2daff] px-3 py-1 rounded-full transition-colors"
+                        className="text-[11px] text-[#6b5ca5] hover:bg-[#efe9ff] px-3 py-1 rounded-full transition-colors"
                     >
                         教科書にもどる
                     </button>
@@ -105,20 +105,20 @@ export default function StudentViewPage() {
                         {/* 生成画像は data URL のため next/image ではなく素の img */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={shown.img} alt="先生が見せている教材"
-                            className="max-w-full max-h-full rounded-2xl shadow-[0_8px_40px_rgba(111,83,133,0.18)]" />
+                            className="max-w-full max-h-full rounded-2xl shadow-[0_8px_40px_rgba(107,92,165,0.18)]" />
                     </div>
                 )}
 
                 {shown?.kind === 'text' && (
-                    <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-[0_8px_40px_rgba(111,83,133,0.12)] p-8">
-                        {shown.title && <p className="text-[#6f5385] font-bold text-sm mb-4">{shown.title}</p>}
-                        <p className="text-[#1a1c1e] text-2xl leading-loose whitespace-pre-wrap">{readable(shown.body)}</p>
+                    <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-[0_8px_40px_rgba(107,92,165,0.12)] p-8">
+                        {shown.title && <p className="text-[#6b5ca5] font-bold text-sm mb-4">{shown.title}</p>}
+                        <p className="text-[#3a3350] text-2xl leading-loose whitespace-pre-wrap">{readable(shown.body)}</p>
                     </div>
                 )}
 
                 {!shown && page && (
-                    <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-[0_8px_40px_rgba(111,83,133,0.10)] p-8">
-                        <p className="text-[#1a1c1e] text-xl leading-loose whitespace-pre-wrap">
+                    <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-[0_8px_40px_rgba(107,92,165,0.10)] p-8">
+                        <p className="text-[#3a3350] text-xl leading-loose whitespace-pre-wrap">
                             {pageText(page.body)}
                         </p>
                         {page.imageUrls.length > 0 && (
@@ -134,28 +134,28 @@ export default function StudentViewPage() {
 
                 {!shown && !page && (
                     <div className="h-full flex flex-col items-center justify-center text-center gap-3">
-                        <div className="w-10 h-10 rounded-full border-2 border-[#c9a8e0]/40 border-t-[#6f5385] animate-spin" />
-                        <p className="text-[#4b454e] text-lg">じゅぎょうの じゅんびを しています</p>
-                        <p className="text-[#9a93a5] text-sm">Getting ready for the lesson…</p>
+                        <div className="w-10 h-10 rounded-full border-2 border-[#ccbeff]/40 border-t-[#6b5ca5] animate-spin" />
+                        <p className="text-[#484550] text-lg">じゅぎょうの じゅんびを しています</p>
+                        <p className="text-[#7a7485] text-sm">Getting ready for the lesson…</p>
                     </div>
                 )}
             </div>
 
             {/* 下：先生の話した日本語の吹き出し＋訳（常時・直近3件） */}
             {latest.length > 0 && (
-                <div className="shrink-0 bg-white border-t border-[#ece9f1] px-6 py-3 max-h-[38vh] overflow-y-auto space-y-2">
+                <div className="shrink-0 bg-white border-t border-[#ece6f6] px-6 py-3 max-h-[38vh] overflow-y-auto space-y-2">
                     {latest.map((s, i) => {
                         const isLast = i === latest.length - 1;
                         return (
                             <div key={s.timestamp + '-' + i}
                                 className={`max-w-3xl mx-auto rounded-2xl px-4 py-2.5 ${isLast
-                                    ? 'bg-[#f2daff]/70'
-                                    : 'bg-[#faf9fd] opacity-60'
+                                    ? 'bg-[#efe9ff]/70'
+                                    : 'bg-[#f6f3fb] opacity-60'
                                     }`}>
-                                <p className={`text-[#1a1c1e] font-bold leading-relaxed ${isLast ? 'text-2xl' : 'text-base'}`}>
+                                <p className={`text-[#3a3350] font-bold leading-relaxed ${isLast ? 'text-2xl' : 'text-base'}`}>
                                     💬 {s.original}
                                 </p>
-                                <p className={`text-[#6f5385] mt-0.5 ${isLast ? 'text-base' : 'text-xs'}`}>
+                                <p className={`text-[#6b5ca5] mt-0.5 ${isLast ? 'text-base' : 'text-xs'}`}>
                                     {s.text}
                                 </p>
                             </div>

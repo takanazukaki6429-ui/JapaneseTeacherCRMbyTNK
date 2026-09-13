@@ -43,21 +43,21 @@ export default function ResetPasswordPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#faf9fd] p-4">
-            <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full bg-[#c9a8e0]/20 blur-[120px] pointer-events-none" />
+        <div className="min-h-screen flex items-center justify-center bg-[#f6f3fb] p-4">
+            <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full bg-[#ccbeff]/20 blur-[120px] pointer-events-none" />
 
             <div className="w-full max-w-md relative">
-                <div className="bg-white/70 backdrop-blur-[24px] rounded-3xl shadow-[0_8px_48px_rgba(111,83,133,0.12)] border border-white/60 p-8">
+                <div className="bg-white/70 backdrop-blur-[24px] rounded-3xl shadow-[0_8px_48px_rgba(107,92,165,0.12)] border border-white/60 p-8">
                     <Link
                         href="/login"
-                        className="inline-flex items-center gap-1 text-xs text-[#6f5385] hover:underline mb-4"
+                        className="inline-flex items-center gap-1 text-xs text-[#6b5ca5] hover:underline mb-4"
                     >
                         <ArrowLeft size={12} />
                         ログイン画面に戻る
                     </Link>
 
-                    <h1 className="text-lg font-bold text-[#1a1c1e] mb-2">パスワード再設定</h1>
-                    <p className="text-xs text-[#4b454e] mb-6">
+                    <h1 className="text-lg font-bold text-[#3a3350] mb-2">パスワード再設定</h1>
+                    <p className="text-xs text-[#484550] mb-6">
                         登録時のメールアドレスを入力してください。<br />
                         再設定用のリンクをメールでお送りします。
                     </p>
@@ -76,21 +76,21 @@ export default function ResetPasswordPage() {
                         )}
 
                         <div className="space-y-1.5">
-                            <label className="block text-xs font-bold text-[#4b454e] uppercase tracking-wider">メールアドレス</label>
+                            <label className="block text-xs font-bold text-[#484550] uppercase tracking-wider">メールアドレス</label>
                             <input
                                 type="email"
                                 required
                                 value={email}
                                 onChange={e => setEmail(e.target.value)}
                                 placeholder="teacher@example.com"
-                                className="w-full px-4 py-3 bg-[#f4f3f7] rounded-xl text-sm text-[#1a1c1e] outline-none focus:bg-[#f2daff] transition-colors placeholder:text-[#4b454e]/50"
+                                className="w-full px-4 py-3 bg-[#f0ebf8] rounded-xl text-sm text-[#3a3350] outline-none focus:bg-[#efe9ff] transition-colors placeholder:text-[#484550]/50"
                             />
                         </div>
 
                         <button
                             type="submit"
                             disabled={loading || !!message}
-                            className="w-full py-3 mt-2 bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] text-white font-bold rounded-full hover:scale-[1.01] transition-transform shadow-[0_4px_20px_rgba(111,83,133,0.3)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                            className="w-full py-3 mt-2 bg-[#6b5ca5] text-white font-bold rounded-full hover:scale-[1.01] transition-transform shadow-[0_4px_20px_rgba(107,92,165,0.3)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         >
                             {loading
                                 ? <span className="flex items-center justify-center gap-2"><Loader2 className="animate-spin" size={18} />処理中...</span>

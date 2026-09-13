@@ -301,8 +301,8 @@ export default function NewLessonPage() {
     if (fetchingScheduled || isAutoFilling) {
         return (
             <div className="flex h-screen flex-col items-center justify-center gap-3">
-                <Loader2 className="animate-spin text-[#6f5385]" size={32} />
-                {isAutoFilling && <p className="text-sm text-[#4b454e]">授業データをAIが解析中…</p>}
+                <Loader2 className="animate-spin text-[#6b5ca5]" size={32} />
+                {isAutoFilling && <p className="text-sm text-[#484550]">授業データをAIが解析中…</p>}
             </div>
         );
     }
@@ -310,30 +310,30 @@ export default function NewLessonPage() {
     return (
         <div className="max-w-2xl mx-auto space-y-6">
             {autoFilled && (
-                <div className="flex items-center gap-2 px-4 py-3 bg-[#f2daff] border border-[#c9a8e0]/40 rounded-2xl text-sm text-[#6f5385] font-medium">
+                <div className="flex items-center gap-2 px-4 py-3 bg-[#efe9ff] border border-[#ccbeff]/40 rounded-2xl text-sm text-[#6b5ca5] font-medium">
                     <Sparkles size={15} className="flex-shrink-0" />
                     授業の音声データからAIが自動入力しました。内容を確認・編集してください。
                 </div>
             )}
             <div className="flex items-center gap-3">
-                <Link href={`/students/${studentId}`} className="p-2 text-[#4b454e] hover:text-[#1a1c1e] hover:bg-[#f4f3f7] rounded-full transition-colors">
+                <Link href={`/students/${studentId}`} className="p-2 text-[#484550] hover:text-[#3a3350] hover:bg-[#f0ebf8] rounded-full transition-colors">
                     <ArrowLeft size={18} />
                 </Link>
-                <h1 className="text-2xl font-bold tracking-tight text-[#1a1c1e]">レッスン記録</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-[#3a3350]">レッスン記録</h1>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
                 {/* 基本情報 */}
-                <div className="bg-white p-6 rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] space-y-4">
-                    <h2 className="text-sm font-bold text-[#1a1c1e] border-b border-[#f4f3f7] pb-2">基本情報</h2>
+                <div className="bg-white p-6 rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] space-y-4">
+                    <h2 className="text-sm font-bold text-[#3a3350] border-b border-[#f0ebf8] pb-2">基本情報</h2>
                     <div>
-                        <label htmlFor="date" className="block text-xs font-bold text-[#4b454e] uppercase tracking-wider mb-1.5">
+                        <label htmlFor="date" className="block text-xs font-bold text-[#484550] uppercase tracking-wider mb-1.5">
                             日時 <span className="text-[#ba1a1a]">*</span>
                         </label>
                         <input
                             type="datetime-local" id="date" name="date" required
                             value={formData.date} onChange={handleChange}
-                            className="w-full px-4 py-2.5 bg-[#f4f3f7] rounded-xl text-sm text-[#1a1c1e] outline-none focus:bg-[#f2daff] transition-colors"
+                            className="w-full px-4 py-2.5 bg-[#f0ebf8] rounded-xl text-sm text-[#3a3350] outline-none focus:bg-[#efe9ff] transition-colors"
                         />
                     </div>
                 </div>
@@ -342,48 +342,48 @@ export default function NewLessonPage() {
                     <button
                         type="button" onClick={handleGenerateFeedback}
                         disabled={isGenerating || (!formData.topics && !formData.mistakes)}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] text-white text-sm font-bold rounded-full hover:scale-[1.02] transition-transform shadow-[0_4px_20px_rgba(111,83,133,0.25)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#6b5ca5] text-white text-sm font-bold rounded-full hover:scale-[1.02] transition-transform shadow-[0_4px_20px_rgba(107,92,165,0.25)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                     >
                         {isGenerating ? <><Loader2 size={15} className="animate-spin" />AIが考え中…</> : <><Star size={15} className="fill-white" />AIで宿題・フィードバックを提案</>}
                     </button>
                 </div>
 
                 {/* 学習内容 */}
-                <div className="bg-white p-6 rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] border border-[#c9a8e0]/30 space-y-4">
-                    <div className="flex items-center justify-between border-b border-[#f4f3f7] pb-2">
-                        <h2 className="text-sm font-bold text-[#6f5385]">学習内容（AI分析用）</h2>
-                        <span className="text-[10px] font-bold bg-[#f2daff] text-[#6f5385] px-2 py-0.5 rounded-full uppercase tracking-wide">重要</span>
+                <div className="bg-white p-6 rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] border border-[#ccbeff]/30 space-y-4">
+                    <div className="flex items-center justify-between border-b border-[#f0ebf8] pb-2">
+                        <h2 className="text-sm font-bold text-[#6b5ca5]">学習内容（AI分析用）</h2>
+                        <span className="text-[10px] font-bold bg-[#efe9ff] text-[#6b5ca5] px-2 py-0.5 rounded-full uppercase tracking-wide">重要</span>
                     </div>
                     <div>
-                        <label htmlFor="topics" className="block text-xs font-bold text-[#4b454e] uppercase tracking-wider mb-1.5">文法・トピック</label>
+                        <label htmlFor="topics" className="block text-xs font-bold text-[#484550] uppercase tracking-wider mb-1.5">文法・トピック</label>
                         <input type="text" id="topics" name="topics" value={formData.topics} onChange={handleChange}
-                            className="w-full px-4 py-2.5 bg-[#f4f3f7] rounded-xl text-sm text-[#1a1c1e] outline-none focus:bg-[#f2daff] transition-colors"
+                            className="w-full px-4 py-2.5 bg-[#f0ebf8] rounded-xl text-sm text-[#3a3350] outline-none focus:bg-[#efe9ff] transition-colors"
                             placeholder="例: 〜てはいけません, 許可を求める表現" />
-                        <p className="text-[11px] text-[#4b454e]/60 mt-1">カンマ区切りで入力するとAIが認識しやすくなります</p>
+                        <p className="text-[11px] text-[#484550]/60 mt-1">カンマ区切りで入力するとAIが認識しやすくなります</p>
                     </div>
                     <div>
-                        <label htmlFor="vocabulary" className="block text-xs font-bold text-[#4b454e] uppercase tracking-wider mb-1.5">語彙・表現</label>
+                        <label htmlFor="vocabulary" className="block text-xs font-bold text-[#484550] uppercase tracking-wider mb-1.5">語彙・表現</label>
                         <textarea id="vocabulary" name="vocabulary" rows={2} value={formData.vocabulary} onChange={handleChange}
-                            className="w-full px-4 py-2.5 bg-[#f4f3f7] rounded-xl text-sm text-[#1a1c1e] outline-none focus:bg-[#f2daff] transition-colors resize-none"
+                            className="w-full px-4 py-2.5 bg-[#f0ebf8] rounded-xl text-sm text-[#3a3350] outline-none focus:bg-[#efe9ff] transition-colors resize-none"
                             placeholder="例: 規則、守る、厳しい" />
                     </div>
                     <div>
-                        <label htmlFor="mistakes" className="block text-xs font-bold text-[#4b454e] uppercase tracking-wider mb-1.5">つまずき・弱点</label>
+                        <label htmlFor="mistakes" className="block text-xs font-bold text-[#484550] uppercase tracking-wider mb-1.5">つまずき・弱点</label>
                         <textarea id="mistakes" name="mistakes" rows={3} value={formData.mistakes} onChange={handleChange}
-                            className="w-full px-4 py-2.5 bg-[#fff0f0] rounded-xl text-sm text-[#1a1c1e] outline-none focus:bg-[#ffe4e4] transition-colors border border-[#f4b8b8]/50 resize-none placeholder:text-[#ba1a1a]/30"
+                            className="w-full px-4 py-2.5 bg-[#fff0f0] rounded-xl text-sm text-[#3a3350] outline-none focus:bg-[#ffe4e4] transition-colors border border-[#f4b8b8]/50 resize-none placeholder:text-[#ba1a1a]/30"
                             placeholder="例: 「〜なくてはいけません」と「〜なくてもいいです」の混同が見られる。" />
                     </div>
                 </div>
 
                 {/* 生徒の様子・ネクスト */}
-                <div className="bg-white p-6 rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] space-y-4">
-                    <h2 className="text-sm font-bold text-[#1a1c1e] border-b border-[#f4f3f7] pb-2">生徒の様子・ネクストアクション</h2>
+                <div className="bg-white p-6 rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] space-y-4">
+                    <h2 className="text-sm font-bold text-[#3a3350] border-b border-[#f0ebf8] pb-2">生徒の様子・ネクストアクション</h2>
                     <div>
-                        <label className="block text-xs font-bold text-[#4b454e] uppercase tracking-wider mb-2">理解度</label>
+                        <label className="block text-xs font-bold text-[#484550] uppercase tracking-wider mb-2">理解度</label>
                         <div className="flex gap-1">
                             {[1, 2, 3, 4, 5].map((star) => (
                                 <button key={star} type="button" onClick={() => setRating(star)}
-                                    className={`p-1 transition-colors ${star <= formData.understanding_level ? 'text-[#c9a8e0]' : 'text-[#f4f3f7]'}`}>
+                                    className={`p-1 transition-colors ${star <= formData.understanding_level ? 'text-[#ccbeff]' : 'text-[#f0ebf8]'}`}>
                                     <Star size={26} fill={star <= formData.understanding_level ? 'currentColor' : 'none'} strokeWidth={star <= formData.understanding_level ? 0 : 2} />
                                 </button>
                             ))}
@@ -391,44 +391,44 @@ export default function NewLessonPage() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label htmlFor="homework" className="block text-xs font-bold text-[#4b454e] uppercase tracking-wider mb-1.5">宿題</label>
+                            <label htmlFor="homework" className="block text-xs font-bold text-[#484550] uppercase tracking-wider mb-1.5">宿題</label>
                             <textarea id="homework" name="homework" rows={3} value={formData.homework} onChange={handleChange}
-                                className="w-full px-4 py-2.5 bg-[#f4f3f7] rounded-xl text-sm text-[#1a1c1e] outline-none focus:bg-[#f2daff] transition-colors resize-none"
+                                className="w-full px-4 py-2.5 bg-[#f0ebf8] rounded-xl text-sm text-[#3a3350] outline-none focus:bg-[#efe9ff] transition-colors resize-none"
                                 placeholder="ドリルP20-22" />
                         </div>
                         <div>
-                            <label htmlFor="next_goal" className="block text-xs font-bold text-[#4b454e] uppercase tracking-wider mb-1.5">次回の目標</label>
+                            <label htmlFor="next_goal" className="block text-xs font-bold text-[#484550] uppercase tracking-wider mb-1.5">次回の目標</label>
                             <textarea id="next_goal" name="next_goal" rows={3} value={formData.next_goal} onChange={handleChange}
-                                className="w-full px-4 py-2.5 bg-[#f4f3f7] rounded-xl text-sm text-[#1a1c1e] outline-none focus:bg-[#f2daff] transition-colors resize-none"
+                                className="w-full px-4 py-2.5 bg-[#f0ebf8] rounded-xl text-sm text-[#3a3350] outline-none focus:bg-[#efe9ff] transition-colors resize-none"
                                 placeholder="会話練習を中心に" />
                         </div>
                     </div>
                     <div>
-                        <label htmlFor="memo" className="block text-xs font-bold text-[#4b454e] uppercase tracking-wider mb-1.5">その他メモ</label>
+                        <label htmlFor="memo" className="block text-xs font-bold text-[#484550] uppercase tracking-wider mb-1.5">その他メモ</label>
                         <textarea id="memo" name="memo" rows={2} value={formData.memo} onChange={handleChange}
-                            className="w-full px-4 py-2.5 bg-[#f4f3f7] rounded-xl text-sm text-[#1a1c1e] outline-none focus:bg-[#f2daff] transition-colors resize-none"
+                            className="w-full px-4 py-2.5 bg-[#f0ebf8] rounded-xl text-sm text-[#3a3350] outline-none focus:bg-[#efe9ff] transition-colors resize-none"
                             placeholder="雑談内容など" />
                     </div>
                 </div>
 
                 {/* 多言語フィードバック生成 */}
-                <div className="bg-white p-6 rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] border border-[#c9a8e0]/30 space-y-4">
-                    <div className="flex items-center justify-between border-b border-[#f4f3f7] pb-2">
-                        <h2 className="text-sm font-bold text-[#6f5385] flex items-center gap-2">
+                <div className="bg-white p-6 rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] border border-[#ccbeff]/30 space-y-4">
+                    <div className="flex items-center justify-between border-b border-[#f0ebf8] pb-2">
+                        <h2 className="text-sm font-bold text-[#6b5ca5] flex items-center gap-2">
                             <Globe size={15} /> 多言語フィードバック生成
                         </h2>
-                        <span className="text-[10px] font-bold bg-[#f2daff] text-[#6f5385] px-2 py-0.5 rounded-full">生徒に送る文章</span>
+                        <span className="text-[10px] font-bold bg-[#efe9ff] text-[#6b5ca5] px-2 py-0.5 rounded-full">生徒に送る文章</span>
                     </div>
                     <div>
-                        <p className="text-xs text-[#4b454e] mb-2">生徒の母国語を選択</p>
+                        <p className="text-xs text-[#484550] mb-2">生徒の母国語を選択</p>
                         <div className="flex flex-wrap gap-2">
                             {FEEDBACK_LANGUAGES.map((lang) => (
                                 <button key={lang.code} type="button"
                                     onClick={() => { setSelectedLang(lang.code); setMultilingualFeedback(''); }}
                                     className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
                                         selectedLang === lang.code
-                                            ? 'bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] text-white shadow-sm'
-                                            : 'bg-[#f4f3f7] text-[#4b454e] hover:bg-[#f2daff] hover:text-[#6f5385]'
+                                            ? 'bg-[#6b5ca5] text-white shadow-sm'
+                                            : 'bg-[#f0ebf8] text-[#484550] hover:bg-[#efe9ff] hover:text-[#6b5ca5]'
                                     }`}>
                                     {lang.label}
                                 </button>
@@ -437,7 +437,7 @@ export default function NewLessonPage() {
                     </div>
                     <button type="button" onClick={handleGenerateMultilingualFeedback}
                         disabled={isGeneratingFeedback || (!formData.topics && !formData.mistakes && !formData.homework)}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] text-white text-sm font-bold rounded-full hover:scale-[1.02] transition-transform shadow-[0_4px_20px_rgba(111,83,133,0.25)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#6b5ca5] text-white text-sm font-bold rounded-full hover:scale-[1.02] transition-transform shadow-[0_4px_20px_rgba(107,92,165,0.25)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                     >
                         {isGeneratingFeedback
                             ? <><Loader2 size={15} className="animate-spin" />生成中…</>
@@ -445,11 +445,11 @@ export default function NewLessonPage() {
                         }
                     </button>
                     {multilingualFeedback && (
-                        <div className="relative bg-[#f2daff] border border-[#c9a8e0]/40 rounded-2xl p-4">
-                            <p className="text-sm text-[#1a1c1e] whitespace-pre-wrap leading-relaxed pr-16">{multilingualFeedback}</p>
+                        <div className="relative bg-[#efe9ff] border border-[#ccbeff]/40 rounded-2xl p-4">
+                            <p className="text-sm text-[#3a3350] whitespace-pre-wrap leading-relaxed pr-16">{multilingualFeedback}</p>
                             <button type="button" onClick={handleCopyFeedback}
                                 className={`absolute top-3 right-3 inline-flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-lg transition-all ${
-                                    feedbackCopied ? 'bg-[#dcfce7] text-[#166534]' : 'bg-white text-[#4b454e] hover:bg-[#eddcf4] border border-[#c9a8e0]/30'
+                                    feedbackCopied ? 'bg-[#dcfce7] text-[#166534]' : 'bg-white text-[#484550] hover:bg-[#dff1ea] border border-[#ccbeff]/30'
                                 }`}>
                                 {feedbackCopied ? <Check size={12} /> : <Copy size={12} />}
                                 {feedbackCopied ? 'コピー済み' : 'コピー'}
@@ -460,7 +460,7 @@ export default function NewLessonPage() {
 
                 <div className="flex justify-end pt-2 pb-0">
                     <button type="submit" disabled={loading}
-                        className="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] text-white font-bold rounded-full hover:scale-[1.02] transition-transform shadow-[0_4px_20px_rgba(111,83,133,0.25)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#6b5ca5] text-white font-bold rounded-full hover:scale-[1.02] transition-transform shadow-[0_4px_20px_rgba(107,92,165,0.25)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                     >
                         {loading ? (
                             <>

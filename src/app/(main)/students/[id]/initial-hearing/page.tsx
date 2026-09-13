@@ -17,7 +17,7 @@ import { nationalityToLangName } from '@/lib/nationality';
 const RoadmapGenerator = dynamic(() => import('@/components/roadmap/RoadmapGenerator'), {
     loading: () => (
         <div className="flex justify-center p-12">
-            <Loader2 className="animate-spin text-[#6f5385]" size={28} />
+            <Loader2 className="animate-spin text-[#6b5ca5]" size={28} />
         </div>
     ),
     ssr: false,
@@ -443,7 +443,7 @@ ${conversationNotes}`.trim();
     if (loading) {
         return (
             <div className="flex h-screen items-center justify-center">
-                <Loader2 className="animate-spin text-[#6f5385]" size={32} />
+                <Loader2 className="animate-spin text-[#6b5ca5]" size={32} />
             </div>
         );
     }
@@ -453,19 +453,19 @@ ${conversationNotes}`.trim();
 
     return (
         <>
-        <div className="min-h-screen bg-[#faf9fd]">
+        <div className="min-h-screen bg-[#f6f3fb]">
             {/* ヘッダー */}
-            <div className="bg-white border-b border-[#f4f3f7] sticky top-0 z-50">
+            <div className="bg-white border-b border-[#f0ebf8] sticky top-0 z-50">
                 <div className="max-w-4xl mx-auto px-4 h-14 flex items-center gap-4">
-                    <Link href={`/students/${studentId}`} className="p-2 text-[#4b454e] hover:text-[#1a1c1e] hover:bg-[#f4f3f7] rounded-full transition-colors">
+                    <Link href={`/students/${studentId}`} className="p-2 text-[#484550] hover:text-[#3a3350] hover:bg-[#f0ebf8] rounded-full transition-colors">
                         <ArrowLeft size={18} />
                     </Link>
                     <div>
-                        <h1 className="font-bold text-[#1a1c1e] flex items-center gap-2 text-sm">
-                            <Sparkles size={15} className="text-[#6f5385]" />
+                        <h1 className="font-bold text-[#3a3350] flex items-center gap-2 text-sm">
+                            <Sparkles size={15} className="text-[#6b5ca5]" />
                             体験レッスン → ロードマップ作成
                         </h1>
-                        <p className="text-xs text-[#4b454e]">{student.name}さん</p>
+                        <p className="text-xs text-[#484550]">{student.name}さん</p>
                     </div>
                 </div>
             </div>
@@ -476,30 +476,30 @@ ${conversationNotes}`.trim();
                 {(phase === 'input') && (
                     <>
                         {/* ステップ説明 */}
-                        <div className="bg-gradient-to-r from-[#f2daff] to-white border border-[#c9a8e0]/30 rounded-2xl p-5">
-                            <p className="text-sm font-bold text-[#1a1c1e] mb-3">使い方（3ステップ）</p>
-                            <div className="flex items-start gap-6 text-xs text-[#4b454e]">
+                        <div className="bg-gradient-to-r from-[#efe9ff] to-white border border-[#ccbeff]/30 rounded-2xl p-5">
+                            <p className="text-sm font-bold text-[#3a3350] mb-3">使い方（3ステップ）</p>
+                            <div className="flex items-start gap-6 text-xs text-[#484550]">
                                 <div className="flex items-center gap-2">
-                                    <span className="w-5 h-5 rounded-full bg-[#6f5385] text-white flex items-center justify-center font-bold flex-shrink-0 text-[10px]">1</span>
+                                    <span className="w-5 h-5 rounded-full bg-[#6b5ca5] text-white flex items-center justify-center font-bold flex-shrink-0 text-[10px]">1</span>
                                     体験レッスンのメモを入力<br/>（テキスト・音声・録音）
                                 </div>
-                                <div className="text-[#c9a8e0]">→</div>
+                                <div className="text-[#ccbeff]">→</div>
                                 <div className="flex items-center gap-2">
-                                    <span className="w-5 h-5 rounded-full bg-[#6f5385] text-white flex items-center justify-center font-bold flex-shrink-0 text-[10px]">2</span>
+                                    <span className="w-5 h-5 rounded-full bg-[#6b5ca5] text-white flex items-center justify-center font-bold flex-shrink-0 text-[10px]">2</span>
                                     AIがレベル・目的を自動判定
                                 </div>
-                                <div className="text-[#c9a8e0]">→</div>
+                                <div className="text-[#ccbeff]">→</div>
                                 <div className="flex items-center gap-2">
-                                    <span className="w-5 h-5 rounded-full bg-[#6f5385] text-white flex items-center justify-center font-bold flex-shrink-0 text-[10px]">3</span>
+                                    <span className="w-5 h-5 rounded-full bg-[#6b5ca5] text-white flex items-center justify-center font-bold flex-shrink-0 text-[10px]">3</span>
                                     スライダー確認→ロードマップ生成
                                 </div>
                             </div>
                         </div>
 
                         {/* 入力エリア */}
-                        <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] p-6 space-y-4">
+                        <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] p-6 space-y-4">
                             <div className="flex items-center justify-between">
-                                <label className="text-sm font-bold text-[#1a1c1e]">体験レッスンのメモ</label>
+                                <label className="text-sm font-bold text-[#3a3350]">体験レッスンのメモ</label>
                                 <div className="flex items-center gap-2">
                                     {/* 録音ボタン（Chrome限定） */}
                                     {isChrome && (
@@ -509,7 +509,7 @@ ${conversationNotes}`.trim();
                                             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                                                 isRecording
                                                     ? 'bg-red-500 text-white animate-pulse'
-                                                    : 'bg-[#f4f3f7] text-[#4b454e] hover:bg-[#f2daff] hover:text-[#6f5385]'
+                                                    : 'bg-[#f0ebf8] text-[#484550] hover:bg-[#efe9ff] hover:text-[#6b5ca5]'
                                             }`}
                                             title="体験レッスンの会話を録音→自動文字起こし"
                                         >
@@ -526,8 +526,8 @@ ${conversationNotes}`.trim();
                                         disabled={isRecording || isTranscribing}
                                         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                                             isListening
-                                                ? 'bg-[#6f5385] text-white animate-pulse'
-                                                : 'bg-[#f4f3f7] text-[#4b454e] hover:bg-[#f2daff] hover:text-[#6f5385]'
+                                                ? 'bg-[#6b5ca5] text-white animate-pulse'
+                                                : 'bg-[#f0ebf8] text-[#484550] hover:bg-[#efe9ff] hover:text-[#6b5ca5]'
                                         }`}
                                         title="話した内容をリアルタイムでテキスト化"
                                     >
@@ -538,13 +538,13 @@ ${conversationNotes}`.trim();
 
                             {/* ステータスバナー */}
                             {isTranscribing && (
-                                <div className="flex items-center gap-2 px-3 py-2 bg-[#f2daff] rounded-xl text-xs text-[#6f5385] font-bold">
+                                <div className="flex items-center gap-2 px-3 py-2 bg-[#efe9ff] rounded-xl text-xs text-[#6b5ca5] font-bold">
                                     <Loader2 size={12} className="animate-spin" />
                                     録音を文字起こし中…
                                 </div>
                             )}
                             {isListening && interimText && (
-                                <div className="px-3 py-2 bg-[#faf9fd] border border-[#c9a8e0]/30 rounded-xl text-sm text-[#4b454e] italic">
+                                <div className="px-3 py-2 bg-[#f6f3fb] border border-[#ccbeff]/30 rounded-xl text-sm text-[#484550] italic">
                                     {interimText}▋
                                 </div>
                             )}
@@ -554,20 +554,20 @@ ${conversationNotes}`.trim();
                                 onChange={(e) => setConversationNotes(e.target.value)}
                                 placeholder={SAMPLE_MEMO}
                                 rows={10}
-                                className="w-full px-4 py-3 border border-[#cdc3ce] rounded-xl text-sm text-[#1a1c1e] focus:outline-none focus:ring-2 focus:ring-[#6f5385] focus:border-transparent resize-y"
+                                className="w-full px-4 py-3 border border-[#d6cfe2] rounded-xl text-sm text-[#3a3350] focus:outline-none focus:ring-2 focus:ring-[#6b5ca5] focus:border-transparent resize-y"
                                 disabled={isTranscribing}
                             />
 
                             <div className="flex items-center justify-between">
-                                <span className="text-xs text-[#4b454e]/60">
+                                <span className="text-xs text-[#484550]/60">
                                     {conversationNotes.length}文字
-                                    {isListening && <span className="ml-2 text-[#6f5385] font-bold">● 音声入力中</span>}
+                                    {isListening && <span className="ml-2 text-[#6b5ca5] font-bold">● 音声入力中</span>}
                                     {isRecording && <span className="ml-2 text-red-500 font-bold">● 録音中 {formatTime(recordingSeconds)}</span>}
                                 </span>
                                 <button
                                     onClick={handleAnalyze}
                                     disabled={!conversationNotes.trim() || isTranscribing}
-                                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#6f5385] to-[#c9a8e0] text-white text-sm font-bold rounded-xl hover:opacity-90 transition-opacity shadow-[0_4px_15px_rgba(111,83,133,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#6b5ca5] text-white text-sm font-bold rounded-xl hover:opacity-90 transition-opacity shadow-[0_4px_15px_rgba(107,92,165,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <Sparkles size={15} />
                                     AIで判定する
@@ -587,11 +587,11 @@ ${conversationNotes}`.trim();
                 {/* ── フェーズ2: 分析中 ── */}
                 {phase === 'analyzing' && (
                     <div className="flex flex-col items-center justify-center py-24 gap-4">
-                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#6f5385] to-[#c9a8e0] flex items-center justify-center animate-pulse">
+                        <div className="w-16 h-16 rounded-full bg-[#6b5ca5] flex items-center justify-center animate-pulse">
                             <Sparkles size={28} className="text-white" />
                         </div>
-                        <p className="text-sm font-bold text-[#1a1c1e]">AIが分析中…</p>
-                        <p className="text-xs text-[#4b454e]">レベル・目的・ロードマップを推定しています</p>
+                        <p className="text-sm font-bold text-[#3a3350]">AIが分析中…</p>
+                        <p className="text-xs text-[#484550]">レベル・目的・ロードマップを推定しています</p>
                     </div>
                 )}
 
@@ -599,8 +599,8 @@ ${conversationNotes}`.trim();
                 {phase === 'result' && result && (
                     <>
                         {/* AI判定結果（コンパクト） */}
-                        <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)] border border-[#c9a8e0]/40 overflow-hidden">
-                            <div className="bg-gradient-to-r from-[#6f5385] to-[#c9a8e0] px-5 py-3 flex items-center justify-between">
+                        <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] border border-[#ccbeff]/40 overflow-hidden">
+                            <div className="bg-[#6b5ca5] px-5 py-3 flex items-center justify-between">
                                 <h2 className="font-bold text-white text-sm flex items-center gap-2">
                                     <CheckCircle2 size={16} />
                                     AI判定結果
@@ -621,7 +621,7 @@ ${conversationNotes}`.trim();
 
                             <div className="p-5 space-y-4">
                                 {/* 要約 */}
-                                <p className="text-sm text-[#1a1c1e] leading-relaxed bg-[#faf9fd] rounded-xl p-3">{result.summary}</p>
+                                <p className="text-sm text-[#3a3350] leading-relaxed bg-[#f6f3fb] rounded-xl p-3">{result.summary}</p>
 
                                 {/* キー指標 */}
                                 <div className="grid grid-cols-4 gap-2">
@@ -631,9 +631,9 @@ ${conversationNotes}`.trim();
                                         { label: '漢字', value: { required: '必須', optional: '任意', minimal: '最小限' }[result.kanji_necessity] },
                                         { label: '推奨期間', value: `${result.period_months_suggestion}ヶ月` },
                                     ].map((item, i) => (
-                                        <div key={i} className="border border-[#f4f3f7] rounded-xl p-3 text-center">
-                                            <p className="text-[10px] text-[#4b454e] mb-1">{item.label}</p>
-                                            <div className="text-sm font-bold text-[#1a1c1e]">{item.value}</div>
+                                        <div key={i} className="border border-[#f0ebf8] rounded-xl p-3 text-center">
+                                            <p className="text-[10px] text-[#484550] mb-1">{item.label}</p>
+                                            <div className="text-sm font-bold text-[#3a3350]">{item.value}</div>
                                         </div>
                                     ))}
                                 </div>
@@ -641,12 +641,12 @@ ${conversationNotes}`.trim();
                                 {/* 重点項目 */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     <div>
-                                        <p className="text-xs font-bold text-[#1a1c1e] mb-2 flex items-center gap-1">
+                                        <p className="text-xs font-bold text-[#3a3350] mb-2 flex items-center gap-1">
                                             <CheckCircle2 size={12} className="text-green-600" /> 重点項目
                                         </p>
                                         <ul className="space-y-1">
                                             {result.focus_areas.slice(0, 4).map((a, i) => (
-                                                <li key={i} className="text-xs text-[#4b454e] flex items-start gap-1.5">
+                                                <li key={i} className="text-xs text-[#484550] flex items-start gap-1.5">
                                                     <span className="text-green-600 mt-0.5">✓</span>{a}
                                                 </li>
                                             ))}
@@ -671,10 +671,10 @@ ${conversationNotes}`.trim();
                         </div>
 
                         {/* ロードマップ（AI自動セット、調整可） */}
-                        <div className="bg-[#f2daff]/30 border border-[#c9a8e0]/30 rounded-2xl p-4">
+                        <div className="bg-[#efe9ff]/30 border border-[#ccbeff]/30 rounded-2xl p-4">
                             <div className="flex items-center gap-2 mb-4">
-                                <Sparkles size={15} className="text-[#6f5385]" />
-                                <p className="text-sm font-bold text-[#6f5385]">
+                                <Sparkles size={15} className="text-[#6b5ca5]" />
+                                <p className="text-sm font-bold text-[#6b5ca5]">
                                     AIが推定値をセットしました（スライダーで調整可）
                                 </p>
                             </div>
@@ -687,7 +687,7 @@ ${conversationNotes}`.trim();
                                 onSave={handleSaveRoadmap}
                             />
                             {saving && (
-                                <div className="flex items-center justify-center gap-2 py-4 text-[#6f5385]">
+                                <div className="flex items-center justify-center gap-2 py-4 text-[#6b5ca5]">
                                     <Loader2 size={16} className="animate-spin" />
                                     <span className="text-sm">保存中...</span>
                                 </div>
@@ -703,7 +703,7 @@ ${conversationNotes}`.trim();
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
                 <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
                     {/* ヘッダー */}
-                    <div className="bg-gradient-to-r from-[#6f5385] to-[#c9a8e0] px-6 py-4 flex items-center justify-between">
+                    <div className="bg-[#6b5ca5] px-6 py-4 flex items-center justify-between">
                         <div>
                             <p className="font-bold text-white flex items-center gap-2">
                                 <BookOpen size={16} />
@@ -730,18 +730,18 @@ ${conversationNotes}`.trim();
                                             onClick={() => setSelectedMaterialType(type)}
                                             className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all ${
                                                 selectedMaterialType === type
-                                                    ? 'border-[#6f5385] bg-[#f2daff]/50'
-                                                    : 'border-[#f4f3f7] hover:border-[#c9a8e0]'
+                                                    ? 'border-[#6b5ca5] bg-[#efe9ff]/50'
+                                                    : 'border-[#f0ebf8] hover:border-[#ccbeff]'
                                             }`}
                                         >
                                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                                                selectedMaterialType === type ? 'bg-[#6f5385] text-white' : 'bg-[#f4f3f7] text-[#4b454e]'
+                                                selectedMaterialType === type ? 'bg-[#6b5ca5] text-white' : 'bg-[#f0ebf8] text-[#484550]'
                                             }`}>
                                                 {info.icon}
                                             </div>
                                             <div>
-                                                <p className="text-sm font-bold text-[#1a1c1e]">{info.label}</p>
-                                                <p className="text-xs text-[#4b454e]">{info.desc}</p>
+                                                <p className="text-sm font-bold text-[#3a3350]">{info.label}</p>
+                                                <p className="text-xs text-[#484550]">{info.desc}</p>
                                             </div>
                                         </button>
                                     ))}
@@ -751,14 +751,14 @@ ${conversationNotes}`.trim();
                                 <div className="flex gap-3">
                                     <button
                                         onClick={handleModalClose}
-                                        className="flex-1 py-3 rounded-xl border border-[#cdc3ce] text-sm font-bold text-[#4b454e] hover:bg-[#f4f3f7] transition-colors"
+                                        className="flex-1 py-3 rounded-xl border border-[#d6cfe2] text-sm font-bold text-[#484550] hover:bg-[#f0ebf8] transition-colors"
                                     >
                                         あとで
                                     </button>
                                     <button
                                         onClick={handleGenerateMaterial}
                                         disabled={generatingMaterial}
-                                        className="flex-2 min-w-0 flex-1 py-3 rounded-xl bg-gradient-to-r from-[#6f5385] to-[#c9a8e0] text-white text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
+                                        className="flex-2 min-w-0 flex-1 py-3 rounded-xl bg-[#6b5ca5] text-white text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
                                     >
                                         {generatingMaterial ? (
                                             <><Loader2 size={15} className="animate-spin" />生成中…</>
@@ -771,25 +771,25 @@ ${conversationNotes}`.trim();
                         ) : (
                             /* 生成結果 */
                             <div className="space-y-4">
-                                <div className="bg-[#faf9fd] rounded-xl p-4 border border-[#f4f3f7]">
+                                <div className="bg-[#f6f3fb] rounded-xl p-4 border border-[#f0ebf8]">
                                     <div className="flex items-center gap-2 mb-2">
                                         <CheckCircle2 size={15} className="text-green-600" />
-                                        <p className="text-sm font-bold text-[#1a1c1e]">{generatedMaterial.title}</p>
+                                        <p className="text-sm font-bold text-[#3a3350]">{generatedMaterial.title}</p>
                                     </div>
                                     {Array.isArray(generatedMaterial.cards) && generatedMaterial.cards.length > 0 && generatedMaterial.cards[0]?.front !== undefined ? (
                                         <div className="space-y-1.5 max-h-48 overflow-y-auto">
                                             {generatedMaterial.cards.slice(0, 5).map((card, i) => (
-                                                <div key={i} className="text-xs bg-white border border-[#f4f3f7] rounded-lg p-2.5">
-                                                    <span className="font-bold text-[#6f5385]">{card.front}</span>
-                                                    <span className="text-[#4b454e] ml-2">→ {card.back}</span>
+                                                <div key={i} className="text-xs bg-white border border-[#f0ebf8] rounded-lg p-2.5">
+                                                    <span className="font-bold text-[#6b5ca5]">{card.front}</span>
+                                                    <span className="text-[#484550] ml-2">→ {card.back}</span>
                                                 </div>
                                             ))}
                                             {generatedMaterial.cards.length > 5 && (
-                                                <p className="text-xs text-[#4b454e]/60 text-center">他 {generatedMaterial.cards.length - 5} 枚</p>
+                                                <p className="text-xs text-[#484550]/60 text-center">他 {generatedMaterial.cards.length - 5} 枚</p>
                                             )}
                                         </div>
                                     ) : (
-                                        <p className="text-xs text-[#4b454e] whitespace-pre-wrap max-h-48 overflow-y-auto leading-relaxed">
+                                        <p className="text-xs text-[#484550] whitespace-pre-wrap max-h-48 overflow-y-auto leading-relaxed">
                                             {generatedMaterial.content.slice(0, 300)}{generatedMaterial.content.length > 300 ? '…' : ''}
                                         </p>
                                     )}
@@ -801,7 +801,7 @@ ${conversationNotes}`.trim();
                                 )}
                                 <button
                                     onClick={handleModalClose}
-                                    className="w-full py-3 rounded-xl bg-gradient-to-r from-[#6f5385] to-[#c9a8e0] text-white text-sm font-bold hover:opacity-90 transition-opacity"
+                                    className="w-full py-3 rounded-xl bg-[#6b5ca5] text-white text-sm font-bold hover:opacity-90 transition-opacity"
                                 >
                                     生徒ページへ
                                 </button>

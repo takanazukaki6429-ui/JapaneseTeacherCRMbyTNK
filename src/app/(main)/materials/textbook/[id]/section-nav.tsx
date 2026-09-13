@@ -8,13 +8,13 @@ type Props = { sections: { id: string; label: string }[] };
 
 export function SectionNav({ sections }: Props) {
     return (
-        <div className="bg-white px-4 py-3 rounded-2xl shadow-[0_0_40px_rgba(111,83,133,0.06)]">
+        <div className="bg-white px-4 py-3 rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)]">
             <div className="flex flex-wrap gap-1.5">
                 {sections.map(s => (
                     <button
                         key={s.id}
                         onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth' })}
-                        className="px-3 py-1.5 text-xs font-medium text-[#4b454e] bg-[#f4f3f7] rounded-lg hover:bg-[#f2daff] hover:text-[#6f5385] transition-colors"
+                        className="px-3 py-1.5 text-xs font-medium text-[#484550] bg-[#f0ebf8] rounded-lg hover:bg-[#efe9ff] hover:text-[#6b5ca5] transition-colors"
                     >
                         {s.label}
                     </button>
