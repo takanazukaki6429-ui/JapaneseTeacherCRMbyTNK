@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSpeechClient, getTranslateClient, getProjectId, isGoogleCloudConfigured } from '@/lib/google-cloud';
 import { createClient } from '@/lib/supabase/server';
+import { notifyAdmin } from '@/lib/notify';
 
 export const dynamic = 'force-dynamic';
 
@@ -174,6 +175,15 @@ export async function POST(req: NextRequest) {
             .gte('created_at', oneHourAgo);
 
         if (count !== null && count >= TRANSCRIBE_HOURLY_LIMIT) {
+            // 運営者へ通知（2026-09-11）。上限に達した最初の1回だけ送る：
+            // 上限を超えた後は利用記録が増えないので、回数がちょうど上限の時が「初めて止めた時」
+            if (count === TRANSCRIBE_HOURLY_LIMIT) {
+                await notifyAdmin({
+                    level: 'warning',
+                    title: '翻訳の利用が1時間の上限に達しました',
+                    body: `先生のID: ${user.id}\n直近1時間の翻訳回数: ${count}（上限 ${TRANSCRIBE_HOURLY_LIMIT}）\n複数のタブ・閉じ忘れ・想定外の使い方の可能性があります。`,
+                });
+            }
             return NextResponse.json(
                 { error: 'Rate limit exceeded', original: '', japanese: '' },
                 { status: 429 }
