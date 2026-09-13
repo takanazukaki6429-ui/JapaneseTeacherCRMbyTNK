@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { BUSINESS_CONTACT_EMAIL } from '@/lib/pricing';
 import { createClient } from '@/lib/supabase/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { withRetry } from '@/lib/retry';
@@ -14,8 +15,9 @@ import { maskPII } from '@/lib/pii-masking';
 
 export const dynamic = 'force-dynamic';
 
-// 問い合わせ先（かずき判断待ち 2026-09-12：今のメールアドレスのまま。決まったらここ1か所を差し替える）
-const SUPPORT_CONTACT = 'サポート（takanazukaki6429@gmail.com）';
+// 問い合わせ先（2026-09-13 かずき決定：案A＝support@asta-crm.com を作って転送）。規約・プライバシーポリシーと同じ1つの設定値から読む。
+// 受け取りの準備ができたら、かずきが Vercel の NEXT_PUBLIC_BUSINESS_EMAIL に support@asta-crm.com を入れる（コードは変えない）
+const SUPPORT_CONTACT = `サポート（${BUSINESS_CONTACT_EMAIL}）`;
 
 // 2026-09-12 書き直し：画面にある機能だけを書く（無くなった「字幕PiP」などは載せない）。
 // 授業や教え方の相談はホームの「ASTAに聞く（授業の相談）」が受け持つ（かずき決定：案A）
@@ -93,7 +95,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ answer: result.response.text() });
     } catch {
         return NextResponse.json(
-            { answer: '申し訳ございません、ただいま回答を生成できませんでした。お急ぎの場合は takanazukaki6429@gmail.com までお問い合わせください。' },
+            { answer: `申し訳ございません、ただいま回答を生成できませんでした。お急ぎの場合は ${BUSINESS_CONTACT_EMAIL} までお問い合わせください。` },
         );
     }
 }

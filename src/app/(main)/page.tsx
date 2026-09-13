@@ -32,7 +32,7 @@ type StudentRow = {
 };
 type LessonRow = {
     id: string; student_id: string; date: string; status: string | null;
-    mistakes: string | null; homework: string | null;
+    topics: string | null; mistakes: string | null; homework: string | null;
 };
 
 /** 日本時間で「9月11日（金）」の形にする */
@@ -56,7 +56,7 @@ async function getHomeData() {
             .select('id, name, nationality, jlpt_level, textbook, current_phase, initial_hearing_done')
             .eq('user_id', user.id),
         supabase.from('lessons')
-            .select('id, student_id, date, status, mistakes, homework, students!inner(user_id)')
+            .select('id, student_id, date, status, topics, mistakes, homework, students!inner(user_id)')
             .eq('students.user_id', user.id)
             .order('date', { ascending: false })
             .limit(2000),
@@ -181,7 +181,7 @@ export default async function Home() {
                                                 ))}
                                             </div>
                                             <p className="text-[15px] leading-[26px] text-[#484550] mt-2">
-                                                <span className="font-medium text-[#6b5ca5]">今の課：</span>{st.textbook || '未設定'}
+                                                <span className="font-medium text-[#6b5ca5]">前回の内容：</span>{last ? (last.topics?.trim() || '記録なし') : 'まだ授業の記録がありません'}
                                             </p>
                                         </div>
                                         <Link

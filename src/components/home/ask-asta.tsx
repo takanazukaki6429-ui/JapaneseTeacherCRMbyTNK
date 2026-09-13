@@ -2,7 +2,7 @@
 
 /**
  * ホームの「ASTAに聞く（授業の相談）」：授業や教え方の相談の入力欄1本（画面の要素一覧_2026-09-10.md 画面1）。
- * ASTAは日本語教師の相談相手として、先生の生徒の情報（レベル・今の課・前回のつまずき）を踏まえて答える（/api/ai の home_ask）。
+ * ASTAは日本語教師の相談相手として、先生の生徒の情報（レベル・使用教材・前回の内容・前回のつまずき）を踏まえて答える（/api/ai の home_ask）。
  * ASTAの使い方の質問は、右下の「使い方ヘルプ」が受け持つ（2026-09-12 かずき決定：案A）。
  * 見た目は画面案 ホーム_色D書体E.html。答えはこの画面の下にそのまま出す（別の画面へ移動しない）。
  */
@@ -51,7 +51,7 @@ export function AskAsta() {
                     <MessagesSquare size={24} strokeWidth={1.5} />
                     <h2 className="text-[18px] leading-[28px] font-bold text-[#3a3350]">ASTAに聞く（授業の相談）</h2>
                 </div>
-                <p className="text-[12px] leading-[18px] text-[#484550] -mt-1">生徒の情報（レベル・今の課・前回のつまずき）を踏まえて答えます。ASTAの使い方は、右下の「？」（使い方ヘルプ）で聞いてください。</p>
+                <p className="text-[12px] leading-[18px] text-[#484550] -mt-1">生徒の情報（レベル・前回の内容・前回のつまずき）を踏まえて答えます。ASTAの使い方は、右下の「？」（使い方ヘルプ）で聞いてください。</p>
                 <form onSubmit={ask} className="relative flex items-center mt-1">
                     <input
                         value={prompt}
