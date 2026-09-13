@@ -8,6 +8,16 @@ import Link from 'next/link';
 import { LessonChatLogsViewer } from '@/components/lessons/lesson-chat-logs-viewer';
 import { nationalityToLangCode } from '@/lib/nationality';
 
+/**
+ * 日時を、日本時間の「YYYY-MM-DDTHH:mm」（日時の入力欄の形）にする。
+ * 以前は世界標準時の時刻を初期値にしていたため、日本より9時間前の時刻が入り、そのまま保存すると記録の日時がずれていた（2026-09-14 修正）
+ */
+function jstForInput(d: Date): string {
+    return new Intl.DateTimeFormat('sv-SE', {
+        timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(d).replace(' ', 'T');
+}
+
 export default function NewLessonPage() {
     const router = useRouter();
     const supabase = createClient();
@@ -21,7 +31,7 @@ export default function NewLessonPage() {
     const [isAutoFilling, setIsAutoFilling] = useState(false);
     const [autoFilled, setAutoFilled] = useState(false);
     const [formData, setFormData] = useState({
-        date: new Date().toISOString().slice(0, 16), // datetime-local format YYYY-MM-DDTHH:mm
+        date: jstForInput(new Date()), // 日本時間の今（日時の入力欄の形 YYYY-MM-DDTHH:mm）
         topics: '',
         vocabulary: '',
         mistakes: '',
@@ -46,9 +56,8 @@ export default function NewLessonPage() {
                 }
 
                 if (data) {
-                    // Convert ISO date to datetime-local format (subset)
-                    const dateObj = new Date(data.date);
-                    const localIso = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+                    // 予定の日時を、日本時間で入力欄に出す
+                    const localIso = jstForInput(new Date(data.date));
 
                     setFormData(prev => ({
                         ...prev,
@@ -243,7 +252,7 @@ export default function NewLessonPage() {
         try {
             const payload = {
                 student_id: studentId,
-                date: new Date(formData.date).toISOString(),
+                date: new Date(`${formData.date}:00+09:00`).toISOString(),   // 入力欄の時刻は日本時間として保存する
                 topics: formData.topics || null,
                 vocabulary: formData.vocabulary || null,
                 mistakes: formData.mistakes || null,
