@@ -25,11 +25,13 @@ export default function NewLessonPage() {
     const studentId = typeof params.id === 'string' ? params.id : '';
     const searchParams = useSearchParams();
     const scheduledLessonId = searchParams.get('scheduledLessonId');
+    const editLessonId = searchParams.get('lessonId');   // 保存した記録を直すとき（2026-09-14 かずき決定）
 
     const [loading, setLoading] = useState(false);
     const [fetchingScheduled, setFetchingScheduled] = useState(false);
     const [isAutoFilling, setIsAutoFilling] = useState(false);
     const [autoFilled, setAutoFilled] = useState(false);
+    const [fetchingEdit, setFetchingEdit] = useState(!!editLessonId);
     const [formData, setFormData] = useState({
         date: jstForInput(new Date()), // 日本時間の今（日時の入力欄の形 YYYY-MM-DDTHH:mm）
         topics: '',
@@ -76,41 +78,89 @@ export default function NewLessonPage() {
         }
     }, [scheduledLessonId, supabase]);
 
+    // 保存した記録を直す（?lessonId=…）：記録の中身を入力欄に読み込む（2026-09-14 かずき決定）
     useEffect(() => {
-        if (!studentId) return;
+        if (!editLessonId) return;
+        supabase
+            .from('lessons')
+            .select('date, topics, vocabulary, mistakes, understanding_level, homework, next_goal, content')
+            .eq('id', editLessonId)
+            .single()
+            .then(({ data }) => {
+                if (data) {
+                    setFormData({
+                        date: jstForInput(new Date(data.date)),
+                        topics: data.topics ?? '',
+                        vocabulary: data.vocabulary ?? '',
+                        mistakes: data.mistakes ?? '',
+                        understanding_level: data.understanding_level ?? 3,
+                        homework: data.homework ?? '',
+                        next_goal: data.next_goal ?? '',
+                        memo: data.content ?? '',
+                    });
+                }
+                setFetchingEdit(false);
+            });
+    }, [editLessonId, supabase]);
+
+    // 記録の自動下書き（2026-09-14 かずき決定：9/28までに入れる）
+    // ライブ授業で「授業を終える」を押すと、授業全体の会話（先生と生徒の両方）が渡ってくる。
+    // ASTAがそこから、学習トピック・語彙・つまずき・宿題・次回の目標の下書きを作る。
+    // （以前は先生のマイクの文字起こしの先頭1500字だけから、トピック・語彙・つまずきの3欄を作っていた）
+    useEffect(() => {
+        if (!studentId || editLessonId) return;
         const sessionKey = `live_session_${studentId}`;
         const saved = localStorage.getItem(sessionKey);
         if (!saved) return;
         try {
-            const { transcript, courseSuggestions: suggestions } = JSON.parse(saved);
+            const { transcript, conversation, courseSuggestions: suggestions } = JSON.parse(saved);
             localStorage.removeItem(sessionKey);
-            if (!transcript?.trim()) return;
+            const talk: string = String(conversation || transcript || '').trim();
+            if (!talk) return;
             setIsAutoFilling(true);
-            const context = suggestions?.length
-                ? `\n\nAIサジェスト:\n${suggestions.map((s: { text: string }) => s.text).join('\n\n')}`
+            // 長い授業は、始めの部分と終わりの大部分を渡す（一度に渡せる量に収めるため）
+            const clipped = talk.length > 24000 ? `${talk.slice(0, 6000)}\n…（途中を省略）…\n${talk.slice(-18000)}` : talk;
+            const hints = suggestions?.length
+                ? `\n\n# 授業中にASTAが出したヒント\n${suggestions.map((x: { text: string }) => x.text).join('\n')}`
                 : '';
             fetch('/api/ai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    prompt: `以下は日本語レッスン中の音声テキストです。これをもとにレッスン記録の各項目を抽出してください。${context}\n\n音声テキスト:\n${transcript.slice(0, 1500)}\n\n以下のJSON形式のみで出力（Markdownなし）:\n{\n  "topics": "学習した文法・トピック（カンマ区切り）",\n  "vocabulary": "出てきた語彙・表現（カンマ区切り）",\n  "mistakes": "つまずき・弱点"\n}`,
+                    type: 'record_draft',   // 記録の自動下書き（利用実態を画面ごとに数えるため）
+                    prompt: `あなたは日本語教師の記録係です。下は日本語レッスン1回分の会話の文字起こしです（行の頭の「先生：」「生徒：」で話し手を示す。音声認識なので聞き間違いを含む）。
+これをもとに、先生が授業のあとに残すレッスン記録の下書きを作ってください。
+
+# 決まり
+- 会話に出てこないことは書かない（推測で足さない）
+- topics：この授業で扱った文法・話題（カンマ区切り・短く）
+- vocabulary：出てきた語彙・表現（カンマ区切り・10個まで）
+- mistakes：生徒がつまずいた点・言い間違い（具体的に。無ければ空）
+- homework：次回までの宿題の案（1〜2個）
+- next_goal：次回の授業の目標の案（1文）
+- 出力は次の形のJSONだけ（Markdownなし）：{"topics":"","vocabulary":"","mistakes":"","homework":"","next_goal":""}${hints}
+
+# 会話
+${clipped}`,
                 }),
             })
                 .then(r => r.json())
                 .then(data => {
                     try {
-                        const clean = data.text.replace(/```json/g, '').replace(/```/g, '').trim();
-                        const result = JSON.parse(clean);
+                        const text = String(data.text ?? '').replace(/```json/g, '').replace(/```/g, '').trim();
+                        const result = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
                         setFormData(prev => ({
                             ...prev,
                             topics: result.topics || prev.topics,
                             vocabulary: result.vocabulary || prev.vocabulary,
                             mistakes: result.mistakes || prev.mistakes,
+                            homework: result.homework || prev.homework,
+                            next_goal: result.next_goal || prev.next_goal,
                         }));
                         setAutoFilled(true);
-                    } catch { /* ignore parse errors */ }
+                    } catch { /* 読めない答えは使わない */ }
                 })
-                .catch(err => console.error('Auto-fill error:', err))
+                .catch(err => console.error('Record draft error:', err))
                 .finally(() => setIsAutoFilling(false));
         } catch { /* ignore */ }
     }, [studentId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -264,14 +314,15 @@ export default function NewLessonPage() {
             };
 
             let error;
-            let savedLessonId: string | null = scheduledLessonId;
+            const targetLessonId = editLessonId ?? scheduledLessonId;   // 直すとき・予定を記録にするときは、その記録を上書き
+            let savedLessonId: string | null = targetLessonId;
 
-            if (scheduledLessonId) {
+            if (targetLessonId) {
                 // Update existing
                 const result = await supabase
                     .from('lessons')
                     .update(payload)
-                    .eq('id', scheduledLessonId);
+                    .eq('id', targetLessonId);
                 error = result.error;
             } else {
                 // Insert new → IDを取得
@@ -287,7 +338,8 @@ export default function NewLessonPage() {
             if (error) throw error;
 
             // Phase 3：ナレッジ蓄積ループ（非同期・ノンブロッキング）
-            if (savedLessonId) {
+            // 直したときは数え直さない（同じ授業を二重に数えないため）
+            if (savedLessonId && !editLessonId) {
                 fetch('/api/lessons/knowledge', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -307,11 +359,11 @@ export default function NewLessonPage() {
 
     if (!studentId) return <div>Invalid Student ID</div>;
 
-    if (fetchingScheduled || isAutoFilling) {
+    if (fetchingScheduled || isAutoFilling || fetchingEdit) {
         return (
             <div className="flex h-screen flex-col items-center justify-center gap-3">
                 <Loader2 className="animate-spin text-[#6b5ca5]" size={32} />
-                {isAutoFilling && <p className="text-sm text-[#484550]">授業データをAIが解析中…</p>}
+                {isAutoFilling && <p className="text-sm text-[#484550]">ASTAが授業の会話から記録を下書きしています…</p>}
             </div>
         );
     }
@@ -321,14 +373,14 @@ export default function NewLessonPage() {
             {autoFilled && (
                 <div className="flex items-center gap-2 px-4 py-3 bg-[#efe9ff] border border-[#ccbeff]/40 rounded-2xl text-sm text-[#6b5ca5] font-medium">
                     <Sparkles size={15} className="flex-shrink-0" />
-                    授業の音声データからAIが自動入力しました。内容を確認・編集してください。
+                    ASTAが授業の会話（先生と生徒）から記録を下書きしました。内容を確かめて、直してから保存してください。
                 </div>
             )}
             <div className="flex items-center gap-3">
                 <Link href={`/students/${studentId}`} className="p-2 text-[#484550] hover:text-[#3a3350] hover:bg-[#f0ebf8] rounded-full transition-colors">
                     <ArrowLeft size={18} />
                 </Link>
-                <h1 className="text-2xl font-bold tracking-tight text-[#3a3350]">レッスン記録</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-[#3a3350]">{editLessonId ? 'レッスン記録を直す' : 'レッスン記録'}</h1>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">

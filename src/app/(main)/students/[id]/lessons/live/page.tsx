@@ -988,9 +988,12 @@ export default function LiveLessonPage() {
     const finishLesson = () => {
         stopListening();
         stopTranslationMode();
-        if (transcriptRef.current.trim()) {
+        // 記録の自動下書き用に、授業全体の会話（先生と生徒の両方・誰が言ったか付き）を記録の画面へ渡す（2026-09-14）
+        const conversation = recentConversation(200000);
+        if (transcriptRef.current.trim() || conversation.trim()) {
             localStorage.setItem(`live_session_${studentId}`, JSON.stringify({
                 transcript: transcriptRef.current,
+                conversation,
                 courseSuggestions: courseSuggestions.slice(0, 3),
             }));
         }

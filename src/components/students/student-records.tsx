@@ -3,7 +3,7 @@
  * 新しい順。1行を押すと、つまずき・宿題などが開く（いちばん新しい記録は最初から開いておく）。
  */
 import Link from 'next/link';
-import { Plus, ChevronDown } from 'lucide-react';
+import { Plus, ChevronDown, Pencil } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 
 type Row = {
@@ -89,6 +89,11 @@ export async function StudentRecords({ studentId }: { studentId: string }) {
                                     {!l.mistakes?.trim() && !l.homework?.trim() && !(l.content?.trim() && !l.topics?.trim()) && (
                                         <p className="text-sm text-[#484550]">つまずき・宿題の記録はありません</p>
                                     )}
+                                    <div className="flex justify-end">
+                                        <Link prefetch href={`/students/${studentId}/lessons/new?lessonId=${l.id}`} className="inline-flex items-center gap-1 text-sm font-bold text-[#6b5ca5] hover:underline">
+                                            <Pencil size={13} /> この記録を直す
+                                        </Link>
+                                    </div>
                                 </div>
                             </details>
                         );

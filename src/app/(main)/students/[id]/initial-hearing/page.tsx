@@ -332,7 +332,8 @@ ${conversationNotes}`.trim();
 現在: Lv.${data.currentLevel} → 目標: Lv.${data.targetLevel}
 期間: ${data.periodMonths}ヶ月 / 目的: ${data.purposeLabel}`.trim();
 
-            await supabase.from('students').update({
+            // 保存の失敗を確かめる（以前は失敗しても「保存完了」を出していた・2026-09-14）
+            const { error: saveError } = await supabase.from('students').update({
                 jlpt_level: result.estimated_jlpt_level,
                 goal_text: `${result.purpose_label}（AI判定）`,
                 // 目的の9択（あいちゃん依頼）のどれかを保存する。2026-09-11 まで保存しておらず、
@@ -342,11 +343,12 @@ ${conversationNotes}`.trim();
                 memo: (student.memo ? student.memo + '\n\n' : '') + hearingSummary + '\n\n' + roadmapSummary,
                 initial_hearing_done: true,
             }).eq('id', studentId);
+            if (saveError) throw saveError;
 
             setShowMaterialModal(true);
         } catch (err) {
             console.error('Save error:', err);
-            alert('保存に失敗しました');
+            alert('ロードマップを保存できませんでした。時間をおいて、もう一度「プロフィールに保存」を押してください。');
         } finally {
             setSaving(false);
         }

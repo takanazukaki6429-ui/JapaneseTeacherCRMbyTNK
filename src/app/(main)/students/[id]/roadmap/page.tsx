@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { ArrowLeft, Loader2, Map, Target, BookText, CheckCircle2, Sparkles, BookOpen, Clock, Send, Copy, Check, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Loader2, Map, Target, BookText, CheckCircle2, Sparkles, BookOpen, Clock, Send, Copy, Check, ExternalLink, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { Student } from '@/types/student';
 import { Card, CardContent } from '@/components/ui/card';
@@ -66,6 +66,39 @@ export default function StudentRoadmapPage() {
         } finally {
             setShareLoading(false);
         }
+    };
+
+    // 目標・期間・目的を直す（2026-09-14 かずき決定：体験レッスンをやり直さずに学習計画を直せるように）
+    const [editOpen, setEditOpen] = useState(false);
+    const [editCurrent, setEditCurrent] = useState('N5');
+    const [editTarget, setEditTarget] = useState(50);
+    const [editMonths, setEditMonths] = useState(6);
+    const [editPurpose, setEditPurpose] = useState('');
+    const [editSaving, setEditSaving] = useState(false);
+    const [editError, setEditError] = useState('');
+
+    const openEdit = () => {
+        if (!student) return;
+        const phase = parseCurrentPhase(student.current_phase);
+        setEditCurrent(student.jlpt_level && JLPT_TO_SCORE[student.jlpt_level] ? student.jlpt_level : 'N5');
+        setEditTarget(phase.targetLevel ?? 50);
+        setEditMonths(phase.periodMonths ?? 6);
+        setEditPurpose((student as Student & { purposes?: string | null }).purposes ?? '');
+        setEditError('');
+        setEditOpen(v => !v);
+    };
+
+    const saveEdit = async () => {
+        const cur = JLPT_TO_SCORE[editCurrent];
+        if (!cur || editTarget <= cur) { setEditError('目標は、今のレベルより上にしてください'); return; }
+        setEditSaving(true); setEditError('');
+        const update = { jlpt_level: editCurrent, current_phase: `目標Lv.${editTarget} / ${editMonths}ヶ月`, purposes: editPurpose || null };
+        const { error } = await supabase.from('students').update(update as never).eq('id', studentId);
+        setEditSaving(false);
+        if (error) { setEditError('保存できませんでした。時間をおいてもう一度お試しください'); return; }
+        setStudent(prev => (prev ? ({ ...prev, ...update } as Student) : prev));
+        setEditOpen(false);
+        toast.success('学習計画を直しました');
     };
 
     const copyShareUrl = async () => {
@@ -131,6 +164,13 @@ export default function StudentRoadmapPage() {
                         </h1>
                     </div>
                     <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={openEdit}
+                            className="text-xs font-bold text-[#6b5ca5] bg-white border border-[#ccbeff] hover:bg-[#efe9ff] px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1"
+                        >
+                            <Pencil size={12} /> 目標・期間・目的を直す
+                        </button>
                         {hasRoadmap && (
                             <button
                                 type="button"
@@ -151,6 +191,53 @@ export default function StudentRoadmapPage() {
             </div>
 
             <div className="max-w-2xl mx-auto p-4 md:p-6 space-y-5">
+
+                {editOpen && (
+                    <div className="bg-white rounded-2xl p-5 shadow-[0_0_40px_rgba(107,92,165,0.06)] space-y-4">
+                        <div>
+                            <p className="text-sm font-bold text-[#3a3350]">学習計画を直す</p>
+                            <p className="text-xs text-[#484550] mt-1 leading-relaxed">
+                                体験レッスンをやり直さずに、今のレベル・目標・期間・目的を直せます。保存すると、このロードマップと、生徒に渡したリンクの中身も変わります。
+                            </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <label className="space-y-1">
+                                <span className="text-xs font-bold text-[#484550]">今のレベル</span>
+                                <select value={editCurrent} onChange={e => setEditCurrent(e.target.value)} className="w-full text-sm border border-[#d6cfe2] rounded-lg px-2 py-2 bg-white text-[#3a3350]">
+                                    {['N5', 'N4', 'N3', 'N2', 'N1'].map(l => <option key={l} value={l}>{l}</option>)}
+                                </select>
+                            </label>
+                            <label className="space-y-1">
+                                <span className="text-xs font-bold text-[#484550]">目標</span>
+                                <select value={editTarget} onChange={e => setEditTarget(Number(e.target.value))} className="w-full text-sm border border-[#d6cfe2] rounded-lg px-2 py-2 bg-white text-[#3a3350]">
+                                    {Array.from(new Set([editTarget, 30, 50, 70, 90])).sort((a, b) => a - b).map(v => (
+                                        <option key={v} value={v}>{getLevelDescription(v, ja)}{v === targetLevel ? '（今の目標）' : ''}</option>
+                                    ))}
+                                </select>
+                            </label>
+                            <label className="space-y-1">
+                                <span className="text-xs font-bold text-[#484550]">期間</span>
+                                <select value={editMonths} onChange={e => setEditMonths(Number(e.target.value))} className="w-full text-sm border border-[#d6cfe2] rounded-lg px-2 py-2 bg-white text-[#3a3350]">
+                                    {Array.from(new Set([editMonths, 1, 2, 3, 4, 5, 6, 9, 12, 18, 24])).sort((a, b) => a - b).map(m => <option key={m} value={m}>{m}か月</option>)}
+                                </select>
+                            </label>
+                            <label className="space-y-1">
+                                <span className="text-xs font-bold text-[#484550]">日本語を学ぶ目的</span>
+                                <select value={editPurpose} onChange={e => setEditPurpose(e.target.value)} className="w-full text-sm border border-[#d6cfe2] rounded-lg px-2 py-2 bg-white text-[#3a3350]">
+                                    <option value="">選ばない</option>
+                                    {(Object.entries(ja.purposes) as [string, { label: string }][]).map(([key, p]) => <option key={key} value={key}>{p.label}</option>)}
+                                </select>
+                            </label>
+                        </div>
+                        {editError && <p className="text-xs text-red-600">{editError}</p>}
+                        <div className="flex justify-end gap-2">
+                            <button type="button" onClick={() => setEditOpen(false)} className="text-sm font-bold text-[#484550] bg-[#f0ebf8] hover:bg-[#efe9ff] px-4 py-1.5 rounded-lg">やめる</button>
+                            <button type="button" onClick={saveEdit} disabled={editSaving} className="text-sm font-bold text-white bg-[#6b5ca5] hover:opacity-90 disabled:opacity-50 px-4 py-1.5 rounded-lg flex items-center gap-1.5">
+                                {editSaving && <Loader2 size={14} className="animate-spin" />} 保存する
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {hasRoadmap && shareOpen && (
                     <div className="bg-white rounded-2xl p-5 shadow-[0_0_40px_rgba(107,92,165,0.06)] space-y-3">
