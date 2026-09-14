@@ -3,12 +3,15 @@ import { Zen_Maru_Gothic, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 
-// 書体＝E：丸ゴシック（2026-09-11 かずき決定）
+// 書体＝E：丸ゴシック（2026-09-11 かずき決定）。
+// 2026-09-14 かずき決定（遅さの直し・案C）：Mac・iPhoneでは初めから入っているヒラギノ丸ゴを先に使い（globals.css）、
+// 入っていない端末（Windowsなど）だけこの書体のファイルを読む。太さは2種類に減らし、先読みはしない
 const zenMaru = Zen_Maru_Gothic({
   variable: "--font-zen-maru",
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
+  weight: ["400", "700"],
   display: "swap",
+  preload: false,
 });
 
 const geistMono = Geist_Mono({

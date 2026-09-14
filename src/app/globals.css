@@ -56,13 +56,14 @@
   --color-accent-foreground: var(--primary);
   --color-muted: var(--surface-low);
   --color-muted-foreground: var(--on-surface-variant);
-  --font-sans: var(--font-zen-maru);
+  --font-sans: "Hiragino Maru Gothic ProN", var(--font-zen-maru), sans-serif;
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-zen-maru), 'Zen Maru Gothic', "Hiragino Maru Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+  /* Mac・iPhoneは初めから入っているヒラギノ丸ゴ、入っていない端末だけ丸ゴシックのファイルを読む（2026-09-14 遅さの直し） */
+  font-family: "Hiragino Maru Gothic ProN", var(--font-zen-maru), 'Zen Maru Gothic', "Hiragino Sans", Meiryo, sans-serif;
   line-height: 1.6;
 }
