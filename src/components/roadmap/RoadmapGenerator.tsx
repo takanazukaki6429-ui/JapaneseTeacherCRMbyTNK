@@ -532,7 +532,6 @@ export default function RoadmapGenerator({
                             <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                                 <p className="text-sm text-[#6b5ca5]">
                                     💡 <strong>{t.whyThisBalance}</strong><br />
-                                    💡 <strong>{t.whyThisBalance}</strong><br />
                                     {getDistributionReason(selectedPurposes, currentLevel, t)}
                                 </p>
                             </div>
