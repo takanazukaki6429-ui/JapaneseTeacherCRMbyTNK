@@ -13,6 +13,14 @@ import {
 import { Student } from '@/types/student';
 import { type Milestone } from '@/lib/roadmap/types';
 import { nationalityToLangName } from '@/lib/nationality';
+import { JLPT_TO_SCORE } from '@/lib/roadmap/from-student';
+import { PURPOSE_ICONS, JLPT_LEVELS } from '@/lib/roadmap/constants';
+import { ja } from '@/app/(main)/roadmap/ja';
+
+/** 0〜100の目盛りをN5〜N1にする（メモなしで作ったときの保存用） */
+function levelToJlpt(level: number): 'N5' | 'N4' | 'N3' | 'N2' | 'N1' {
+    return (JLPT_LEVELS.find(l => level >= l.minLevel && level < l.maxLevel) ?? JLPT_LEVELS[4]).name as 'N5' | 'N4' | 'N3' | 'N2' | 'N1';
+}
 
 const RoadmapGenerator = dynamic(() => import('@/components/roadmap/RoadmapGenerator'), {
     loading: () => (
@@ -116,6 +124,8 @@ export default function InitialHearingPage() {
 
     // AI結果
     const [result, setResult] = useState<HearingResult | null>(null);
+    // メモなしで学習計画を作る（2026-09-14 かずき決定）：AIの判定を飛ばし、先生がスライダーで決める
+    const [skippedMemo, setSkippedMemo] = useState(false);
 
     // 保存
     const [saving, setSaving] = useState(false);
@@ -270,7 +280,31 @@ export default function InitialHearingPage() {
     }, []);
 
     // ── AI 分析 ──
+    const handleSkipMemo = () => {
+        // 初期値：生徒に入っているレベル（無ければN5）・目的（無ければ「その他」）・期間6か月
+        const level = (student?.jlpt_level ?? 'N5') as HearingResult['estimated_jlpt_level'];
+        const saved = (student as { purposes?: string | null } | null)?.purposes;
+        const purposeId = saved && saved in PURPOSE_ICONS ? saved : 'other';
+        setResult({
+            estimated_jlpt_level: level,
+            estimated_level_score: JLPT_TO_SCORE[level] ?? 15,
+            detected_purpose: purposeId,
+            purpose_label: ja.purposes[purposeId as keyof typeof ja.purposes]?.label ?? 'その他',
+            kanji_necessity: 'optional',
+            focus_areas: [],
+            skip_recommendations: [],
+            period_months_suggestion: 6,
+            summary: '',
+            confidence: 'low',
+            clarification_questions: [],
+        });
+        setSkippedMemo(true);
+        setError('');
+        setPhase('result');
+    };
+
     const handleAnalyze = async () => {
+        setSkippedMemo(false);
         if (isListening) stopListening();
         if (!conversationNotes.trim()) { setError('会話メモを入力してください'); return; }
         if (conversationNotes.trim().length < 30) { setError('メモが短すぎます。もう少し詳しく入力してください。'); return; }
@@ -314,7 +348,9 @@ export default function InitialHearingPage() {
         setSaving(true);
 
         try {
-            const hearingSummary = `【初回ヒアリングAI判定: ${new Date().toLocaleDateString('ja-JP')}】
+            const hearingSummary = skippedMemo
+                ? `【学習計画（体験レッスンのメモなし・先生が設定）: ${new Date().toLocaleDateString('ja-JP')}】`
+                : `【初回ヒアリングAI判定: ${new Date().toLocaleDateString('ja-JP')}】
 判定レベル: ${result.estimated_jlpt_level} (スコア: ${result.estimated_level_score})
 学習目的: ${result.purpose_label}
 推奨期間: ${result.period_months_suggestion}ヶ月
@@ -334,8 +370,8 @@ ${conversationNotes}`.trim();
 
             // 保存の失敗を確かめる（以前は失敗しても「保存完了」を出していた・2026-09-14）
             const { error: saveError } = await supabase.from('students').update({
-                jlpt_level: result.estimated_jlpt_level,
-                goal_text: `${result.purpose_label}（AI判定）`,
+                jlpt_level: skippedMemo ? levelToJlpt(data.currentLevel) : result.estimated_jlpt_level,
+                goal_text: skippedMemo ? data.purposeLabel : `${result.purpose_label}（AI判定）`,
                 // 目的の9択（あいちゃん依頼）のどれかを保存する。2026-09-11 まで保存しておらず、
                 // 生徒の目的の欄は全員空だった（本番で108人中0人）。ロードマップを生徒に渡す・作り直す時の元になる
                 purposes: data.purposeId,
@@ -569,6 +605,15 @@ ${conversationNotes}`.trim();
                                     {isListening && <span className="ml-2 text-[#6b5ca5] font-bold">● 音声入力中</span>}
                                     {isRecording && <span className="ml-2 text-red-500 font-bold">● 録音中 {formatTime(recordingSeconds)}</span>}
                                 </span>
+                                <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleSkipMemo}
+                                    disabled={isTranscribing}
+                                    className="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold text-[#6b5ca5] bg-white border border-[#ccbeff] rounded-xl hover:bg-[#f6f3fb] transition-colors disabled:opacity-40"
+                                >
+                                    メモなしで学習計画を作る
+                                </button>
                                 <button
                                     onClick={handleAnalyze}
                                     disabled={!conversationNotes.trim() || isTranscribing}
@@ -577,6 +622,7 @@ ${conversationNotes}`.trim();
                                     <Sparkles size={15} />
                                     AIで判定する
                                 </button>
+                                </div>
                             </div>
 
                             {error && (
@@ -603,7 +649,19 @@ ${conversationNotes}`.trim();
                 {/* ── フェーズ3: 結果 + ロードマップ ── */}
                 {phase === 'result' && result && (
                     <>
-                        {/* AI判定結果（コンパクト） */}
+                        {skippedMemo && (
+                            <div className="bg-white rounded-2xl border border-[#ccbeff]/40 px-5 py-4 flex items-center justify-between gap-3">
+                                <p className="text-sm text-[#3a3350]">体験レッスンのメモなしで作ります。今のレベル・目標・期間・目的を、下で選んでください。</p>
+                                <button
+                                    onClick={() => { setPhase('input'); setResult(null); setSkippedMemo(false); }}
+                                    className="text-xs font-bold text-[#6b5ca5] hover:underline whitespace-nowrap flex items-center gap-1"
+                                >
+                                    <RefreshCw size={12} /> メモを書く画面に戻る
+                                </button>
+                            </div>
+                        )}
+                        {/* AI判定結果（コンパクト）。メモなしのときは出さない */}
+                        {!skippedMemo && (
                         <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] border border-[#ccbeff]/40 overflow-hidden">
                             <div className="bg-[#6b5ca5] px-5 py-3 flex items-center justify-between">
                                 <h2 className="font-bold text-white text-sm flex items-center gap-2">
@@ -675,12 +733,14 @@ ${conversationNotes}`.trim();
                             </div>
                         </div>
 
+                        )}
+
                         {/* ロードマップ（AI自動セット、調整可） */}
                         <div className="bg-[#efe9ff]/30 border border-[#ccbeff]/30 rounded-2xl p-4">
                             <div className="flex items-center gap-2 mb-4">
                                 <Sparkles size={15} className="text-[#6b5ca5]" />
                                 <p className="text-sm font-bold text-[#6b5ca5]">
-                                    AIが推定値をセットしました（スライダーで調整可）
+                                    {skippedMemo ? '今のレベル・目標・期間・目的をスライダーで選んでください' : 'AIが推定値をセットしました（スライダーで調整可）'}
                                 </p>
                             </div>
                             <RoadmapGenerator
