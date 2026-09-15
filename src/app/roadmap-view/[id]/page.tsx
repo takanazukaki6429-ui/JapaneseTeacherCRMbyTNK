@@ -21,12 +21,14 @@ export const metadata: Metadata = {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function NotAvailable() {
+/** 開けないときの案内。reason は止まった理由（先生・運営が原因を切り分けるため。本番では中身の文は出さない） */
+function NotAvailable({ reason }: { reason?: string }) {
     return (
         <div className="min-h-screen flex items-center justify-center bg-[#f6f3fb] p-6">
             <div className="bg-white rounded-2xl p-8 text-center max-w-sm shadow-[0_0_40px_rgba(107,92,165,0.06)] space-y-2">
                 <p className="font-bold text-[#3a3350]">このリンクは期限切れか、見つかりません。</p>
                 <p className="text-sm text-[#484550]">This link has expired or cannot be found. Please ask your teacher for a new link.</p>
+                {reason && <p className="text-xs text-[#797581] pt-2">{reason}</p>}
             </div>
         </div>
     );
@@ -36,13 +38,29 @@ export default async function RoadmapViewPage({ params }: { params: Promise<{ id
     const { id } = await params;
     if (!UUID_RE.test(id)) return <NotAvailable />;
 
+    // 読み込みの途中で止まったら、真っ白なエラー画面ではなく理由を1行出す（2026-09-15：ブランチ環境で原因を切り分けるため）
+    try {
+        return await loadRoadmap(id);
+    } catch (e) {
+        console.error('[roadmap-view] 読み込みに失敗', e);
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg.includes('SUPABASE_SERVICE_ROLE_KEY')) {
+            return <NotAvailable reason="理由：サーバーの設定（管理用の鍵）が、この環境に入っていません" />;
+        }
+        const showDetail = process.env.VERCEL_ENV !== 'production';   // ブランチ環境だけ、止まった理由の文を短く出す
+        return <NotAvailable reason={`理由：読み込みに失敗しました${showDetail ? `（${msg.slice(0, 120)}）` : ''}`} />;
+    }
+}
+
+async function loadRoadmap(id: string) {
     const admin = createAdminClient();
-    const { data: link } = await admin
+    const { data: link, error: linkError } = await admin
         .from('shared_links')
         .select('teacher_id, student_id, roadmap_data')
         .eq('id', id)
         .gt('expires_at', new Date().toISOString())
         .maybeSingle();
+    if (linkError) throw linkError;
     if (!link?.student_id || !link.teacher_id) return <NotAvailable />;
 
     // 先生本人の生徒であることも確かめる（リンクを作った先生と生徒の持ち主が一致しなければ出さない）
