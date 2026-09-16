@@ -32,6 +32,12 @@ export const PLAN_PRICE_SENTENCE: string =
         ? '料金は準備中です（確定次第、事前にご案内します）'
         : `月額 ${PLAN_PRICE_LABEL}（消費税込み）`;
 
+/** 初回の申込みからの無料期間（日）。2026-08-14 かずき決定＝30日。画面の表示と申込みの処理は必ずここを見る */
+export const TRIAL_DAYS = 30;
+
+/** 申込み前に出す説明の一文（定期購入の表示・2026-09-17） */
+export const PLAN_TRIAL_SENTENCE = `最初の${TRIAL_DAYS}日間は無料です。${TRIAL_DAYS + 1}日目に最初の課金が始まります`;
+
 /** 規約・特商法表記の施行日。課金開始に合わせて更新する */
 export const LEGAL_EFFECTIVE_DATE = process.env.NEXT_PUBLIC_LEGAL_EFFECTIVE_DATE || '2026年10月1日';
 

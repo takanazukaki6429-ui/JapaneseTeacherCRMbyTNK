@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Check, Sparkles, Loader2 } from 'lucide-react';
-import { PLAN_PRICE_LABEL } from '@/lib/pricing';
+import { PLAN_PRICE_LABEL, PLAN_PRICE_SENTENCE, PLAN_TRIAL_SENTENCE } from '@/lib/pricing';
 
 // useSearchParams を使うため静的プリレンダリングを無効化
 export const dynamic = 'force-dynamic';
@@ -85,6 +85,14 @@ function PricingContent() {
                 {error && (
                     <p className="text-xs text-red-600 mb-4 px-3 py-2 bg-red-50 rounded-xl">{error}</p>
                 )}
+
+                {/* 申込みの直前に出す説明（定期購入の表示・2026-09-17） */}
+                <div className="mb-4 px-4 py-3 bg-[#f6f3fb] rounded-2xl text-xs leading-relaxed text-[#3a3350] space-y-1">
+                    <p>・{PLAN_PRICE_SENTENCE}が、毎月の課金日に自動で課金されます（自動更新）。</p>
+                    <p>・{PLAN_TRIAL_SENTENCE}。</p>
+                    <p>・解約は、設定の「プラン」またはStripeの窓口からいつでもできます。解約すると、その課金期間の末日で終わります。</p>
+                    <p>・日割りの返金はありません。</p>
+                </div>
 
                 <button
                     onClick={handleCheckout}

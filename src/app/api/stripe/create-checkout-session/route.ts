@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { TRIAL_DAYS } from '@/lib/pricing';
 import { createClient } from '@/lib/supabase/server';
 import { getStripe, getStripePriceId } from '@/lib/stripe';
 
@@ -57,6 +58,8 @@ export async function POST(req: NextRequest) {
             cancel_url: `${origin}/pricing?canceled=1`,
             locale: 'ja',
             subscription_data: {
+                // 初月無料（2026-08-14 かずき決定＝30日）。画面の表示と同じ値を使う（lib/pricing.ts）
+                trial_period_days: TRIAL_DAYS,
                 metadata: { supabase_user_id: user.id },
             },
         });
