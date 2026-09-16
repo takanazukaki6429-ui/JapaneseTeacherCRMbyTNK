@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Check, Sparkles, Loader2 } from 'lucide-react';
-import { PLAN_PRICE_LABEL, PLAN_PRICE_SENTENCE, PLAN_TRIAL_SENTENCE } from '@/lib/pricing';
+import { PLAN_PRICE_JPY, PLAN_PRICE_LABEL, PLAN_PRICE_SENTENCE, PLAN_TRIAL_SENTENCE } from '@/lib/pricing';
 
 // useSearchParams を使うため静的プリレンダリングを無効化
 export const dynamic = 'force-dynamic';
@@ -44,8 +44,8 @@ function PricingContent() {
         <div className="min-h-screen bg-[#f0ebf8] flex flex-col items-center justify-center px-4 py-16">
             {/* ロゴ */}
             <div className="mb-10 text-center">
-                <p className="text-[10px] font-black tracking-[0.3em] text-[#6b5ca5]/60 uppercase mb-2">
-                    Nihongo Teacher CRM
+                <p className="text-xs font-black tracking-[0.2em] text-[#6b5ca5] mb-2">
+                    日本語教師のためのASTA
                 </p>
                 <h1 className="text-3xl font-black text-[#3a3350] tracking-tight">
                     ASTA
@@ -88,7 +88,9 @@ function PricingContent() {
 
                 {/* 申込みの直前に出す説明（定期購入の表示・2026-09-17） */}
                 <div className="mb-4 px-4 py-3 bg-[#f6f3fb] rounded-2xl text-xs leading-relaxed text-[#3a3350] space-y-1">
-                    <p>・{PLAN_PRICE_SENTENCE}が、毎月の課金日に自動で課金されます（自動更新）。</p>
+                    <p>{PLAN_PRICE_JPY === null
+                        ? '・料金は準備中です。確定しだい、事前にご案内します。'
+                        : `・${PLAN_PRICE_SENTENCE}が、毎月の課金日に自動で課金されます（自動更新）。`}</p>
                     <p>・{PLAN_TRIAL_SENTENCE}。</p>
                     <p>・解約は、設定の「プラン」またはStripeの窓口からいつでもできます。解約すると、その課金期間の末日で終わります。</p>
                     <p>・日割りの返金はありません。</p>
