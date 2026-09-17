@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { generatePrepSheet, loadPrepSheet, prepStamp, type PrepSheet, type PrepSource } from '@/lib/prep-sheet';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -14,12 +15,7 @@ import { Lesson } from '@/types/lesson';
 import { Student } from '@/types/student';
 
 /* ── 型定義 ─────────────────────────────────────── */
-type KeyPoint = { question: string; answer: string };
-type PrepContent = {
-    review_quiz: KeyPoint[];
-    intro_topic: string;
-    advice: string;
-};
+type PrepContent = PrepSheet;
 
 type MaterialContentType = 'fill_in_blank' | 'dialogue' | 'flashcard';
 
@@ -110,49 +106,51 @@ export default function LessonPreparePage() {
         fetchData();
     }, [studentId]);
 
-    /* ── 準備プラン生成（既存） ──────────────────── */
-    const handleGeneratePlan = async () => {
-        if (!lastLesson) return;
+    /* ── 授業前の1枚（2026-09-17：自動で作る・共通部品 lib/prep-sheet.ts） ── */
+    const prepSource = useCallback((): PrepSource | null => {
+        if (!student) return null;
+        return {
+            studentName: student.name,
+            jlptLevel: student.jlpt_level,
+            textbook: student.textbook,
+            lastDate: lastLesson?.date ?? null,
+            topics: lastLesson?.topics ?? null,
+            mistakes: lastLesson?.mistakes ?? null,
+            homework: lastLesson?.homework ?? null,
+            nextGoal: lastLesson?.next_goal ?? null,
+        };
+    }, [student, lastLesson]);
+
+    const handleGeneratePlan = useCallback(async () => {
+        const src = prepSource();
+        if (!src || !studentId) return;
         setGenerating(true);
         try {
-            const prompt = `
-あなたはプロの日本語教師です。
-前回 (${new Date(lastLesson.date).toLocaleDateString()}) のレッスン記録に基づき、今日のレッスンのための「復習クイズ」と「導入トーク」を作成してください。
-
-## 前回のレッスン記録
-- 宿題: ${lastLesson.homework || 'なし'}
-- つまずき・弱点: ${lastLesson.mistakes || 'なし'}
-- 次回の目標: ${lastLesson.next_goal || 'なし'}
-- トピック: ${lastLesson.topics || 'なし'}
-
-出力は以下のJSON形式でお願いします（Markdownコードブロックは不要です）:
-{
-  "review_quiz": [
-    {"question": "問題文1", "answer": "答え1"},
-    {"question": "問題文2", "answer": "答え2"}
-  ],
-  "intro_topic": "前回の内容を踏まえた、今日のレッスンの導入となる短いトークスクリプト（挨拶含む）",
-  "advice": "教師へのアドバイス（今日のポイントなど）"
-}
-`;
-            const res = await fetch('/api/ai', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt, type: 'prep_plan' }),   // 授業前：準備プラン（利用実態を画面ごとに数えるため）
-            });
-            if (!res.ok) throw new Error('AI request failed');
-            const data = await res.json();
-            const clean = data.text.replace(/```json/g, '').replace(/```/g, '').trim();
-            const result: PrepContent = JSON.parse(clean);
-            setPrepContent(result);
-            localStorage.setItem(`prep_content_${studentId}`, JSON.stringify(result));
+            const sheet = await generatePrepSheet(studentId, prepStamp(src.lastDate), src);
+            setPrepContent(sheet);
         } catch (err) {
             console.error('Plan generation error:', err);
-            toast.error('生成に失敗しました。もう一度お試しください。');
+            toast.error('作れませんでした。もう一度お試しください。');
         } finally {
             setGenerating(false);
         }
-    };
+    }, [prepSource, studentId]);
+
+    // 開いた時点でできている状態にする：保存済みがあれば読み、無ければ自動で作る（自動は1回だけ）
+    const autoTried = useRef(false);
+    useEffect(() => {
+        if (!studentId || !student || autoTried.current) return;
+        autoTried.current = true;
+        const run = async () => {
+            const src = prepSource();
+            if (!src) return;
+            const cached = loadPrepSheet(studentId, prepStamp(src.lastDate));
+            if (cached) { setPrepContent(cached); return; }
+            if (!src.lastDate) return;   // 授業記録がまだ無いときは作らない
+            await handleGeneratePlan();
+        };
+        run();
+    }, [studentId, student, prepSource, handleGeneratePlan]);
 
     /* ── 教材生成（新機能） ──────────────────────── */
     const handleGenerateMaterial = async () => {
@@ -391,7 +389,7 @@ ${typeInstructions[selectedType]}
                                         className="flex items-center gap-2 px-6 py-2.5 bg-[#efe9ff] text-[#6b5ca5] font-bold text-sm rounded-full hover:bg-[#dff1ea] hover:-translate-y-0.5 transition-all disabled:opacity-50"
                                     >
                                         {generating ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-                                        {generating ? 'AIが考え中...' : 'AIで準備プランを作成'}
+                                        {generating ? 'ASTAが授業前の1枚を用意しています…' : 'AIで準備プランを作成'}
                                     </button>
                                 </div>
                             ) : (

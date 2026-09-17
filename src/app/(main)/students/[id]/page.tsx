@@ -10,8 +10,9 @@
  * - 「本日の授業指針」は、授業前の1枚の自動作成ができるまでは、前回のつまずきから決まった形の文で出す（つまずきが無ければ出さない）
  */
 import Link from 'next/link';
+import { PrepGuideBand } from '@/components/students/prep-guide-band';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, Pencil, Play, ClipboardList, NotebookPen, Lightbulb, Send, AlertCircle, Map, MessageCircleQuestion } from 'lucide-react';
+import { ArrowLeft, Pencil, Play, ClipboardList, NotebookPen, Send, AlertCircle, Map, MessageCircleQuestion } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { Student } from '@/types/student';
 import { DeleteStudentButton } from './delete-button';
@@ -25,13 +26,13 @@ import { ja } from '@/app/(main)/roadmap/ja';
 
 export const revalidate = 0;
 
-type LessonRow = { date: string; topics: string | null; mistakes: string | null; status: string | null };
+type LessonRow = { date: string; topics: string | null; mistakes: string | null; status: string | null; homework: string | null; next_goal: string | null };
 
 async function getData(id: string) {
     const supabase = await createClient();
     const [{ data: student }, { data: lessons }] = await Promise.all([
         supabase.from('students').select('*').eq('id', id).single(),
-        supabase.from('lessons').select('date, topics, mistakes, status').eq('student_id', id).order('date', { ascending: false }).limit(20),
+        supabase.from('lessons').select('date, topics, mistakes, status, homework, next_goal').eq('student_id', id).order('date', { ascending: false }).limit(20),
     ]);
     if (!student) return null;
     const now = Date.now();
@@ -48,7 +49,6 @@ function planOf(phase: string | null) {
     return { target: getLevelDescription(parseInt(lv[1], 10), ja), months: parseInt(mo[1], 10) };
 }
 
-const shorten = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}…` : s);
 const card = 'bg-white border border-[#e4ddf0] rounded-xl p-6 shadow-[0_2px_16px_rgba(107,92,165,0.05)]';
 
 function Field({ label, wide, children }: { label: string; wide?: boolean; children: React.ReactNode }) {
@@ -102,13 +102,21 @@ export default async function StudentDetailPage({ params }: Props) {
                 </div>
             </header>
 
-            {/* 本日の授業指針（授業前の1枚の自動作成ができるまでは、前回のつまずきから決まった形の文で出す） */}
-            {mistakes && (
-                <section className="mb-8 w-full bg-[#dff1ea] border border-[#bfe3d4] rounded-xl px-5 py-3.5 flex items-start gap-3 text-[15px] leading-[26px] text-[#3a3350]">
-                    <Lightbulb size={18} className="text-[#2a6f5a] mt-1 flex-shrink-0" />
-                    <p><strong className="text-[#2a6f5a]">本日の授業指針：</strong>前回のつまずき「{shorten(mistakes, 40)}」を5分ほど復習してから入ると、理解が深まります。</p>
-                </section>
-            )}
+            {/* 本日の授業指針：ASTAが作った授業前の1枚の指針を出す（無ければ作る／作れなければ前回のつまずきからの決まった文） */}
+            <PrepGuideBand
+                studentId={student.id}
+                fallbackMistakes={mistakes}
+                source={{
+                    studentName: student.name,
+                    jlptLevel: student.jlpt_level,
+                    textbook: student.textbook,
+                    lastDate: last?.date ?? null,
+                    topics: last?.topics ?? null,
+                    mistakes: last?.mistakes ?? null,
+                    homework: last?.homework ?? null,
+                    nextGoal: last?.next_goal ?? null,
+                }}
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 {/* 左：学習の現在地・これまでの記録・AIの分析 */}
