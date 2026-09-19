@@ -89,6 +89,9 @@ export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonC
     }, [level]);   // onLessonChange は親で useCallback 済み
 
     useEffect(() => {
+        // 課の選択を外したときに表示を空へ戻すだけの処理。書き換えるとライブ授業画面
+        // （検証済み）の挙動が変わるため、10/1の有料化後に作り直す。
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         if (!lessonId) { setSections([]); setOpenStep(null); return; }
         const supabase = createClient();
         supabase

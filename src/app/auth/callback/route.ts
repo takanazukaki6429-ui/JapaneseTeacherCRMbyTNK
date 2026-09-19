@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     }
 
     // 最初にリダイレクト用レスポンスを作り、その cookies に Supabase から書き込ませる。
-    let response = NextResponse.redirect(`${origin}${next}`);
+    const response = NextResponse.redirect(`${origin}${next}`);
 
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
