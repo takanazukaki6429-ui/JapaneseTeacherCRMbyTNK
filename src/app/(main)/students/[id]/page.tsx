@@ -17,6 +17,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Student } from '@/types/student';
 import { DeleteStudentButton } from './delete-button';
 import { StudentRecords } from '@/components/students/student-records';
+import { StudentLessonFlows } from '@/components/lessons/lesson-flow-viewer';
 import { LessonScheduler } from '@/components/lessons/lesson-scheduler';
 import { AIProfileAnalyzer } from '@/components/students/ai-profile-analyzer';
 import { StudentMaterials } from '@/components/students/student-materials';
@@ -149,6 +150,9 @@ export default async function StudentDetailPage({ params }: Props) {
                     </section>
 
                     <StudentRecords studentId={student.id} />
+
+                    {/* 過去の授業でASTAが作った物（絵・例文・練習問題・言い換え・会話）2026-09-20 かずき指示 */}
+                    <StudentLessonFlows studentId={student.id} />
 
                     <AIProfileAnalyzer student={student} />
                 </div>
