@@ -204,9 +204,16 @@ export async function purgeOldFlows(teacherId: string): Promise<number> {
     return ids.length;
 }
 
+/** 授業の番号が無いときに「直前の授業」とみなす時間（時間） */
+const RECENT_FALLBACK_HOURS = 12;
+
 /**
  * 保存した授業の流れを読み出す。
- * 授業の番号があればその授業の分、無ければその生徒の一番新しい分を返す。
+ *
+ * - 授業の番号があれば、その授業の分だけを返す
+ * - 番号が無いとき（授業を終えた直後に、予定と紐づかない記録を書いている場面）は、
+ *   その生徒の一番新しい分を返す。ただし直近12時間以内に保存された物に限る。
+ *   時間で区切らないと、後日まっさらな記録を開いたときに前の授業の流れが出てしまう
  */
 export async function loadLessonFlow(params: {
     studentId: string;
@@ -219,12 +226,50 @@ export async function loadLessonFlow(params: {
         .select('id, student_id, lesson_id, items, image_count, created_at')
         .eq('student_id', params.studentId);
 
-    if (params.lessonId) query = query.eq('lesson_id', params.lessonId);
+    if (params.lessonId) {
+        query = query.eq('lesson_id', params.lessonId);
+    } else {
+        const since = new Date(Date.now() - RECENT_FALLBACK_HOURS * 60 * 60 * 1000).toISOString();
+        query = query.gte('created_at', since);
+    }
 
     const { data, error } = await query.order('created_at', { ascending: false }).limit(1).maybeSingle();
 
     if (error || !data) return null;
     return data as LessonFlowRow;
+}
+
+/**
+ * 授業の記録を保存したときに、その記録と「まだどの記録にも結びついていない授業の流れ」を繋ぐ。
+ *
+ * 予定から始めなかった授業は、流れを保存する時点では記録の番号がまだ存在しない
+ * （記録は授業のあとで作られるため）。繋いでおかないと、あとで記録を開き直したときに
+ * その授業の流れを引けなくなる。
+ *
+ * 対象は「直近12時間以内・記録の番号が空」の一番新しい1件だけ。
+ */
+export async function linkLessonFlow(studentId: string, lessonId: string): Promise<boolean> {
+    const supabase = createClient();
+    const since = new Date(Date.now() - RECENT_FALLBACK_HOURS * 60 * 60 * 1000).toISOString();
+
+    const { data, error } = await supabase
+        .from('lesson_flows')
+        .select('id')
+        .eq('student_id', studentId)
+        .is('lesson_id', null)
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (error || !data) return false;
+
+    const { error: upError } = await supabase
+        .from('lesson_flows')
+        .update({ lesson_id: lessonId })
+        .eq('id', (data as { id: string }).id);
+
+    return !upError;
 }
 
 /** その生徒の、保存済みの授業の流れを新しい順に並べる（見出しだけ） */

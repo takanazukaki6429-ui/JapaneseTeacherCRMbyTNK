@@ -7,6 +7,7 @@ import { ArrowLeft, Save, Loader2, Star, Globe, Copy, Check, Sparkles } from 'lu
 import Link from 'next/link';
 import { LessonChatLogsViewer } from '@/components/lessons/lesson-chat-logs-viewer';
 import { LessonFlowViewer } from '@/components/lessons/lesson-flow-viewer';
+import { linkLessonFlow } from '@/lib/lesson-flow';
 import { nationalityToLangCode } from '@/lib/nationality';
 
 /**
@@ -338,6 +339,12 @@ ${clipped}`,
 
             if (error) throw error;
 
+            // 授業中にASTAが作った物を、この記録に結びつける（2026-09-20）
+            // 予定から始めなかった授業は、流れを保存した時点では記録の番号がまだ無いため
+            if (savedLessonId && !targetLessonId) {
+                void linkLessonFlow(studentId, savedLessonId);
+            }
+
             // Phase 3：ナレッジ蓄積ループ（非同期・ノンブロッキング）
             // 直したときは数え直さない（同じ授業を二重に数えないため）
             if (savedLessonId && !editLessonId) {
@@ -541,8 +548,10 @@ ${clipped}`,
                 {/* Chat Logs (if available) - placed at bottom for reference */}
                 <LessonChatLogsViewer lessonId={scheduledLessonId} />
 
-                {/* 授業中にASTAが作った物（絵・例文・練習問題・言い換え・質問と答え）2026-09-20 */}
-                <LessonFlowViewer studentId={studentId} lessonId={scheduledLessonId} />
+                {/* 授業中にASTAが作った物（絵・例文・練習問題・言い換え・質問と答え）2026-09-20
+                    保存した記録を開き直したときは lessonId（editLessonId）、
+                    予定から始めた授業のときは scheduledLessonId で引く */}
+                <LessonFlowViewer studentId={studentId} lessonId={editLessonId ?? scheduledLessonId} />
             </form>
         </div>
     );
