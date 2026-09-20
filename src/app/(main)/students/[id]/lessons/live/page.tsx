@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { SpeechSegmenter, rmsOf } from '@/lib/speech-segmenter';
+import { saveLessonFlow } from '@/lib/lesson-flow';
 import {
     ArrowLeft, Send, Sparkles, Mic, Loader2, Download, ChevronDown, Headphones, Lightbulb, Image as ImageIcon, BookOpen, PencilLine, Repeat2, Home, GraduationCap, Settings,
 } from 'lucide-react';
@@ -139,6 +140,8 @@ export default function LiveLessonPage() {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+    /** 授業を終えるとき、流れを保存している間だけ true（2026-09-20） */
+    const [savingFlow, setSavingFlow] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // ── Phase 1B：生徒コンテキスト ──
@@ -985,7 +988,7 @@ export default function LiveLessonPage() {
         }
     };
 
-    const finishLesson = () => {
+    const finishLesson = async () => {
         stopListening();
         stopTranslationMode();
         // 記録の自動下書き用に、授業全体の会話（先生と生徒の両方・誰が言ったか付き）を記録の画面へ渡す（2026-09-14）
@@ -997,6 +1000,25 @@ export default function LiveLessonPage() {
                 courseSuggestions: courseSuggestions.slice(0, 3),
             }));
         }
+
+        // 授業の流れ（絵・例文・練習問題・言い換え・質問と答え・発話）をまるごと保存する
+        // （2026-09-20 かずき決定・案3フル版）。直す前はどれも保存されず画面を閉じると消えていた。
+        // 保存に失敗しても授業の終わりは止めない（記録の画面へは必ず進む）
+        if (flow.length > 0) {
+            setSavingFlow(true);
+            try {
+                await saveLessonFlow({
+                    studentId,
+                    lessonId: scheduledLessonId || null,
+                    items: flow,
+                });
+            } catch (e) {
+                console.error('授業の流れの保存に失敗', e);
+            } finally {
+                setSavingFlow(false);
+            }
+        }
+
         const query = scheduledLessonId ? `?scheduledLessonId=${scheduledLessonId}` : '';
         router.push(`/students/${studentId}/lessons/new${query}`);
     };
@@ -1160,9 +1182,10 @@ export default function LiveLessonPage() {
 
                         <button
                             onClick={finishLesson}
-                            className="px-4 py-2 rounded-lg bg-[#6b5ca5] hover:bg-[#55488a] text-white text-[15px] font-medium shadow-sm transition-colors active:scale-[0.98] whitespace-nowrap"
+                            disabled={savingFlow}
+                            className="px-4 py-2 rounded-lg bg-[#6b5ca5] hover:bg-[#55488a] disabled:bg-[#a89ccb] disabled:cursor-wait text-white text-[15px] font-medium shadow-sm transition-colors active:scale-[0.98] whitespace-nowrap"
                         >
-                            授業を終える
+                            {savingFlow ? '授業の内容を保存しています…' : '授業を終える'}
                         </button>
                     </div>
                 </header>

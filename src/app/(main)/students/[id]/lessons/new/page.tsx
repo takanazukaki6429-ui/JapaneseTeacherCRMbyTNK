@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { ArrowLeft, Save, Loader2, Star, Globe, Copy, Check, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { LessonChatLogsViewer } from '@/components/lessons/lesson-chat-logs-viewer';
+import { LessonFlowViewer } from '@/components/lessons/lesson-flow-viewer';
 import { nationalityToLangCode } from '@/lib/nationality';
 
 /**
@@ -539,6 +540,9 @@ ${clipped}`,
 
                 {/* Chat Logs (if available) - placed at bottom for reference */}
                 <LessonChatLogsViewer lessonId={scheduledLessonId} />
+
+                {/* 授業中にASTAが作った物（絵・例文・練習問題・言い換え・質問と答え）2026-09-20 */}
+                <LessonFlowViewer studentId={studentId} lessonId={scheduledLessonId} />
             </form>
         </div>
     );
