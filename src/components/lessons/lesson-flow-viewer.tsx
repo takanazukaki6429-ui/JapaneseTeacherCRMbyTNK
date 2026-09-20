@@ -46,7 +46,9 @@ export function LessonFlowViewer({ studentId, lessonId }: { studentId: string; l
             setRow(found);
 
             if (found) {
-                const paths = found.items.map(i => i.imgPath).filter((p): p is string => !!p);
+                const paths = found.items
+                    .flatMap(i => [i.imgPath, i.imgAltPath])
+                    .filter((p): p is string => !!p);
                 if (paths.length > 0) {
                     const map = await signImagePaths(paths);
                     if (alive) setSigned(map);
@@ -106,10 +108,30 @@ export function LessonFlowViewer({ studentId, lessonId }: { studentId: string; l
                                 )}
 
                                 {item.imgPath && (
-                                    url
-                                        // eslint-disable-next-line @next/next/no-img-element
-                                        ? <img src={url} alt="授業中に作った絵" className="mt-2 w-full max-w-md rounded-lg" />
-                                        : <p className="mt-2 text-[13px] text-[#807a8d]">絵を読み込めませんでした</p>
+                                    <div className="mt-2 space-y-2">
+                                        <div>
+                                            <p className="text-[12px] text-[#807a8d] mb-1">
+                                                {item.imgShown === 'quality' ? '授業で見せた絵（きれいな版）' : '授業で見せた絵（速い版）'}
+                                            </p>
+                                            {url
+                                                // eslint-disable-next-line @next/next/no-img-element
+                                                ? <img src={url} alt="授業で見せた絵" className="w-full max-w-md rounded-lg" />
+                                                : <p className="text-[13px] text-[#807a8d]">絵を読み込めませんでした</p>}
+                                        </div>
+
+                                        {/* もう一方の絵。押した時点で2枚とも作られているので、見せなかったほうも残している */}
+                                        {item.imgAltPath && (
+                                            <div>
+                                                <p className="text-[12px] text-[#807a8d] mb-1">
+                                                    {item.imgShown === 'quality' ? 'もう一方（速い版）' : 'もう一方（きれいな版）'}
+                                                </p>
+                                                {signed[item.imgAltPath]
+                                                    // eslint-disable-next-line @next/next/no-img-element
+                                                    ? <img src={signed[item.imgAltPath]} alt="もう一方の絵" className="w-full max-w-md rounded-lg opacity-90" />
+                                                    : <p className="text-[13px] text-[#807a8d]">絵を読み込めませんでした</p>}
+                                            </div>
+                                        )}
+                                    </div>
                                 )}
 
                                 {item.imgs && item.imgs.length > 0 && (

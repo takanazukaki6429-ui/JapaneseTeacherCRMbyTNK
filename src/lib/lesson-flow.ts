@@ -36,8 +36,12 @@ export type SavedFlowItem = {
     title?: string;
     text?: string;
     translation?: string;
-    /** 絵の置き場の住所（データの塊ではない） */
+    /** 絵の置き場の住所（データの塊ではない）。授業中に表示していたほう */
     imgPath?: string;
+    /** もう一方の絵の住所。押した時点で2枚とも作って課金済みなので、両方残す（かずき決定 2026-09-20） */
+    imgAltPath?: string;
+    /** imgPath がどちらか（見返すときの見出しに使う） */
+    imgShown?: 'fast' | 'quality';
     /** 教科書のページの画像（もともと住所なのでそのまま持つ） */
     imgs?: string[];
     /** いつ流れに出たか */
@@ -51,6 +55,10 @@ export type SourceFlowItem = {
     text?: string;
     translation?: string;
     img?: string;
+    /** 控えの丁寧版（表示が速い版のとき） */
+    imgQuality?: string;
+    /** 控えの速い版（表示が丁寧版のとき） */
+    imgFast?: string;
     imgs?: string[];
     ts: Date | string;
 };
@@ -117,22 +125,38 @@ export async function saveLessonFlow(params: {
             ts: it.ts instanceof Date ? it.ts.toISOString() : String(it.ts),
         };
 
-        // 絵（データの塊）だけ置き場へ上げて、住所に置き換える
+        // 絵（データの塊）を置き場へ上げて、住所に置き換える。
+        // 表示していたほうと控えのほうの2枚とも上げる（押した時点で2枚とも課金済みのため）
+        const upload = async (dataUrl: string, suffix: string): Promise<string | null> => {
+            const converted = dataUrlToBlob(dataUrl);
+            if (!converted) return null;
+            const path = `${teacherId}/${params.studentId}/${stamp}-${i}${suffix}.${converted.ext}`;
+            const { error } = await supabase.storage
+                .from(BUCKET)
+                .upload(path, converted.blob, { contentType: converted.blob.type, upsert: false });
+            if (error) {
+                console.error('授業の流れ：絵の保存に失敗', error.message);
+                return null;
+            }
+            imageCount++;
+            return path;
+        };
+
         if (it.img?.startsWith('data:image/')) {
-            const converted = dataUrlToBlob(it.img);
-            if (converted) {
-                const path = `${teacherId}/${params.studentId}/${stamp}-${i}.${converted.ext}`;
-                const { error } = await supabase.storage
-                    .from(BUCKET)
-                    .upload(path, converted.blob, { contentType: converted.blob.type, upsert: false });
-                if (!error) {
-                    row.imgPath = path;
-                    imageCount++;
-                } else {
-                    // 上げられなかった絵は、文字だけ残して先へ進む（授業を止めない）
-                    console.error('授業の流れ：絵の保存に失敗', error.message);
-                    row.text = row.text ?? '（この絵は保存できませんでした）';
-                }
+            const shownPath = await upload(it.img, '');
+            if (shownPath) {
+                row.imgPath = shownPath;
+                // 表示していたのが丁寧版なら、控えにあるのは速い版
+                row.imgShown = it.imgFast ? 'quality' : 'fast';
+            } else {
+                // 上げられなかった絵は、文字だけ残して先へ進む（授業を止めない）
+                row.text = row.text ?? '（この絵は保存できませんでした）';
+            }
+
+            const alt = it.imgFast ?? it.imgQuality;
+            if (alt?.startsWith('data:image/')) {
+                const altPath = await upload(alt, '-alt');
+                if (altPath) row.imgAltPath = altPath;
             }
         }
 
@@ -183,7 +207,7 @@ export async function purgeOldFlows(teacherId: string): Promise<number> {
 
     // 先に絵の実体を消す（行だけ消すと、置き場に絵が残り続けてしまう）
     const paths = (old as { items: SavedFlowItem[] }[])
-        .flatMap(r => (r.items ?? []).map(i => i.imgPath))
+        .flatMap(r => (r.items ?? []).flatMap(i => [i.imgPath, i.imgAltPath]))
         .filter((p): p is string => !!p);
 
     if (paths.length > 0) {

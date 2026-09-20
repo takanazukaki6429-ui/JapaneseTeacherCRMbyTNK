@@ -37,7 +37,10 @@ type FlowItem = {
     title?: string;
     translation?: string;  // said: 発話の母語訳（あとから届く）
     img?: string;          // illust: 表示中の絵
-    imgQuality?: string;   // illust: 裏で作った丁寧版（未差し替え時のみ保持）
+    imgQuality?: string;   // illust: 控えの丁寧版（表示が速い版のとき）
+    imgFast?: string;      // illust: 控えの速い版（表示が丁寧版のとき）
+                           //   2026-09-20 かずき決定「両方残す」：差し替えても捨てず、行き来できる。
+                           //   絵は押した時点で2枚とも作って課金済みなので、残しても生成の費用は増えない
     imgs?: string[];       // textbook: ページの画像
     ts: Date;
 };
@@ -1366,16 +1369,24 @@ export default function LiveLessonPage() {
                                                 // eslint-disable-next-line @next/next/no-img-element
                                                 <img src={item.img} alt="生成したイラスト" className="w-full rounded-lg" />
                                             )}
-                                            {/* 案C：丁寧版ができたら差し替えを提案 */}
+                                            {/* 案C：丁寧版ができたら差し替えを提案。2026-09-20 から行き来できる（捨てない） */}
                                             {item.img && item.imgQuality && (
                                                 <button
-                                                    onClick={() => patchFlow(item.id, { img: item.imgQuality, imgQuality: undefined })}
+                                                    onClick={() => patchFlow(item.id, { img: item.imgQuality, imgFast: item.img, imgQuality: undefined })}
                                                     className="w-full mt-2 text-left text-[13px] bg-[#fdf6e7] border border-[#ecd9a8] text-[#8a6d1f] rounded-lg px-3 py-2 hover:bg-[#fbefd2] transition-colors"
                                                 >
                                                     <b className="text-[#6b5ca5]">文字まできれいな版</b>ができました → 押すと差し替えます
                                                 </button>
                                             )}
-                                            {item.img && !item.imgQuality && item.title?.includes('できた絵') && (
+                                            {item.img && item.imgFast && (
+                                                <button
+                                                    onClick={() => patchFlow(item.id, { img: item.imgFast, imgQuality: item.img, imgFast: undefined })}
+                                                    className="w-full mt-2 text-left text-[13px] bg-[#f4f1fb] border border-[#ddd4f2] text-[#5a4c94] rounded-lg px-3 py-2 hover:bg-[#efe9ff] transition-colors"
+                                                >
+                                                    ← <b>さっきの速い版</b>に戻す
+                                                </button>
+                                            )}
+                                            {item.img && !item.imgQuality && !item.imgFast && item.title?.includes('できた絵') && (
                                                 <p className="text-[12px] text-[#484550] mt-2">
                                                     ※ AIが作った画像です。文字が正しいか目で確かめてから生徒さんに見せてください。
                                                 </p>
