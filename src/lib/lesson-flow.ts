@@ -22,6 +22,14 @@ const BUCKET = 'lesson-images';
 /** 見返すときに作る住所の有効時間（秒）。1時間 */
 const SIGNED_URL_TTL = 60 * 60;
 
+/**
+ * 保存した授業の流れを何日で消すか（かずき決定 2026-09-20：90日）
+ * 無制限に貯めると置き場の容量と原価が読めなくなるため。
+ * 消す仕事は「授業を終えて保存した直後」に、その先生の分だけ静かに走らせる
+ * （別の仕組みを増やさずに済み、データが増える場面でだけ動く）
+ */
+const KEEP_DAYS = 90;
+
 /** 保存する1項目。ライブ授業の FlowItem から、残す価値のある物だけを写す */
 export type SavedFlowItem = {
     kind: string;
@@ -149,7 +157,51 @@ export async function saveLessonFlow(params: {
         console.error('授業の流れの保存に失敗', error.message);
         return null;
     }
+
+    // 90日より古い分を片付ける。待たない（失敗しても授業の終わりに影響させない）
+    void purgeOldFlows(teacherId);
+
     return { id: data.id as string, imageCount };
+}
+
+/**
+ * 90日より古い授業の流れを消す（絵の実体 → 表の行 の順）。
+ * 自分の分だけが対象（権限の仕組みで、他の先生の分は触れない）。
+ */
+export async function purgeOldFlows(teacherId: string): Promise<number> {
+    const supabase = createClient();
+
+    const cutoff = new Date(Date.now() - KEEP_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: old, error } = await supabase
+        .from('lesson_flows')
+        .select('id, items')
+        .eq('teacher_id', teacherId)
+        .lt('created_at', cutoff);
+
+    if (error || !old || old.length === 0) return 0;
+
+    // 先に絵の実体を消す（行だけ消すと、置き場に絵が残り続けてしまう）
+    const paths = (old as { items: SavedFlowItem[] }[])
+        .flatMap(r => (r.items ?? []).map(i => i.imgPath))
+        .filter((p): p is string => !!p);
+
+    if (paths.length > 0) {
+        const { error: rmError } = await supabase.storage.from(BUCKET).remove(paths);
+        // 絵を消せなかったときは行を残す（次回もう一度試せるようにする）
+        if (rmError) {
+            console.error('古い絵の削除に失敗', rmError.message);
+            return 0;
+        }
+    }
+
+    const ids = (old as { id: string }[]).map(r => r.id);
+    const { error: delError } = await supabase.from('lesson_flows').delete().in('id', ids);
+    if (delError) {
+        console.error('古い授業の流れの削除に失敗', delError.message);
+        return 0;
+    }
+    return ids.length;
 }
 
 /**
