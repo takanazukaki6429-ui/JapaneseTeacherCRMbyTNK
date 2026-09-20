@@ -12,9 +12,15 @@ export const maxDuration = 120;   // 画像生成は最大60秒近くかかる�
  * 指示文はここで組み立てる。
  *
  * モデルの選択（2026-08-13 実測3回ずつで比較して決定）:
- *   fast     = gemini-3.1-flash-image … 8〜10秒 / 約0.06円 / 主文の日本語は3/3正確、
+ *   fast     = gemini-3.1-flash-image … 8〜10秒 / 主文の日本語は3/3正確、
  *              ただし背景の装飾文字が1/3で崩れた
- *   quality  = gpt-image-2            … 31〜42秒 / 約1.7円 / 背景の文字まで3/3正確
+ *   quality  = gpt-image-2（画質 medium）… 31〜42秒 / 背景の文字まで3/3正確
+ *
+ * 単価（2026-09-20 に公表値で確認・訂正）:
+ *   fast    $0.067/枚（≒¥10）。以前ここに「約0.06円」と書いてあったのは
+ *           $0.06 をドルのまま円と書いた取り違えで、実際は167倍だった
+ *   quality $0.05/枚（≒¥7.5）。1536x1024・画質 medium の場合。
+ *           画質を指定しないと $0.013〜$0.25 の間でぶれるため medium に固定した
  * 授業中に「すぐ欲しい」場合と「しっかり作りたい」場合があるため、先生が選べるようにする。
  */
 
@@ -90,7 +96,10 @@ async function generateWithOpenAI(prompt: string) {
     const res = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-        body: JSON.stringify({ model: 'gpt-image-2', prompt, size: '1536x1024', n: 1 }),
+        // quality を指定しないと、どの画質で課金されるかが決まらない（1枚 $0.013〜$0.25 と20倍ぶれる）。
+        // 2026-09-20 かずき決定：medium に固定。low だと「背景の文字まで正確」というこの版の存在理由が消え、
+        // high は1枚 $0.25 で、授業でよく使う先生だと月額を超える恐れがある（AI費用試算 2026-09-20 §8）
+        body: JSON.stringify({ model: 'gpt-image-2', prompt, size: '1536x1024', n: 1, quality: 'medium' }),
     });
     if (!res.ok) throw new Error(`画像生成に失敗しました（${res.status}）`);
     const data = await res.json();
