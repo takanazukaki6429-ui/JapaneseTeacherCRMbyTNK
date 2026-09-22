@@ -260,7 +260,11 @@ ${conversation_notes}
                 .eq('user_id', user.id)
                 .single();
 
-            if (settings?.ai_model) {
+            // 先生の設定のモデルは、今使える物（2.5系・3系）のときだけ使う（2026-09-22）。
+            // 登録時の初期値が gemini-1.5-flash のままで、本番の先生30人全員がこれだった（かずき実測）。
+            // 1.x は2026年時点で使えないとされており（下の予備のモデルの一覧のコメント）、その場合は
+            // 毎回1回空振りしてから 2.5 Flash に切り替わる＝その分遅い。実際に答えたモデルは ai_usage_log.model に残る
+            if (settings?.ai_model && /^gemini-(2\.5|3)/.test(settings.ai_model)) {
                 selectedModel = settings.ai_model;
             }
         }
