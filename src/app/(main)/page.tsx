@@ -90,10 +90,12 @@ async function getHomeData() {
                 text: `${c.st.name}さんの授業が ${jpDate(c.next.date, true)} にあります`,
                 label: '授業前の準備', href: `/students/${c.st.id}/lessons/prepare?scheduledLessonId=${c.next.id}` });
         }
+        // 宿題は「授業の記録」の1欄（lessons.homework）。書く場所は記録の画面だけなので、
+        // 前回の記録を直す画面へ飛ばす（2026-09-22 かずき指摘：以前は授業前の準備へ飛び、そこは見るだけで書けなかった）
         if (c.last && c.daysSince !== null && c.daysSince < LONG_GAP_DAYS && !c.last.homework?.trim()) {
             homeworkNotices.push({ key: `hw-${c.st.id}`, icon: 'homework', tone: 'lavender',
                 text: `${c.st.name}さんに宿題を出していません`,
-                label: '宿題を作る', href: `/students/${c.st.id}/lessons/prepare` });
+                label: '宿題を書く', href: `/students/${c.st.id}/lessons/new?lessonId=${c.last.id}` });
         }
         if (c.noPlan) {
             planNotices.push({ key: `plan-${c.st.id}`, icon: 'plan', tone: 'beige',
