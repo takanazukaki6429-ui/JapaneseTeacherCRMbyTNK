@@ -11,9 +11,9 @@ export const maxDuration = 120;   // 画像生成は最大60秒近くかかる�
  * 先生は追加入力をしない（課と生徒は画面が持っている）ので、
  * 指示文はここで組み立てる。
  *
- * モデルの選択（2026-08-13 実測3回ずつで比較して決定）:
+ * モデルの選択（2026-08-13 実測3回ずつで比較して決定。速い版は 2026-09-22 に Lite へ変更＝下の FAST_MODEL）:
  *   fast     = gemini-3.1-flash-image … 8〜10秒 / 主文の日本語は3/3正確、
- *              ただし背景の装飾文字が1/3で崩れた
+ *              ただし背景の装飾文字が1/3で崩れた（〜2026-09-21）
  *   quality  = gpt-image-2（画質 medium）… 31〜42秒 / 背景の文字まで3/3正確
  *
  * 単価（2026-09-20 に公表値で確認・訂正）:
@@ -25,6 +25,12 @@ export const maxDuration = 120;   // 画像生成は最大60秒近くかかる�
  */
 
 type Mode = 'fast' | 'quality';
+
+// 速い版のモデル（2026-09-22 かずき決定「一番原価を抑える組み合わせ」）：
+//   gemini-3.1-flash-lite-image … $0.0336/枚（≒¥5）・3〜5秒。同じ場面2枚の比較で主文の日本語は2/2正確、
+//   ふりがなが1/2で誤り（比較_安いモデルの質_2026-09-22.html）。3.1-flash-image（$0.067・8〜10秒）から切り替え。
+//   きれい版（gpt-image-2）は自動では作らず、先生が絵のカードのボタンで頼んだ時だけ作る
+const FAST_MODEL = 'gemini-3.1-flash-lite-image';
 
 // 教材の画像は文字が崩れると使い物にならない（誤った日本語を生徒に見せることになる）ため、
 // 指示文でも文字の正確さを最優先で要求する
@@ -68,7 +74,7 @@ async function generateWithGemini(prompt: string) {
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error('GEMINI_API_KEY が未設定です');
     const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent?key=${key}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${FAST_MODEL}:generateContent?key=${key}`,
         {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -214,7 +220,7 @@ export async function POST(req: NextRequest) {
 
         supabase.from('ai_usage_log').insert({
             user_id: user.id,
-            model: mode === 'quality' ? 'gpt-image-2' : 'gemini-3.1-flash-image',
+            model: mode === 'quality' ? 'gpt-image-2' : FAST_MODEL,
             prompt_type: 'illustrate',
             token_usage: result.tokens,
         }).then(() => {}, console.error);

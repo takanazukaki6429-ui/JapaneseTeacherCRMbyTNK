@@ -927,22 +927,10 @@ export default function LiveLessonPage() {
         const run = ++illustRunRef.current;
         setIllustBusy(true);
         setIllustError('');
-        // まず流れに「描いています…」のカードを置き、速い版・丁寧版の両方がそこへ届く
-        const itemId = addFlow({ kind: 'illust', title: '🎨 絵を描いています…（約10秒）', img: '' });
-
-        // 丁寧版は裏で静かに走らせる。失敗しても速い版があるので黙って諦める
-        requestIllust('quality')
-            .then(d => {
-                if (illustRunRef.current !== run) return;
-                // 万一こちらが先に完成したら（速い版の失敗時）そのまま本編として出す
-                setFlow(prev => prev.map(it => {
-                    if (it.id !== itemId) return it;
-                    return it.img
-                        ? { ...it, imgQuality: d.dataUrl }
-                        : { ...it, img: d.dataUrl, title: '🎨 できた絵' };
-                }));
-            })
-            .catch(() => { /* 速い版で続行 */ });
+        // まず流れに「描いています…」のカードを置き、速い版がそこへ届く。
+        // きれい版（約35秒・¥7.5）は自動では作らない：先生が絵のカードのボタンで頼んだ時だけ作る
+        // （2026-09-22 かずき決定「一番原価を抑える組み合わせ」。9/13〜9/21 は両方を同時に作っていた）
+        const itemId = addFlow({ kind: 'illust', title: '🎨 絵を描いています…（約5秒）', img: '' });
 
         try {
             const d = await requestIllust('fast');
@@ -955,6 +943,21 @@ export default function LiveLessonPage() {
             }
         } finally {
             if (illustRunRef.current === run) setIllustBusy(false);
+        }
+    };
+
+    // 先生が頼んだ時だけ、文字まできれいな版（gpt-image-2）を作って差し替える。速い版は控えに残す（行き来できる）
+    const makeQualityIllust = async (itemId: Parameters<typeof patchFlow>[0]) => {
+        setIllustError('');
+        patchFlow(itemId, { title: '🎨 きれいな版を作っています…（約35秒）' });
+        try {
+            const d = await requestIllust('quality');
+            setFlow(prev => prev.map(it => it.id !== itemId
+                ? it
+                : { ...it, title: '🎨 できた絵（きれいな版）', img: d.dataUrl, imgFast: it.img, imgQuality: undefined }));
+        } catch (e) {
+            patchFlow(itemId, { title: '🎨 できた絵' });
+            setIllustError(e instanceof Error ? e.message : 'きれいな版の生成に失敗しました。');
         }
     };
 
@@ -1040,7 +1043,7 @@ export default function LiveLessonPage() {
     ];
     const ASK_BUTTONS = [
         { key: 'illust', title: '絵で見せる', hint: 'いまの内容を1枚の絵に', Icon: ImageIcon, tile: 'bg-[#ede8fa] text-[#6b5ca5] group-hover:bg-[#6b5ca5]',
-          busy: illustBusy, disabled: illustBusy, onClick: generateIllustration, tip: 'いまの会話と課に合う絵を約10秒で作る。文字まできれいな版も自動で用意' },
+          busy: illustBusy, disabled: illustBusy, onClick: generateIllustration, tip: 'いまの会話と課に合う絵を約5秒で作る。文字まできれいな版は、できた絵の下のボタンで頼める' },
         { key: 'examples', title: '例文', hint: MATERIAL_MODES.examples.hint, Icon: BookOpen, tile: 'bg-[#dff1ea] text-[#2a6f5a] group-hover:bg-[#2a6f5a]',
           busy: materialBusy === 'examples', disabled: materialBusy !== null, onClick: () => makeMaterial('examples'), tip: MATERIAL_MODES.examples.hint },
         { key: 'exercises', title: '練習問題', hint: MATERIAL_MODES.exercises.hint, Icon: PencilLine, tile: 'bg-[#efe9f8] text-[#55488a] group-hover:bg-[#55488a]',
@@ -1386,10 +1389,18 @@ export default function LiveLessonPage() {
                                                     ← <b>さっきの速い版</b>に戻す
                                                 </button>
                                             )}
-                                            {item.img && !item.imgQuality && !item.imgFast && item.title?.includes('できた絵') && (
-                                                <p className="text-[12px] text-[#484550] mt-2">
-                                                    ※ AIが作った画像です。文字が正しいか目で確かめてから生徒さんに見せてください。
-                                                </p>
+                                            {item.img && !item.imgQuality && !item.imgFast && item.title?.includes('できた絵') && !item.title.includes('きれいな版') && (
+                                                <>
+                                                    <button
+                                                        onClick={() => makeQualityIllust(item.id)}
+                                                        className="w-full mt-2 text-left text-[13px] bg-[#fdf6e7] border border-[#ecd9a8] text-[#8a6d1f] rounded-lg px-3 py-2 hover:bg-[#fbefd2] transition-colors"
+                                                    >
+                                                        文字が崩れていたら → <b className="text-[#6b5ca5]">文字まできれいな版を作る</b>（約35秒）
+                                                    </button>
+                                                    <p className="text-[12px] text-[#484550] mt-2">
+                                                        ※ AIが作った画像です。文字が正しいか目で確かめてから生徒さんに見せてください。
+                                                    </p>
+                                                </>
                                             )}
                                         </div>
                                     )}

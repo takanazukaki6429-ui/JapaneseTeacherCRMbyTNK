@@ -269,6 +269,13 @@ ${conversation_notes}
             }
         }
 
+        // 先生の言葉の訳（1吹き出しごと・高頻度）は 3.1 Flash-Lite に固定する（2026-09-22 かずき決定「一番原価を抑える組み合わせ」）。
+        // 2.5 Flash は短い訳のために最大1,700字ぶん「考え」、その分が答えの単価で課金されて1回¥0.24だった。
+        // Lite は考えずに答えて1回¥0.007・1秒。フリートーク10文の比較で意味の誤り0（比較_安いモデルの質_2026-09-22.html）
+        if (type === AI_USAGE_TYPE.studentTranslation) {
+            selectedModel = 'gemini-3.1-flash-lite';
+        }
+
         // Initialize Gemini API here to ensure we use the current env var and handle missing keys gracefully
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 

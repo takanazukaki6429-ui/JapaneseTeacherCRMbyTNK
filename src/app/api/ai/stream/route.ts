@@ -26,8 +26,9 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'transcript is required' }, { status: 400 });
         }
 
-        // レート制限（先生1人・1時間あたり40回）。授業中のヒントの分だけを数える（2026-09-13 かずき決定：案A）。
+        // レート制限（先生1人・1時間あたり20回。2026-09-22 かずき決定で 40→20 に）。授業中のヒントの分だけを数える（2026-09-13 かずき決定：案A）。
         // 以前は文字起こし以外を全部数えていたため、生徒向け翻訳が40回を超えるとヒントが止まっていた
+        const HINT_HOURLY_LIMIT = 20;
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
         const { count } = await supabase
             .from('ai_usage_log')
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
             .eq('prompt_type', AI_USAGE_TYPE.liveAssistant)
             .gte('created_at', oneHourAgo);
 
-        if (count !== null && count >= 40) {
+        if (count !== null && count >= HINT_HOURLY_LIMIT) {
             return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
         }
 
@@ -78,16 +79,18 @@ ${transcript}
             prompt = transcript;
         }
 
-        // Geminiストリーミング
+        // Geminiストリーミング。ヒントは 3.1 Flash-Lite（2026-09-22 かずき決定「一番原価を抑える組み合わせ」）。
+        // 2.5 Flash は1回¥0.66・9.5秒（考える分1,472字が課金）、Lite は¥0.066・1.5秒で、同じ会話での提案は Lite の方が具体的だった
+        const HINT_MODEL = 'gemini-3.1-flash-lite';
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        const model = genAI.getGenerativeModel({ model: HINT_MODEL });
 
         const result = await model.generateContentStream(prompt);
 
         // 使用ログ記録（非同期・ノンブロッキング）
         supabase.from('ai_usage_log').insert({
             user_id: user.id,
-            model: 'gemini-2.5-flash',
+            model: HINT_MODEL,
             prompt_type: type || 'live_assistant',
             token_usage: 0
         }).then(() => {}, console.error);

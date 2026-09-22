@@ -164,15 +164,18 @@ ${MODE_INSTRUCTION[mode]}
 
 ⚠️ 前置き・挨拶は不要。本題だけを日本語で出力してください。`;
 
+        // 例文・練習問題・言い換えは 3.1 Flash-Lite（2026-09-22 かずき決定「一番原価を抑える組み合わせ」）。
+        // 2.5 Flash は1回¥0.83・11秒（考える分1,972字が課金）、Lite は¥0.05・1.3秒で、例文は Lite の方が直近の会話に沿っていた
+        const IMPROVISE_MODEL = 'gemini-3.1-flash-lite';
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        const model = genAI.getGenerativeModel({ model: IMPROVISE_MODEL });
         const result = await model.generateContent(prompt);
         const text = result.response.text();
 
         // 利用記録（原価の実測に使う）
         supabase.from('ai_usage_log').insert({
             user_id: user.id,
-            model: 'gemini-2.5-flash',
+            model: IMPROVISE_MODEL,
             prompt_type: 'improvise',
             token_usage: result.response.usageMetadata?.totalTokenCount ?? 0,
         }).then(() => {}, console.error);

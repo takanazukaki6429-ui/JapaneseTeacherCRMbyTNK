@@ -1,7 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSpeechClient, getTranslateClient, getProjectId, isGoogleCloudConfigured } from '@/lib/google-cloud';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@/lib/supabase/server';
 import { notifyAdmin } from '@/lib/notify';
+
+// 生徒の声の日本語訳は 3.1 Flash-Lite（2026-09-22 かずき決定「一番原価を抑える組み合わせ」）。
+// Google の翻訳は $20/100万文字（月50万文字までは ASTA 全体で無料）で1文¥0.2、Lite は1文¥0.006。
+// 6文の比較で Lite の方が自然な日本語だった（Google は直訳調）。ただし 0.2秒→0.9秒と遅くなる。
+// Lite が失敗した時だけ Google の翻訳でやり直す（翻訳モードを止めないため）
+const TRANSLATE_MODEL = 'gemini-3.1-flash-lite';
+
+async function translateToJapanese(text: string, sourceLanguage: string): Promise<{ japanese: string; engine: string }> {
+    if (process.env.GEMINI_API_KEY) {
+        try {
+            const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+            const model = genAI.getGenerativeModel({ model: TRANSLATE_MODEL });
+            const result = await model.generateContent(
+                `Translate the following ${sourceLanguage} text (spoken by a Japanese-language student to their teacher) into natural Japanese. Output ONLY the translation, nothing else.\n\n${text}`
+            );
+            const japanese = result.response.text().trim();
+            if (japanese) return { japanese, engine: TRANSLATE_MODEL };
+        } catch (err) {
+            console.error('[transcribe] gemini translate failed, falling back to Google Translate:', err instanceof Error ? err.message : err);
+        }
+    }
+    const translate = getTranslateClient();
+    const [translated] = await translate.translate(text, 'ja');
+    return { japanese: translated, engine: 'google-translate' };
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +44,7 @@ const TRANSCRIBE_HOURLY_LIMIT = 1800;
  *   （生徒の母国語名と、直前の発話が文の途中なら その原文＝文脈 も同送）
  *     → Google Cloud STT v2 の Chirp 3 で文字起こし（言語は自動判定・句読点つき。
  *        失敗時は旧設定 latest_short＝母国語 + en-US + ja-JP の3言語指定でやり直す）
- *     → 文脈があれば前後をつなげてから Google Cloud Translation v2 で日本語訳
+ *     → 文脈があれば前後をつなげてから 3.1 Flash-Lite で日本語訳（2026-09-22。失敗時は Google Cloud Translation v2）
  *       （画面側は前の吹き出しを結合訳で差し替える。2026-09-06 かずき決定 A＋B案）
  *
  * Gemini フォールバックは 2026-07-12 に廃止。
@@ -48,7 +74,7 @@ const LANGUAGE_TO_STT_CODE: Record<string, string> = {
     Indonesian: 'id-ID',
 };
 
-type TranscribeResult = { original: string; japanese: string; merged: boolean };
+type TranscribeResult = { original: string; japanese: string; merged: boolean; engine: string };
 
 // 認識モデル（2026-09-06 かずき決定「い」）。既定は新世代の Chirp 3：
 //  - 言語を「自動判定」に任せられる（母国語・英語・日本語の3言語制限が消える）
@@ -137,7 +163,7 @@ async function transcribeWithGoogle(audioBytes: Buffer, studentLanguage: string,
     if (isJapanese) original = tidyJapaneseSpacing(original);
 
     if (!original) {
-        return { original: '', japanese: '', merged: false };
+        return { original: '', japanese: '', merged: false, engine: 'google-stt' };
     }
 
     // 直前の発話が文の途中で終わっていた場合、画面側がその原文を文脈として送ってくる。
@@ -146,13 +172,13 @@ async function transcribeWithGoogle(audioBytes: Buffer, studentLanguage: string,
 
     // 日本語ならそのまま、それ以外は日本語訳
     if (isJapanese) {
-        return { original: merged, japanese: merged, merged: !!context };
+        return { original: merged, japanese: merged, merged: !!context, engine: 'google-stt' };
     }
 
-    const translate = getTranslateClient();
-    const [translated] = await translate.translate(merged, 'ja');
+    const sourceLanguage = detectedLang.startsWith('en') ? 'English' : (detectedLang ? `${studentLanguage} or English` : studentLanguage);
+    const { japanese, engine } = await translateToJapanese(merged, sourceLanguage);
 
-    return { original: merged, japanese: translated, merged: !!context };
+    return { original: merged, japanese, merged: !!context, engine: `google-stt+${engine}` };
 }
 
 export async function POST(req: NextRequest) {
@@ -223,8 +249,9 @@ export async function POST(req: NextRequest) {
         };
 
         const result = await transcribeWithGoogle(audioBuffer, studentLanguage, context);
-        logUsage('google-stt');
-        return NextResponse.json({ ...result, engine: 'google-stt' });
+        // 訳に使った物まで記録に残す（google-stt / google-stt+gemini-3.1-flash-lite / google-stt+google-translate）
+        logUsage(result.engine);
+        return NextResponse.json(result);
 
     } catch (error) {
         // 認識失敗＝何も表示しない（Geminiで捏造するより誠実）。原因はログに残す
