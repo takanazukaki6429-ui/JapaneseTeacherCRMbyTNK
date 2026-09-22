@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Zen_Maru_Gothic, Geist_Mono } from "next/font/google";
+import { Zen_Maru_Gothic, Noto_Sans_JP, Geist_Mono } from "next/font/google";
+import { FontCompareBar } from "@/components/font-compare-bar";
 import "./globals.css";
 import { Toaster } from "sonner";
 
@@ -13,6 +14,18 @@ const zenMaru = Zen_Maru_Gothic({
   display: "swap",
   preload: false,
 });
+
+// 書体の見比べ用（置き場 try/font-compare だけ・2026-09-22）。案2・案3で、ヒラギノ角ゴが無い端末（Windowsなど）に使う
+const notoJp = Noto_Sans_JP({
+  variable: "--font-noto-jp",
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  display: "swap",
+  preload: false,
+});
+
+// 画面が描かれる前に、選んである書体を当てる（切り替えのちらつきを防ぐ）。?font=0〜3 でも切り替えられる
+const fontCompareScript = `try{var p=new URLSearchParams(location.search).get('font');if(p!==null){if(p==='0'){localStorage.removeItem('asta-font')}else{localStorage.setItem('asta-font',p)}}var f=localStorage.getItem('asta-font');if(f){document.documentElement.dataset.font=f}}catch(e){}`;
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -43,12 +56,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja">
+    <html lang="ja" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: fontCompareScript }} />
+      </head>
       <body
-        className={`${zenMaru.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+        className={`${zenMaru.variable} ${notoJp.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
         {children}
         <Toaster />
+        <FontCompareBar />
       </body>
     </html>
   );

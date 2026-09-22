@@ -67,3 +67,30 @@ body {
   font-family: "Hiragino Maru Gothic ProN", var(--font-zen-maru), 'Zen Maru Gothic', "Hiragino Sans", Meiryo, sans-serif;
   line-height: 1.6;
 }
+
+
+/* ─────────────────────────────────────────────
+   書体の見比べ（置き場 try/font-compare だけ・2026-09-22 かずき依頼）
+   左下の帯か ?font=0〜3 で切り替える。本番へ入れる統合版には入れない
+   今 ：ヒラギノ丸ゴ（Mac・iPhone。太さが1種類しか無く、太字は機械的に太らせた偽物）
+   案1：丸ゴシック（Zen Maru Gothic を全端末で先に使う＝本物の太字）
+   案2：角ゴシック（Mac・iPhoneはヒラギノ角ゴ＝読み込みゼロ、それ以外は Noto Sans JP）
+   案3：見出し（h1〜h4）だけ丸ゴシック、本文は角ゴシック
+   ───────────────────────────────────────────── */
+html[data-font="1"] {
+  --font-sans: var(--font-zen-maru), "Zen Maru Gothic", "Hiragino Sans", sans-serif;
+}
+html[data-font="1"] body {
+  font-family: var(--font-zen-maru), "Zen Maru Gothic", "Hiragino Sans", Meiryo, sans-serif;
+}
+html[data-font="2"],
+html[data-font="3"] {
+  --font-sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", var(--font-noto-jp), "Noto Sans JP", Meiryo, sans-serif;
+}
+html[data-font="2"] body,
+html[data-font="3"] body {
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", var(--font-noto-jp), "Noto Sans JP", Meiryo, sans-serif;
+}
+html[data-font="3"] :is(h1, h2, h3, h4) {
+  font-family: var(--font-zen-maru), "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif;
+}
