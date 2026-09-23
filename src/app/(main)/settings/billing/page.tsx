@@ -3,8 +3,8 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { CheckCircle, CreditCard, Loader2, AlertCircle } from 'lucide-react';
-import { PLAN_PRICE_LABEL } from '@/lib/pricing';
+import { CheckCircle, CreditCard, Loader2, AlertCircle, Languages } from 'lucide-react';
+import { PLAN_TIERS, isPlanTier, tierPriceLabel, PACK_SENTENCE, PACK_PRICE_JPY, PACK_MINUTES, PACK_VALID_DAYS } from '@/lib/pricing';
 
 // useSearchParams を使う＋認証必須のユーザー固有ページのため静的化を無効
 export const dynamic = 'force-dynamic';
@@ -13,36 +13,42 @@ type BillingInfo = {
     is_free: boolean;
     subscription_status: string | null;
     stripe_customer_id: string | null;
+    plan_tier?: string | null;
 };
+
+type Quota = { tier: string; capMin: number; planCapMin: number; packMin: number; usedMin: number; remainingMin: number };
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
     active:   { label: '有効', color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
-    trialing: { label: 'トライアル中', color: 'text-blue-600 bg-blue-50 border-blue-200' },
+    trialing: { label: '無料お試し中', color: 'text-blue-600 bg-blue-50 border-blue-200' },
     past_due: { label: '支払い遅延', color: 'text-amber-600 bg-amber-50 border-amber-200' },
-    canceled: { label: 'キャンセル済み', color: 'text-red-600 bg-red-50 border-red-200' },
+    canceled: { label: '解約済み', color: 'text-red-600 bg-red-50 border-red-200' },
     inactive: { label: '未契約', color: 'text-gray-600 bg-gray-50 border-gray-200' },
 };
 
 function BillingContent() {
     const searchParams = useSearchParams();
     const success = searchParams.get('success') === '1';
+    const packBought = searchParams.get('pack') === '1';
 
     const [info, setInfo] = useState<BillingInfo | null>(null);
+    const [quota, setQuota] = useState<Quota | null>(null);
     const [loading, setLoading] = useState(true);
     const [portalLoading, setPortalLoading] = useState(false);
+    const [packLoading, setPackLoading] = useState(false);
+    const [packError, setPackError] = useState('');
 
     useEffect(() => {
         const supabase = createClient();
         supabase.auth.getUser().then(async ({ data: { user } }) => {
             if (!user) return;
-            const { data } = await supabase
-                .from('user_settings')
-                .select('is_free, subscription_status, stripe_customer_id')
-                .eq('user_id', user.id)
-                .single();
-            setInfo(data as BillingInfo);
+            // plan_tier の列がまだ無い保管庫でも動くよう、失敗したら列なしで読み直す
+            let row: BillingInfo | null = (await supabase.from('user_settings').select('is_free, subscription_status, stripe_customer_id, plan_tier').eq('user_id', user.id).single()).data as BillingInfo | null;
+            if (!row) row = (await supabase.from('user_settings').select('is_free, subscription_status, stripe_customer_id').eq('user_id', user.id).single()).data as BillingInfo | null;
+            setInfo(row);
             setLoading(false);
         });
+        fetch('/api/quota/translation').then(r => r.ok ? r.json() : null).then(q => q && setQuota(q)).catch(() => {});
     }, []);
 
     const handlePortal = async () => {
@@ -58,6 +64,20 @@ function BillingContent() {
         }
     };
 
+    const handlePack = async () => {
+        setPackLoading(true);
+        setPackError('');
+        try {
+            const res = await fetch('/api/stripe/create-pack-checkout', { method: 'POST' });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'エラーが発生しました');
+            if (data.url) window.location.href = data.url;
+        } catch (e) {
+            setPackError(e instanceof Error ? e.message : 'エラーが発生しました');
+            setPackLoading(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex h-64 items-center justify-center">
@@ -69,6 +89,11 @@ function BillingContent() {
     const status = info?.subscription_status ?? 'inactive';
     const statusInfo = STATUS_LABEL[status] ?? STATUS_LABEL['inactive'];
     const isActive = info?.is_free || status === 'active' || status === 'trialing';
+    const tier = isPlanTier(info?.plan_tier) ? info.plan_tier : 'light';
+    const planLabel = info?.is_free
+        ? '無償プラン（招待）'
+        : `${PLAN_TIERS[tier].label}プラン ${tierPriceLabel(tier)}/月`;
+    const usedPct = quota && quota.capMin > 0 ? Math.min(100, Math.round(quota.usedMin / quota.capMin * 100)) : 0;
 
     return (
         <div className="max-w-lg mx-auto space-y-6">
@@ -77,7 +102,13 @@ function BillingContent() {
             {success && (
                 <div className="flex items-center gap-3 px-5 py-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-sm text-emerald-700">
                     <CheckCircle size={18} />
-                    サブスクリプションが有効になりました！ご利用ありがとうございます。
+                    お申込みが完了しました。ご利用ありがとうございます。
+                </div>
+            )}
+            {packBought && (
+                <div className="flex items-center gap-3 px-5 py-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-sm text-emerald-700">
+                    <CheckCircle size={18} />
+                    追加パックを購入しました。翻訳モードの残りに{PACK_MINUTES}分が加わります（反映まで1分ほどかかることがあります）。
                 </div>
             )}
 
@@ -85,15 +116,13 @@ function BillingContent() {
                 <div className="flex items-center justify-between">
                     <div>
                         <p className="text-xs font-bold text-[#484550] uppercase tracking-wider mb-1">現在のプラン</p>
-                        <p className="text-lg font-bold text-[#3a3350]">
-                            {info?.is_free ? '無償プラン（招待）' : `プロプラン ${PLAN_PRICE_LABEL}/月`}
-                        </p>
+                        <p className="text-lg font-bold text-[#3a3350]">{planLabel}</p>
                     </div>
                     <CreditCard size={24} className="text-[#6b5ca5]" />
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-[#484550]">ステータス</span>
+                    <span className="text-xs font-bold text-[#484550]">状態</span>
                     <span className={`text-xs font-bold px-3 py-1 rounded-full border ${statusInfo.color}`}>
                         {info?.is_free ? '無償（永続）' : statusInfo.label}
                     </span>
@@ -102,17 +131,50 @@ function BillingContent() {
                 {!isActive && !info?.is_free && (
                     <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
                         <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
-                        サブスクリプションが有効ではありません。プランに加入してすべての機能をご利用ください。
+                        プランが有効ではありません。プランに加入してすべての機能をご利用ください。
                     </div>
                 )}
             </div>
 
-            {/* Stripe Customer Portal（キャンセル・カード変更） */}
+            {/* 今月の翻訳モード（月の上限・2026-09-23） */}
+            {quota && (
+                <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] p-6 space-y-3">
+                    <div className="flex items-center gap-2">
+                        <Languages size={18} className="text-[#6b5ca5]" />
+                        <p className="text-sm font-bold text-[#3a3350]">今月の翻訳モード</p>
+                    </div>
+                    <div className="h-2.5 w-full bg-[#efe9ff] rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${usedPct >= 90 ? 'bg-amber-500' : 'bg-[#6b5ca5]'}`} style={{ width: `${usedPct}%` }} />
+                    </div>
+                    <p className="text-sm text-[#3a3350]">
+                        使った時間 <b>{Math.round(quota.usedMin)}分</b> ／ 上限 <b>{quota.capMin.toLocaleString('ja-JP')}分</b>
+                        {quota.packMin > 0 && <span className="text-xs text-[#484550]">（プラン{quota.planCapMin.toLocaleString('ja-JP')}分＋追加パック{quota.packMin}分）</span>}
+                    </p>
+                    <p className="text-xs text-[#484550]">上限に達すると翻訳モードだけ止まります。ほかの機能はそのまま使えます。上限は毎月1日に戻ります。</p>
+
+                    {PACK_PRICE_JPY !== null && isActive && (
+                        <div className="pt-2 border-t border-[#f0ebf8]">
+                            <p className="text-xs text-[#484550] mb-2">{PACK_SENTENCE}。買った日から{PACK_VALID_DAYS}日の間、今月の上限に足されます。</p>
+                            {packError && <p className="text-xs text-red-600 mb-2">{packError}</p>}
+                            <button
+                                onClick={handlePack}
+                                disabled={packLoading}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-[#6b5ca5] text-white text-sm font-bold rounded-xl hover:scale-[1.02] transition-transform disabled:opacity-60"
+                            >
+                                {packLoading ? <Loader2 size={14} className="animate-spin" /> : <Languages size={14} />}
+                                追加パックを買う（翻訳＋{PACK_MINUTES}分）
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Stripe Customer Portal（プランの変更・キャンセル・カード変更） */}
             {info?.stripe_customer_id && !info?.is_free && (
                 <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] p-6">
-                    <p className="text-sm font-bold text-[#3a3350] mb-1">支払い情報の管理</p>
+                    <p className="text-sm font-bold text-[#3a3350] mb-1">プランの変更・支払い情報の管理</p>
                     <p className="text-xs text-[#484550] mb-4">
-                        カードの変更・サブスクリプションのキャンセルはStripeのポータルで行えます。
+                        プランの変更（ライト⇄レギュラー⇄プロ）・カードの変更・解約はStripeの窓口で行えます。
                     </p>
                     <button
                         onClick={handlePortal}
@@ -120,7 +182,7 @@ function BillingContent() {
                         className="inline-flex items-center gap-2 px-4 py-2 bg-[#f0ebf8] text-[#3a3350] text-sm font-bold rounded-xl hover:bg-[#efe9ff] transition-colors disabled:opacity-60"
                     >
                         {portalLoading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
-                        Stripeポータルを開く
+                        Stripeの窓口を開く
                     </button>
                 </div>
             )}

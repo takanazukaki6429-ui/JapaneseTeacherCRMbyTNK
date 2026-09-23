@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getStripe } from '@/lib/stripe';
+import { getStripe, tierFromPriceId } from '@/lib/stripe';
+import { PACK_MINUTES, PACK_VALID_DAYS, isPlanTier } from '@/lib/pricing';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAudit } from '@/lib/audit';
 import Stripe from 'stripe';
@@ -55,12 +56,43 @@ export async function POST(req: NextRequest) {
                 customerId = subscription.customer as string;
                 const status = subscription.status; // active | trialing | canceled | past_due 等
 
+                // 段（2026-09-23・3段）：申込み時に付けた metadata.plan_tier を優先し、
+                // ポータルで段を変えた時は契約の価格IDから決める。どちらも当たらなければ段は変えない
+                const fromPrice = tierFromPriceId(subscription.items?.data?.[0]?.price?.id);
+                const fromMeta = subscription.metadata?.plan_tier;
+                const tier = fromPrice ?? (isPlanTier(fromMeta) ? fromMeta : null);
+
                 updatedRows = await updateByCustomerId(customerId, {
                     stripe_subscription_id: subscription.id,
                     subscription_status: status,
+                    ...(tier ? { plan_tier: tier } : {}),
                 });
 
-                console.log(`Subscription ${event.type}: customer=${customerId} status=${status} rows=${updatedRows}`);
+                console.log(`Subscription ${event.type}: customer=${customerId} status=${status} tier=${tier ?? '-'} rows=${updatedRows}`);
+                break;
+            }
+
+            case 'checkout.session.completed': {
+                // 追加パック（1回払い）の支払い完了 → 翻訳モードの分数を足す（2026-09-23 かずき決定）
+                const session = event.data.object as Stripe.Checkout.Session;
+                if (session.mode !== 'payment' || session.metadata?.pack !== 'translation') break;
+                customerId = (session.customer as string) ?? null;
+                const userId = session.metadata?.supabase_user_id;
+                if (!userId) {
+                    console.error('Pack checkout without supabase_user_id:', session.id);
+                    return NextResponse.json({ error: 'No user id' }, { status: 500 });
+                }
+                const minutes = Number(session.metadata?.minutes) || PACK_MINUTES;
+                const expiresAt = new Date(Date.now() + PACK_VALID_DAYS * 24 * 60 * 60 * 1000).toISOString();
+                // 同じ支払いの通知が2回来ても二重に足さない（stripe_session_id が一意）
+                const { error: packError } = await supabase
+                    .from('translation_packs')
+                    .upsert({ user_id: userId, minutes, expires_at: expiresAt, stripe_session_id: session.id }, { onConflict: 'stripe_session_id', ignoreDuplicates: true });
+                if (packError) {
+                    throw new Error(`translation_packs insert failed: ${packError.message}`);
+                }
+                updatedRows = 1;
+                console.log(`Pack purchased: user=${userId} minutes=${minutes} expires=${expiresAt}`);
                 break;
             }
 

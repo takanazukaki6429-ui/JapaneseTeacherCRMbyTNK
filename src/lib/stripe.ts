@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { PLAN_TIER_KEYS, type PlanTier } from '@/lib/pricing';
 
 /**
  * Server-side Stripe client（遅延初期化シングルトン）
@@ -31,7 +32,27 @@ export function isSubscriptionActive(
     return status === 'active' || status === 'trialing';
 }
 
-/** 価格ID（未設定時は空文字。利用時にチェックする） */
-export function getStripePriceId(): string {
-    return process.env.STRIPE_PRICE_ID || '';
+/**
+ * 段ごとの価格ID（2026-09-23・3段）。環境変数 STRIPE_PRICE_ID_LIGHT / _REGULAR / _PRO。
+ * 旧・単一の STRIPE_PRICE_ID はレギュラーの代わりとして読む（互換）。未設定時は空文字（利用時にチェックする）
+ */
+export function getStripePriceId(tier: PlanTier = 'regular'): string {
+    const byTier: Record<PlanTier, string | undefined> = {
+        light: process.env.STRIPE_PRICE_ID_LIGHT,
+        regular: process.env.STRIPE_PRICE_ID_REGULAR ?? process.env.STRIPE_PRICE_ID,
+        pro: process.env.STRIPE_PRICE_ID_PRO,
+    };
+    return byTier[tier] || '';
+}
+
+/** 価格ID → 段。Stripe からの通知（契約の作成・変更）で段を決めるのに使う。どれにも当たらなければ null */
+export function tierFromPriceId(priceId: string | null | undefined): PlanTier | null {
+    if (!priceId) return null;
+    for (const t of PLAN_TIER_KEYS) if (getStripePriceId(t) === priceId) return t;
+    return null;
+}
+
+/** 追加パック（翻訳＋500分・1回買い）の価格ID。環境変数 STRIPE_PRICE_ID_PACK */
+export function getStripePackPriceId(): string {
+    return process.env.STRIPE_PRICE_ID_PACK || '';
 }

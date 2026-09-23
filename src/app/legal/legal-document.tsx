@@ -11,6 +11,7 @@
 import {
     PLAN_PRICE_LABEL,
     PLAN_PRICE_SENTENCE,
+    PACK_SENTENCE,
     LEGAL_EFFECTIVE_DATE,
     BUSINESS_CONTACT_EMAIL,
 } from '@/lib/pricing';
@@ -20,6 +21,7 @@ const TABLE_DIVIDER = /^\|[\s\-:|]+\|$/;
 function fillPlaceholders(text: string) {
     return text
         .replaceAll('{{PRICE_SENTENCE}}', PLAN_PRICE_SENTENCE)
+        .replaceAll('{{PACK_SENTENCE}}', PACK_SENTENCE)
         .replaceAll('{{PRICE}}', PLAN_PRICE_LABEL)
         .replaceAll('{{EFFECTIVE_DATE}}', LEGAL_EFFECTIVE_DATE)
         .replaceAll('{{CONTACT_EMAIL}}', BUSINESS_CONTACT_EMAIL);
