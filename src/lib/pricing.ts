@@ -38,6 +38,22 @@ export const TRIAL_DAYS = 7;
 /** 申込み前に出す説明の一文（定期購入の表示・2026-09-17） */
 export const PLAN_TRIAL_SENTENCE = `最初の${TRIAL_DAYS}日間は無料です。${TRIAL_DAYS + 1}日目に最初の課金が始まります`;
 
+/**
+ * プランの段（2026-09-23 かずき決定・案B）。段の差は「翻訳モードの月の分数」だけ（機能は同じ・絵は0）。
+ * 分数は「毎回60分つけっぱなし × 生徒のめやす × 月4.3回」で置く＝ふつうの使い方なら届かない。
+ * 金額はここに書かない（環境変数から。上の注意のとおり）
+ */
+export type PlanTier = 'light' | 'regular' | 'pro';
+export const PLAN_TIERS: Record<PlanTier, { label: string; students: number; translationMinutes: number }> = {
+    light:   { label: 'ライト',   students: 10, translationMinutes: 2580 },
+    regular: { label: 'レギュラー', students: 20, translationMinutes: 5160 },
+    pro:     { label: 'プロ',     students: 40, translationMinutes: 10320 },
+};
+/** 無料お試し（7日）の間の翻訳モードの上限（分）。2026-09-23 かずき決定 */
+export const TRIAL_TRANSLATION_MINUTES = 180;
+/** 既存の先生（is_free）の翻訳モードの月の上限（分）。⚠️ 仮の値＝ライトと同じ。数字はかずき未決（2026-09-22「翻訳と絵に月の上限」のみ決定） */
+export const FREE_LEGACY_TRANSLATION_MINUTES = 2580;
+
 /** 規約・特商法表記の施行日。課金開始に合わせて更新する */
 export const LEGAL_EFFECTIVE_DATE = process.env.NEXT_PUBLIC_LEGAL_EFFECTIVE_DATE || '2026年10月1日';
 

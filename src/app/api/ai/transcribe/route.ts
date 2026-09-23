@@ -3,6 +3,7 @@ import { getSpeechClient, getTranslateClient, getProjectId, isGoogleCloudConfigu
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@/lib/supabase/server';
 import { notifyAdmin } from '@/lib/notify';
+import { getTranslationQuota } from '@/lib/translation-quota';
 
 // 生徒の声の日本語訳は 3.1 Flash-Lite（2026-09-22 かずき決定「一番原価を抑える組み合わせ」）。
 // Google の翻訳は $20/100万文字（月50万文字までは ASTA 全体で無料）で1文¥0.2、Lite は1文¥0.006。
@@ -279,9 +280,20 @@ export async function POST(req: NextRequest) {
         const studentLanguage = String(formData.get('language') || 'English');
         // 直前の生徒発話の原文（文の途中で終わっていた時だけ画面側が付ける）。長さは抑える
         const context = String(formData.get('context') || '').trim().slice(0, 400);
+        // 1切れの音声の長さ（ミリ秒・画面側が録音の開始〜停止で測る）。無ければバイト数から概算（opus 約16KB/秒）
+        const durationMs = Math.max(0, Math.round(Number(formData.get('duration_ms')) || (audioBlob ? audioBlob.size / 16 : 0)));
 
         if (!audioBlob || audioBlob.size < 500) {
             return NextResponse.json({ original: '', japanese: '' });
+        }
+
+        // 月の上限（2026-09-23 かずき決定・案B）。届いたら翻訳モードだけ止める（他の機能はそのまま）
+        const quota = await getTranslationQuota(supabase, user.id);
+        if (quota.usedMin >= quota.capMin) {
+            return NextResponse.json(
+                { error: 'monthly_limit', capMin: quota.capMin, usedMin: quota.usedMin, original: '', japanese: '' },
+                { status: 429 }
+            );
         }
 
         if (!isGoogleCloudConfigured()) {
@@ -296,13 +308,14 @@ export async function POST(req: NextRequest) {
         const audioBuffer = Buffer.from(arrayBuffer);
 
         // 使用ログ記録（非同期・ノンブロッキング）
-        // token_usage には音声バイト数を記録（1切れの長さは可変なので、利用時間はバイト数から概算する）
+        // token_usage には音声の長さ（ミリ秒）を記録する（2026-09-23〜。月の上限がこれを合計する。
+        // それより前の行はバイト数＝translation-quota.ts の USAGE_MS_SINCE で区別）
         const logUsage = (engine: string) => {
             supabase.from('ai_usage_log').insert({
                 user_id: user.id,
                 model: engine,
                 prompt_type: 'transcribe',
-                token_usage: audioBlob.size,
+                token_usage: durationMs,
             }).then(() => {}, console.error);
         };
 
@@ -318,7 +331,9 @@ export async function POST(req: NextRequest) {
         if (!result) result = await transcribeWithGoogle(audioBuffer, studentLanguage, context);
         // 使った物まで記録に残す（gemini-3.5-flash-lite / google-stt / google-stt+gemini-3.1-flash-lite / google-stt+google-translate）
         logUsage(result.engine);
-        return NextResponse.json(result);
+        // 残り分数も返す（画面側が残りわずかの案内に使う）
+        const remainingMin = Math.max(0, Math.round((quota.capMin - quota.usedMin - durationMs / 60000) * 10) / 10);
+        return NextResponse.json({ ...result, remainingMin, capMin: quota.capMin });
 
     } catch (error) {
         // 認識失敗＝何も表示しない（Geminiで捏造するより誠実）。原因はログに残す

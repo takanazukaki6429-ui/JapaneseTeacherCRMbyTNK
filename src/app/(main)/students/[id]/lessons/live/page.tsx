@@ -226,6 +226,11 @@ export default function LiveLessonPage() {
     // どちらの状態でも全部見えて安全な設計なので、押し忘れても事故にならない
     const [toolsOut, setToolsOut] = useState(true);
     const [showHints, setShowHints] = useState(true);   // ASTAのヒント（進め方・ことば・考え中）を画面に出すか。生徒に画面を見せるときはオフ
+    // 先生の言葉を生徒の母語に訳して吹き出しに添えるか（2026-09-23・先生が選べる。N3以上の生徒なら要らないことがある）
+    const [translateTeacher, setTranslateTeacher] = useState(true);
+    const translateTeacherRef = useRef(true);
+    useEffect(() => { translateTeacherRef.current = translateTeacher; }, [translateTeacher]);
+    const lowQuotaNoticedRef = useRef(false);   // 翻訳モードの残りわずかの案内を1回だけ出す
 
 
     // ── 生徒向け翻訳（先生 → 生徒方向）──
@@ -397,6 +402,7 @@ export default function LiveLessonPage() {
     // 原文と訳が必ず同じ吹き出しで揃うよう、吹き出し確定の単位で訳す
     const translateSaid = useCallback((flowId: number, japaneseText: string) => {
         if (!japaneseText.trim()) return;
+        if (!translateTeacherRef.current) return;   // 先生が「生徒への訳」を切っている（N3以上の生徒など・2026-09-23）
         (async () => {
             try {
                 const res = await fetch('/api/ai', {
@@ -758,7 +764,7 @@ export default function LiveLessonPage() {
 
             // 1切れの音声を送る。直前の生徒発話が文の途中で終わっていれば、その原文を
             // 「文脈」として同送し、返ってきた結合訳で前の吹き出しを差し替える（B案）
-            const sendChunk = async (blob: Blob) => {
+            const sendChunk = async (blob: Blob, durationMs: number) => {
                 const prev = lastStudentRef.current;
                 const canMerge = !!prev
                     && Date.now() - prev.at < 8000
@@ -769,15 +775,27 @@ export default function LiveLessonPage() {
                 // 生徒の母国語をSTTの検出対象に使う（母国語+en-USの2言語検出）
                 formData.append('language', studentNativeLangRef.current);
                 formData.append('context', canMerge && prev ? prev.original : '');
+                // 1切れの長さ（月の上限はこれを合計する・2026-09-23）
+                formData.append('duration_ms', String(Math.round(durationMs)));
                 try {
                     const res = await fetch('/api/ai/transcribe', { method: 'POST', body: formData });
                     if (res.status === 429) {
-                        // 利用上限到達 → 再送を止めるため翻訳モードごと停止（課金暴走の栓）
+                        // 利用上限到達 → 再送を止めるため翻訳モードごと停止（課金暴走の栓）。
+                        // 月の上限（プランの分数）と1時間の上限で案内を分ける。他の機能はどちらでも使える
+                        let monthly: { capMin?: number } | null = null;
+                        try { const j = await res.json(); if (j?.error === 'monthly_limit') monthly = j; } catch { /* 本文なし */ }
                         stopTranslationMode();
-                        addFlow({ kind: 'notice', text: '⚠️ 翻訳の利用量が上限に達したため自動停止しました。1時間ほど置いてから再度お試しください。' });
+                        addFlow({ kind: 'notice', text: monthly
+                            ? `⚠️ 今月の翻訳モードの上限（${monthly.capMin ?? ''}分）に達したため、翻訳を止めました。ヒント・例文・記録はそのまま使えます。来月1日に元に戻ります`
+                            : '⚠️ 翻訳の利用量が上限に達したため自動停止しました。1時間ほど置いてから再度お試しください。' });
                         return;
                     }
                     const data = await res.json();
+                    // 残りわずか（30分未満）になったら1回だけ知らせる
+                    if (typeof data.remainingMin === 'number' && data.remainingMin < 30 && !lowQuotaNoticedRef.current) {
+                        lowQuotaNoticedRef.current = true;
+                        addFlow({ kind: 'notice', text: `ℹ️ 今月の翻訳モードは残り約${Math.round(data.remainingMin)}分です（上限 ${data.capMin}分）。上限に達すると翻訳だけ止まります` });
+                    }
                     const japanese = String(data.japanese ?? '').trim();
                     const original = String(data.original ?? '').trim();
                     if (!japanese) return;
@@ -803,14 +821,16 @@ export default function LiveLessonPage() {
                 const recorder = new MediaRecorder(displayStreamRef.current, { mimeType });
                 translationRecorderRef.current = recorder;
                 let shouldSend = false;
+                const startedAt = performance.now();   // 1切れの長さを測る（月の上限の数え方・2026-09-23）
                 cutRecorderRef.current = (send: boolean) => {
                     shouldSend = send;
                     if (recorder.state === 'recording') recorder.stop();
                 };
                 recorder.ondataavailable = (e: BlobEvent) => {
                     if (!shouldSend || e.data.size < 500) return;
+                    const durationMs = performance.now() - startedAt;
                     // 順番を守って1つずつ送る（結合の判定が直前の結果に依存するため）
-                    sendChainRef.current = sendChainRef.current.then(() => sendChunk(e.data)).catch(() => {});
+                    sendChainRef.current = sendChainRef.current.then(() => sendChunk(e.data, durationMs)).catch(() => {});
                 };
                 recorder.onstop = () => {
                     // stopTranslationMode 経由の停止（ref がnull化 or 差し替え済み）なら再起動しない
@@ -827,7 +847,9 @@ export default function LiveLessonPage() {
             analyser.fftSize = 2048;
             source.connect(analyser);
             const samples = new Float32Array(analyser.fftSize);
-            const segmenter = new SpeechSegmenter(performance.now());
+            // 区切りの「間」の長さ（既定0.7秒）。環境変数で 2秒 などに変えて、1回ごとの費用と訳の遅れを比べる（2026-09-23・原価を下げる方法1の試験用）
+            const silenceMs = Number(process.env.NEXT_PUBLIC_SEGMENT_SILENCE_MS) || 700;
+            const segmenter = new SpeechSegmenter(performance.now(), { silenceMs });
             let fallbackLastCut = performance.now();
             vadTimerRef.current = setInterval(() => {
                 const now = performance.now();
@@ -859,11 +881,11 @@ export default function LiveLessonPage() {
 
             audioTrack.onended = () => stopTranslationMode();
 
-            // 閉じ忘れ対策：連続90分で自動停止（STT課金が一晩中続く事故を防ぐ）
+            // 閉じ忘れ対策：連続70分で自動停止（STT課金が一晩中続く事故を防ぐ。2026-09-23 かずき決定で90分→70分）
             translationTimerRef.current = setTimeout(() => {
                 stopTranslationMode();
-                addFlow({ kind: 'notice', text: '⏰ 連続90分が経過したため翻訳を自動停止しました。続ける場合はもう一度「翻訳を始める」を押してください。' });
-            }, 90 * 60 * 1000);
+                addFlow({ kind: 'notice', text: '⏰ 連続70分が経過したため翻訳を自動停止しました。続ける場合はもう一度「翻訳を始める」を押してください。' });
+            }, 70 * 60 * 1000);
         } catch (err) {
             // ユーザーがキャンセル or 権限拒否 → コンソールエラーを出さない
             if (err instanceof DOMException && err.name === 'NotAllowedError') return;
@@ -1041,9 +1063,12 @@ export default function LiveLessonPage() {
         { name: '教材', href: '/materials', Icon: BookOpen },
         { name: '設定', href: '/settings', Icon: Settings },
     ];
+    // 絵は料金プランに入れない（2026-09-23 かずき決定・案B＝絵0）。環境変数 NEXT_PUBLIC_ILLUST_ENABLED=1 のときだけボタンを出す
+    // （追加パックで売るときに戻せるよう、機能は残す）
+    const ILLUST_ENABLED = process.env.NEXT_PUBLIC_ILLUST_ENABLED === '1';
     const ASK_BUTTONS = [
-        { key: 'illust', title: '絵で見せる', hint: 'いまの内容を1枚の絵に', Icon: ImageIcon, tile: 'bg-[#ede8fa] text-[#6b5ca5] group-hover:bg-[#6b5ca5]',
-          busy: illustBusy, disabled: illustBusy, onClick: generateIllustration, tip: 'いまの会話と課に合う絵を約5秒で作る。文字まできれいな版は、できた絵の下のボタンで頼める' },
+        ...(ILLUST_ENABLED ? [{ key: 'illust', title: '絵で見せる', hint: 'いまの内容を1枚の絵に', Icon: ImageIcon, tile: 'bg-[#ede8fa] text-[#6b5ca5] group-hover:bg-[#6b5ca5]',
+          busy: illustBusy, disabled: illustBusy, onClick: generateIllustration, tip: 'いまの会話と課に合う絵を約5秒で作る。文字まできれいな版は、できた絵の下のボタンで頼める' }] : []),
         { key: 'examples', title: '例文', hint: MATERIAL_MODES.examples.hint, Icon: BookOpen, tile: 'bg-[#dff1ea] text-[#2a6f5a] group-hover:bg-[#2a6f5a]',
           busy: materialBusy === 'examples', disabled: materialBusy !== null, onClick: () => makeMaterial('examples'), tip: MATERIAL_MODES.examples.hint },
         { key: 'exercises', title: '練習問題', hint: MATERIAL_MODES.exercises.hint, Icon: PencilLine, tile: 'bg-[#efe9f8] text-[#55488a] group-hover:bg-[#55488a]',
@@ -1166,6 +1191,20 @@ export default function LiveLessonPage() {
                         >
                             <span className="text-[15px] font-medium">ASTAのヒント</span>
                             <span className={`w-9 h-5 rounded-full flex items-center p-0.5 transition-colors ${showHints ? 'bg-[#6b5ca5] justify-end' : 'bg-[#cfc6ea] justify-start'}`}>
+                                <span className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                            </span>
+                        </button>
+
+                        {/* 生徒への訳：オン＝先生の言葉の吹き出しに母語の訳を添える。日本語が分かる生徒（N3以上など）ならオフ */}
+                        <button
+                            onClick={() => setTranslateTeacher(v => !v)}
+                            role="switch"
+                            aria-checked={translateTeacher}
+                            title={translateTeacher ? '押すと先生の言葉の訳をやめる（日本語が分かる生徒のとき）' : '押すと先生の言葉に母語の訳を添える'}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#e4ddf0] bg-white text-[#3a3350] whitespace-nowrap"
+                        >
+                            <span className="text-[15px] font-medium">生徒への訳</span>
+                            <span className={`w-9 h-5 rounded-full flex items-center p-0.5 transition-colors ${translateTeacher ? 'bg-[#6b5ca5] justify-end' : 'bg-[#cfc6ea] justify-start'}`}>
                                 <span className="w-4 h-4 bg-white rounded-full shadow-sm" />
                             </span>
                         </button>
