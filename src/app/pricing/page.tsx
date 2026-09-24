@@ -2,11 +2,12 @@
 
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Check, Loader2, Mail } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
+import { ContactButton } from '@/components/contact-dialog';
 import {
     PLAN_TIERS, PLAN_TIER_KEYS, tierPriceLabel, tierPerLessonLabel, ALL_TIER_PRICES_SET,
     TRIAL_DAYS, TRIAL_TRANSLATION_MINUTES, PACK_SENTENCE, PACK_PRICE_JPY, PACK_PRICE_LABEL, PACK_MINUTES, PACK_VALID_DAYS,
-    BUSINESS_CONTACT_EMAIL, type PlanTier,
+    type PlanTier,
 } from '@/lib/pricing';
 
 // useSearchParams を使うため静的プリレンダリングを無効化
@@ -65,9 +66,9 @@ function buildGroups(): Group[] {
             { name: '自分の教材・みんなの教材', sub: '作った教材を保存・共有', cells: all4 },
         ] },
         { title: '上限とお支払い', rows: [
-            { name: '翻訳モードが上限に達したら', cells: { span: '翻訳モードだけ止まります（毎月1日に戻る）。ヒント・例文・記録はそのまま' } },
+            { name: '翻訳モードが上限に達したら', cells: { span: '翻訳モードだけ止まります（毎月1日にリセット）。ヒント・例文・記録はそのまま' } },
             { name: '追加パック', sub: `翻訳＋${PACK_MINUTES}分（${PACK_VALID_DAYS}日間有効）`, cells: [NO, pack, pack, pack] },
-            { name: 'プランの変更', cells: { span: 'いつでも変更できます。上げた分の差額は日割り。無料お試し中の変更は、お試しをそのまま続けられます' } },
+            { name: 'プランの変更', cells: { span: 'いつでも変更できます。上げた分の差額は日割りになります。無料お試し中の変更は、お試しをそのまま続けられます' } },
             { name: 'お支払い', cells: { span: 'クレジットカード・毎月自動更新・日割りの返金なし' } },
         ] },
     ];
@@ -78,10 +79,10 @@ const FAQ: { q: string; a: string }[] = [
     { q: '上限に達したらどうなりますか？', a: `翻訳モードだけ止まり、授業は続けられます。ヒント・例文・記録・学習計画はそのまま使えます。残りが30分を切ると画面でお知らせします。翌月1日に元に戻ります。急ぎなら追加パック（＋${PACK_MINUTES}分）を買い足せます。` },
     { q: 'プランの目安の「生徒◯人」を超えたら？', a: '生徒の登録に上限はありません。目安は「毎回60分、翻訳モードをつけっぱなし」でも足りる人数です。実際は生徒が話す時間だけ数えるので、目安より多い生徒でも上限に届かないことがほとんどです。' },
     { q: `${TRIAL_DAYS}日間の無料お試しで何ができますか？`, a: `選んだプランのすべての機能を使えます。翻訳モードは${TRIAL_DAYS}日間で${TRIAL_TRANSLATION_MINUTES}分まで（30分の授業なら6回分）。${TRIAL_DAYS + 1}日目に最初の課金が始まります。${TRIAL_DAYS}日以内に解約すれば料金はかかりません。` },
-    { q: 'プランの変更・解約はどこでできますか？', a: '設定の「プラン」から、いつでもできます。上のプランに変えると、その日から使えて差額は日割りです。解約は、その課金期間の末日までは使えます。' },
+    { q: 'プランの変更・解約はどこでできますか？', a: '設定の「プラン」から、いつでもできます。上のプランに変えると、その日から使えて、差額は日割りになります。解約は、その課金期間の末日までは使えます。' },
     { q: 'Zoom のアプリを使っていますが、翻訳モードは使えますか？', a: '翻訳モードは Chrome のタブの音声を聞く仕組みです。Zoom や Google Meet を Chrome のブラウザで開いてください。Zoom のパソコン用アプリでは生徒の声を拾えません。Preply はブラウザなのでそのまま使えます。' },
-    { q: 'プロより多く使いたい・画像生成を使いたい', a: `個別にご相談ください。生徒の人数・週の授業数・使いたい機能を添えて、${BUSINESS_CONTACT_EMAIL} までご連絡ください。` },
-    { q: '領収書はもらえますか？', a: 'はい。設定の「プラン」にある支払いの窓口から、毎月の領収書をいつでも表示・保存できます。経費の記録にそのままお使いいただけます。※ 適格請求書（インボイス）の登録番号は記載されません。' },
+    { q: 'プロより多く使いたい・画像生成を使いたい', a: 'このページの「個別に相談する」ボタンから、生徒の人数・週の授業数・使いたい機能をお送りください。内容を確認して、メールでご連絡します。' },
+    { q: '領収書はもらえますか？', a: 'はい。お支払いのたびに、領収書がメールで届きます。設定の「プラン」にある支払いの窓口からも、過去の領収書をいつでも表示・保存できます。経費の記録にそのままお使いいただけます。※ 適格請求書（インボイス）の登録番号は記載されません。' },
 ];
 
 /** 「。」で改行して描く（かずき指示 2026-09-24） */
@@ -190,11 +191,9 @@ function PricingContent() {
                 </section>
 
                 {/* プロ以上の量・画像生成の相談 */}
-                <section className="mt-[18px] bg-white border border-[#e4ddf0] rounded-[22px] px-6 py-4 flex flex-wrap gap-3 items-center justify-between">
+                <section id="contact" className="mt-[18px] bg-white border border-[#e4ddf0] rounded-[22px] px-6 py-4 flex flex-wrap gap-3 items-center justify-between">
                     <p className="font-bold">プロプラン以上の使用量が欲しい方、画像生成機能を使用したい方は個別でご相談ください。</p>
-                    <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-[14px] bg-[#efe9ff] font-bold text-[14px] select-all">
-                        <Mail size={15} className="text-[#6b5ca5]" />{BUSINESS_CONTACT_EMAIL}
-                    </span>
+                    <ContactButton />
                 </section>
 
                 {/* 比べる表 */}
