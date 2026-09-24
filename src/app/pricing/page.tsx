@@ -38,7 +38,7 @@ type Row = { name: string; sub?: string; cells: (React.ReactNode | string)[] | {
 type Group = { title: string; rows: Row[] };
 
 function buildGroups(): Group[] {
-    const minutes = (t: PlanTier) => <b>月{PLAN_TIERS[t].translationMinutes.toLocaleString('ja-JP')}分</b>;
+    const minutes = (t: PlanTier) => <b>{PLAN_TIERS[t].translationMinutes.toLocaleString('ja-JP')}分/月</b>;
     const students = (t: PlanTier) => <>上限なし<span className="block text-[12px] text-[#6f6884]">目安{PLAN_TIERS[t].students}人</span></>;
     const all4 = [OK, OK, OK, OK];
     const pack = PACK_PRICE_JPY === null ? '準備中' : `${PACK_PRICE_LABEL} / 回`;
@@ -168,7 +168,7 @@ function PricingContent() {
                                     {perLesson ? <>授業1回あたり <b className="text-[#3a3350]">約{perLesson}</b><span className="block text-[12px]">（生徒{t.students}人・週1回の場合）</span></> : '料金は準備中です'}
                                 </p>
                                 <div className="bg-[#f0ebf8] rounded-[14px] px-3.5 py-3 mb-4">
-                                    <b className="block text-[15px]">翻訳モード 月{t.translationMinutes.toLocaleString('ja-JP')}分まで</b>
+                                    <b className="block text-[15px]">翻訳モード {t.translationMinutes.toLocaleString('ja-JP')}分/月まで</b>
                                     <small className="block text-[#6f6884] text-[12px] leading-snug mt-0.5">生徒{t.students}人が毎回60分使っても足りる量</small>
                                 </div>
                                 <button
@@ -204,7 +204,7 @@ function PricingContent() {
                 <section className="mt-16">
                     <h2 className="text-[26px] font-black text-center mb-1.5">プランを比べる</h2>
                     <p className="text-center text-[#6f6884] mb-6">上限に達しても、止まるのは翻訳モードだけ。<br />ほかの機能はそのまま使えます。</p>
-                    <div className="overflow-auto max-h-[70vh] border border-[#e4ddf0] rounded-[18px] bg-white">
+                    <div className="overflow-auto max-h-[70vh] border border-[#e4ddf0] rounded-[18px] bg-white [color-scheme:light] [scrollbar-width:thin] [scrollbar-color:#cfc6ea_transparent]">
                         <table className="w-full min-w-[720px] text-[14px] border-collapse">
                             <thead>
                                 <tr>

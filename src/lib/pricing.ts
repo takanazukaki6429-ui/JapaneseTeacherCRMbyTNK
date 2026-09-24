@@ -87,7 +87,7 @@ export const PACK_SENTENCE: string = PACK_PRICE_JPY === null
 
 /** 3段の料金の一文（規約 第5条・特商法の「販売価格」で使う）。1つでも未設定なら準備中 */
 export const PLAN_PRICE_SENTENCE: string = ALL_TIER_PRICES_SET
-    ? PLAN_TIER_KEYS.map(t => `${PLAN_TIERS[t].label}プラン 月額 ${tierPriceLabel(t)}（翻訳モード 月${PLAN_TIERS[t].translationMinutes.toLocaleString('ja-JP')}分まで）`).join('／') + '（いずれも消費税込み）'
+    ? PLAN_TIER_KEYS.map(t => `${PLAN_TIERS[t].label}プラン 月額 ${tierPriceLabel(t)}（翻訳モード ${PLAN_TIERS[t].translationMinutes.toLocaleString('ja-JP')}分/月まで）`).join('／') + '（いずれも消費税込み）'
     : '料金は準備中です（確定次第、事前にご案内します）';
 
 /** 規約・特商法表記の施行日。課金開始に合わせて更新する */
