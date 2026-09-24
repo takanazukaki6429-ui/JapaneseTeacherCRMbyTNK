@@ -97,7 +97,8 @@ function Lines({ text }: { text: string }) {
 function PricingContent() {
     const searchParams = useSearchParams();
     const canceled = searchParams.get('canceled') === '1';
-    const lapsed = searchParams.get('lapsed') === '1';   // 解約した先生が「見るだけ」で使えない画面を開いたとき（2026-09-25 案B）
+    const lapsed = searchParams.get('lapsed') === '1';
+    const draft = searchParams.get('draft') === '1';     // 協議用に共有するとき（?draft=1）は「料金案（協議中）」と出す（2026-09-25）   // 解約した先生が「見るだけ」で使えない画面を開いたとき（2026-09-25 案B）
     const [loading, setLoading] = useState<PlanTier | null>(null);
     const [error, setError] = useState('');
     const groups = buildGroups();
@@ -125,6 +126,12 @@ function PricingContent() {
             <div className="max-w-[1100px] mx-auto">
                 {/* 見出し */}
                 <header className="text-center pt-14 pb-7">
+                    {draft && (
+                        <>
+                            <span className="inline-block mb-3 px-3.5 py-1 rounded-full bg-[#fdf6e7] text-[#8a6d1f] text-[13px] font-bold tracking-wide">料金案（協議中）</span>
+                            <p className="-mt-1 mb-3 text-[12px] text-[#8a6d1f]">金額・内容は、協議のうえで変わることがあります。</p>
+                        </>
+                    )}
                     <p className="text-xs font-black tracking-[0.2em] text-[#6b5ca5] mb-2">日本語教師のためのASTA</p>
                     <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-3">料金プラン</h1>
                     <p className="text-[#6f6884] max-w-[36em] mx-auto">
