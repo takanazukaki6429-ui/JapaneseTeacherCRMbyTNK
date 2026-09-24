@@ -221,6 +221,15 @@ export default function LoginPage() {
                             }
                         </button>
                     </form>
+
+                    {/* まだ登録していない先生も料金を見られるように（2026-09-24 かずき指示） */}
+                    <p className="mt-6 text-center text-[12px] text-[#6f6884]">
+                        <a href="/pricing" className="font-bold text-[#6b5ca5] underline">料金プランを見る</a>
+                        <span className="mx-2">・</span>
+                        <a href="/legal/terms" target="_blank" className="underline hover:text-[#6b5ca5]">利用規約</a>
+                        <span className="mx-2">・</span>
+                        <a href="/legal/terms#tokusho" target="_blank" className="underline hover:text-[#6b5ca5]">特定商取引法に基づく表記</a>
+                    </p>
                 </div>
             </div>
         </div>

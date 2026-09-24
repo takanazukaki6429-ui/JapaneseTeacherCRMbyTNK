@@ -150,7 +150,7 @@ function BillingContent() {
                         使った時間 <b>{Math.round(quota.usedMin)}分</b> ／ 上限 <b>{quota.capMin.toLocaleString('ja-JP')}分</b>
                         {quota.packMin > 0 && <span className="text-xs text-[#484550]">（プラン{quota.planCapMin.toLocaleString('ja-JP')}分＋追加パック{quota.packMin}分）</span>}
                     </p>
-                    <p className="text-xs text-[#484550]">上限に達すると翻訳モードだけ止まります。ほかの機能はそのまま使えます。上限は毎月1日に戻ります。</p>
+                    <p className="text-xs text-[#484550]">上限に達すると翻訳モードだけ止まります。ほかの機能はそのまま使えます。上限は毎月1日にリセットされます。</p>
 
                     {PACK_PRICE_JPY !== null && isActive && (
                         <div className="pt-2 border-t border-[#f0ebf8]">
@@ -187,14 +187,31 @@ function BillingContent() {
                 </div>
             )}
 
-            {!isActive && !info?.is_free && (
+            {!isActive && !info?.is_free ? (
                 <a
                     href="/pricing"
                     className="block w-full text-center py-3.5 bg-[#6b5ca5] text-white font-bold rounded-2xl hover:scale-[1.02] transition-transform shadow-[0_4px_24px_rgba(107,92,165,0.25)]"
                 >
                     プランに加入する
                 </a>
+            ) : (
+                // 契約中・無料の先生も、ほかのプランを見比べられるように（2026-09-24 かずき指示）
+                <a
+                    href="/pricing"
+                    className="block w-full text-center py-3.5 bg-white text-[#3a3350] font-bold rounded-2xl border border-[#e4ddf0] hover:bg-[#f6f3fb] transition-colors"
+                >
+                    料金プランを比べる
+                </a>
             )}
+
+            {/* 規約と特商法の表記への入口（購入の前に見つけやすい場所に置く・2026-09-24） */}
+            <p className="text-center text-[12px] text-[#6f6884]">
+                <a href="/legal/terms" className="underline hover:text-[#6b5ca5]">利用規約</a>
+                <span className="mx-2">・</span>
+                <a href="/legal/terms#tokusho" className="underline hover:text-[#6b5ca5]">特定商取引法に基づく表記</a>
+                <span className="mx-2">・</span>
+                <a href="/legal/privacy" className="underline hover:text-[#6b5ca5]">プライバシーポリシー</a>
+            </p>
         </div>
     );
 }

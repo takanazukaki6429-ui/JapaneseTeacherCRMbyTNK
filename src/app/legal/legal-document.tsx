@@ -96,7 +96,7 @@ export function LegalDocument({ markdown }: { markdown: string }) {
         }
         if (line.startsWith('# ')) {
             blocks.push(
-                <h1 key={i} className="text-xl font-bold text-[#3a3350] mt-8 mb-3 first:mt-0">
+                <h1 key={i} id={line.slice(2) === '特定商取引法に基づく表記' ? 'tokusho' : undefined} className="text-xl font-bold text-[#3a3350] mt-8 mb-3 first:mt-0 scroll-mt-6">
                     {line.slice(2)}
                 </h1>
             );
