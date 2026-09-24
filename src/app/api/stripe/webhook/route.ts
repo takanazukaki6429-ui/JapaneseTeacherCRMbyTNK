@@ -52,7 +52,17 @@ export async function POST(req: NextRequest) {
         switch (event.type) {
             case 'customer.subscription.created':
             case 'customer.subscription.updated': {
-                const subscription = event.data.object as Stripe.Subscription;
+                // 通知の中身ではなく「今の契約」を Stripe に問い合わせて使う（2026-09-24）。
+                // 失敗した古い通知を Stripe が後から再送すると、新しい状態（プロ・有効）を古い状態（レギュラー・お試し中）で
+                // 上書きしていた（ブランチ環境のテストで実際に起きた：09:28 にプロへ変更 → 10:16 に 09:15 の作成通知が再送）。
+                // 今の契約を取り直せば、届く順番に関係なく最後は正しい状態に落ち着く
+                const notified = event.data.object as Stripe.Subscription;
+                let subscription = notified;
+                try {
+                    subscription = await getStripe().subscriptions.retrieve(notified.id);
+                } catch (err) {
+                    console.error('[webhook] subscription retrieve failed, using event payload:', err instanceof Error ? err.message : err);
+                }
                 customerId = subscription.customer as string;
                 const status = subscription.status; // active | trialing | canceled | past_due 等
 
