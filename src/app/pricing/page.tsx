@@ -6,7 +6,7 @@ import { Check, Loader2 } from 'lucide-react';
 import { ContactButton } from '@/components/contact-dialog';
 import {
     PLAN_TIERS, PLAN_TIER_KEYS, tierPriceLabel, tierPerLessonLabel, ALL_TIER_PRICES_SET,
-    TRIAL_DAYS, TRIAL_TRANSLATION_MINUTES, PACK_SENTENCE, PACK_PRICE_JPY, PACK_PRICE_LABEL, PACK_MINUTES, PACK_VALID_DAYS,
+    TRIAL_DAYS, TRIAL_TRANSLATION_MINUTES, PACK_PRICE_JPY, PACK_PRICE_LABEL, PACK_MINUTES, PACK_VALID_DAYS,
     type PlanTier,
 } from '@/lib/pricing';
 
@@ -66,28 +66,31 @@ function buildGroups(): Group[] {
             { name: '自分の教材・みんなの教材', sub: '作った教材を保存・共有', cells: all4 },
         ] },
         { title: '上限とお支払い', rows: [
-            { name: '翻訳モードが上限に達したら', cells: { span: '翻訳モードだけ止まります（毎月1日にリセット）。ヒント・例文・記録はそのまま' } },
+            { name: '翻訳モードが上限に達したら', cells: { span: '翻訳モードだけ止まります（毎月1日にリセット）。\nヒント・例文・記録はそのまま使えます' } },
             { name: '追加パック', sub: `翻訳＋${PACK_MINUTES}分（${PACK_VALID_DAYS}日間有効）`, cells: [NO, pack, pack, pack] },
-            { name: 'プランの変更', cells: { span: 'いつでも変更できます。上げた分の差額は日割りになります。無料お試し中の変更は、お試しをそのまま続けられます' } },
+            { name: 'プランの変更', cells: { span: 'いつでも変更できます。\n上げた分の差額は日割りになります。\n無料お試し中に変えても、お試しは続きます' } },
             { name: 'お支払い', cells: { span: 'クレジットカード・毎月自動更新・日割りの返金なし' } },
         ] },
     ];
 }
 
 const FAQ: { q: string; a: string }[] = [
-    { q: '翻訳モードの「分」はどう数えますか？', a: '翻訳モードをオンにしている間の、生徒が話している時間だけを数えます。生徒が黙っている間は数えません。60分の授業で生徒が20分話せば、20分です。' },
-    { q: '上限に達したらどうなりますか？', a: `翻訳モードだけ止まり、授業は続けられます。ヒント・例文・記録・学習計画はそのまま使えます。残りが30分を切ると画面でお知らせします。翌月1日に元に戻ります。急ぎなら追加パック（＋${PACK_MINUTES}分）を買い足せます。` },
-    { q: 'プランの目安の「生徒◯人」を超えたら？', a: '生徒の登録に上限はありません。目安は「毎回60分、翻訳モードをつけっぱなし」でも足りる人数です。実際は生徒が話す時間だけ数えるので、目安より多い生徒でも上限に届かないことがほとんどです。' },
-    { q: `${TRIAL_DAYS}日間の無料お試しで何ができますか？`, a: `選んだプランのすべての機能を使えます。翻訳モードは${TRIAL_DAYS}日間で${TRIAL_TRANSLATION_MINUTES}分まで（30分の授業なら6回分）。${TRIAL_DAYS + 1}日目に最初の課金が始まります。${TRIAL_DAYS}日以内に解約すれば料金はかかりません。` },
-    { q: 'プランの変更・解約はどこでできますか？', a: '設定の「プラン」から、いつでもできます。上のプランに変えると、その日から使えて、差額は日割りになります。解約は、その課金期間の末日までは使えます。' },
-    { q: 'Zoom のアプリを使っていますが、翻訳モードは使えますか？', a: '翻訳モードは Chrome のタブの音声を聞く仕組みです。Zoom や Google Meet を Chrome のブラウザで開いてください。Zoom のパソコン用アプリでは生徒の声を拾えません。Preply はブラウザなのでそのまま使えます。' },
-    { q: 'プロより多く使いたい・画像生成を使いたい', a: 'このページの「個別に相談する」ボタンから、生徒の人数・週の授業数・使いたい機能をお送りください。内容を確認して、メールでご連絡します。' },
-    { q: '領収書はもらえますか？', a: 'はい。お支払いのたびに、領収書がメールで届きます。設定の「プラン」にある支払いの窓口からも、過去の領収書をいつでも表示・保存できます。経費の記録にそのままお使いいただけます。※ 適格請求書（インボイス）の登録番号は記載されません。' },
+    { q: '翻訳モードの「分」はどう数えますか？', a: '翻訳モードをオンにしている間の、\n生徒が話している時間だけを数えます。\n生徒が黙っている間は数えません。\n例：60分の授業で生徒が20分話したら、20分です。' },
+    { q: '上限に達したらどうなりますか？', a: `翻訳モードだけが止まります。\n授業はそのまま続けられます。\nヒント・例文・記録・学習計画も使えます。\n残りが30分を切ると、画面でお知らせします。\n上限は毎月1日にリセットされます。\n急ぐときは、\n追加パック（＋${PACK_MINUTES}分）を買い足せます。` },
+    { q: 'プランの目安の「生徒◯人」を超えたら？', a: '生徒の登録に上限はありません。\n目安は「毎回60分つけっぱなし」でも\n足りる人数です。\n実際は、生徒が話す時間だけを数えます。\nそのため目安より多い生徒でも、\n上限に届くことはほとんどありません。' },
+    { q: `${TRIAL_DAYS}日間の無料お試しで何ができますか？`, a: `選んだプランの機能を、すべて使えます。\n翻訳モードは${TRIAL_DAYS}日間で${TRIAL_TRANSLATION_MINUTES}分まで。\n（30分の授業なら6回分）\n${TRIAL_DAYS + 1}日目に、最初の課金が始まります。\n${TRIAL_DAYS}日以内に解約すれば、料金はかかりません。` },
+    { q: 'プランの変更・解約はどこでできますか？', a: '設定の「プラン」から、いつでもできます。\n上のプランに変えると、その日から使えます。\n差額は日割りになります。\n解約した後も、\nその課金期間の末日までは使えます。' },
+    { q: 'Zoom のアプリを使っていますが、翻訳モードは使えますか？', a: '翻訳モードは、\nChrome のタブの音声を聞く仕組みです。\nZoom や Google Meet は、\nChrome のブラウザで開いてください。\nZoom のパソコン用アプリでは、\n生徒の声を拾えません。\nPreply はブラウザなので、そのまま使えます。' },
+    { q: 'プロより多く使いたい・画像生成を使いたい', a: 'このページの「個別に相談する」ボタンから、\n生徒の人数・週の授業数・使いたい機能を\nお送りください。\n内容を確認して、メールでご連絡します。' },
+    { q: '領収書はもらえますか？', a: 'はい。\nお支払いのたびに、領収書がメールで届きます。\n設定の「プラン」にある支払いの窓口からも、\n過去の領収書をいつでも表示・保存できます。\n経費の記録に、そのままお使いいただけます。\n※ 適格請求書（インボイス）の\n登録番号は記載されません。' },
 ];
 
-/** 「。」で改行して描く（かずき指示 2026-09-24） */
-function Br({ text }: { text: string }) {
-    const parts = text.split(/(?<=。)(?=[^）」\s])/);
+/**
+ * 文を「意味の区切り」で改行して描く（かずき指示 2026-09-24）。文の中の \n が改行の位置。
+ * 1行はスマホの幅（約20字）に収まる長さにしてある。それでも折れる所は、文節で折る（word-break: auto-phrase）
+ */
+function Lines({ text }: { text: string }) {
+    const parts = text.split('\n');
     return <>{parts.map((t, i) => <span key={i}>{t}{i < parts.length - 1 && <br />}</span>)}</>;
 }
 
@@ -117,17 +120,18 @@ function PricingContent() {
     };
 
     return (
-        <div className="min-h-screen bg-[#f5f2fa] text-[#3a3350] px-4 pb-16">
+        <div className="min-h-screen bg-[#f5f2fa] text-[#3a3350] px-4 pb-16 [word-break:auto-phrase] [text-wrap:pretty]">
             <div className="max-w-[1100px] mx-auto">
                 {/* 見出し */}
                 <header className="text-center pt-14 pb-7">
                     <p className="text-xs font-black tracking-[0.2em] text-[#6b5ca5] mb-2">日本語教師のためのASTA</p>
                     <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-3">料金プラン</h1>
                     <p className="text-[#6f6884] max-w-[36em] mx-auto">
-                        機能は3つとも同じです。<br />違いは、生徒の声をその場で日本語にする「翻訳モード」を月に使える時間。<br />生徒の数に上限はありません。
+                        機能は3つとも同じです。<br />違いは「翻訳モード」を月に使える時間。<br />翻訳モードは、生徒の声をその場で日本語にします。<br />生徒の数に上限はありません。
                     </p>
                     <div className="flex justify-center gap-2.5 flex-wrap mt-5">
-                        <span className="inline-flex items-center gap-2 bg-[#dff1ea] text-[#2a6f5a] font-bold text-[13px] px-3.5 py-1.5 rounded-full">✓ どのプランも最初の{TRIAL_DAYS}日間は無料（翻訳モードは{TRIAL_TRANSLATION_MINUTES}分まで）</span>
+                        <span className="inline-flex items-center gap-2 bg-[#dff1ea] text-[#2a6f5a] font-bold text-[13px] px-3.5 py-1.5 rounded-full">✓ どのプランも最初の{TRIAL_DAYS}日間は無料</span>
+                        <span className="inline-flex items-center gap-2 bg-[#dff1ea] text-[#2a6f5a] font-bold text-[13px] px-3.5 py-1.5 rounded-full">✓ お試し中の翻訳モードは{TRIAL_TRANSLATION_MINUTES}分まで</span>
                         <span className="inline-flex items-center gap-2 bg-[#dff1ea] text-[#2a6f5a] font-bold text-[13px] px-3.5 py-1.5 rounded-full">✓ いつでも解約できます</span>
                     </div>
                 </header>
@@ -192,7 +196,7 @@ function PricingContent() {
 
                 {/* プロ以上の量・画像生成の相談 */}
                 <section id="contact" className="mt-[18px] bg-white border border-[#e4ddf0] rounded-[22px] px-6 py-4 flex flex-wrap gap-3 items-center justify-between">
-                    <p className="font-bold">プロプラン以上の使用量が欲しい方、画像生成機能を使用したい方は個別でご相談ください。</p>
+                    <p className="font-bold leading-relaxed">プロプラン以上の使用量が欲しい方、<br />画像生成機能を使用したい方は、<br />個別でご相談ください。</p>
                     <ContactButton />
                 </section>
 
@@ -229,15 +233,15 @@ function PricingContent() {
                                 <summary className="cursor-pointer font-bold py-3.5 list-none flex justify-between gap-3 items-center [&::-webkit-details-marker]:hidden">
                                     {q}<span className="text-[#6b5ca5] font-black group-open:hidden">＋</span><span className="text-[#6b5ca5] font-black hidden group-open:inline">−</span>
                                 </summary>
-                                <p className="text-[#6f6884] pb-3.5 leading-relaxed"><Br text={a} /></p>
+                                <p className="text-[#6f6884] pb-3.5 leading-relaxed"><Lines text={a} /></p>
                             </details>
                         ))}
                     </div>
                     <div className="max-w-[760px] mx-auto mt-10 text-[12px] text-[#6f6884] leading-relaxed">
                         <p>※ 金額はすべて消費税込みです。</p>
-                        <p>※ 「授業1回あたり」は、月額 ÷（生徒の目安の人数 × 月4.3回）で計算した参考値です。</p>
-                        <p>※ 翻訳モードの分数は、生徒が話している時間を1秒単位で数えます。</p>
-                        {PACK_PRICE_JPY !== null && <p>※ {PACK_SENTENCE}。</p>}
+                        <p>※ 「授業1回あたり」は参考値です。<br />　月額 ÷（目安の人数 × 月4.3回）で計算しています。</p>
+                        <p>※ 翻訳モードは、生徒が話している時間を<br />　1秒単位で数えます。</p>
+                        {PACK_PRICE_JPY !== null && <p>※ 追加パック：翻訳モード{PACK_MINUTES}分・{PACK_VALID_DAYS}日間有効<br />　1回 {PACK_PRICE_LABEL}（消費税込み）</p>}
                         <p>※ <a href="/legal/terms" className="text-[#6b5ca5] underline">利用規約・特定商取引法に基づく表記</a>もご覧ください。</p>
                     </div>
                 </section>
@@ -259,11 +263,11 @@ function GroupRows({ group }: { group: Group }) {
                 <tr key={r.name}>
                     <td className="px-4 py-3 border-b border-[#e4ddf0] align-top whitespace-nowrap">
                         {r.name}
-                        {r.sub && <span className="block text-[#6f6884] text-[12px] leading-snug"><Br text={r.sub} /></span>}
+                        {r.sub && <span className="block text-[#6f6884] text-[12px] leading-snug"><Lines text={r.sub} /></span>}
                     </td>
                     {Array.isArray(r.cells)
                         ? r.cells.map((c, i) => <td key={i} className="px-4 py-3 border-b border-[#e4ddf0] text-center align-top tabular-nums">{c}</td>)
-                        : <td colSpan={4} className="px-4 py-3 border-b border-[#e4ddf0] text-center align-top"><Br text={r.cells.span} /></td>}
+                        : <td colSpan={4} className="px-4 py-3 border-b border-[#e4ddf0] text-center align-top"><Lines text={r.cells.span} /></td>}
                 </tr>
             ))}
         </>
