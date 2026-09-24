@@ -97,6 +97,7 @@ function Lines({ text }: { text: string }) {
 function PricingContent() {
     const searchParams = useSearchParams();
     const canceled = searchParams.get('canceled') === '1';
+    const lapsed = searchParams.get('lapsed') === '1';   // 解約した先生が「見るだけ」で使えない画面を開いたとき（2026-09-25 案B）
     const [loading, setLoading] = useState<PlanTier | null>(null);
     const [error, setError] = useState('');
     const groups = buildGroups();
@@ -142,6 +143,13 @@ function PricingContent() {
                     </p>
                 </header>
 
+                {lapsed && (
+                    <div className="mb-6 px-5 py-3 bg-[#fdf6e7] border border-[#ecd9a8] rounded-2xl text-sm text-[#8a6d1f] text-center leading-relaxed">
+                        プランが有効ではないため、この画面は使えません。<br />
+                        これまでの記録は、生徒の1枚から見られます。<br />
+                        続きから使うには、下のプランからお申込みください。
+                    </div>
+                )}
                 {canceled && (
                     <div className="mb-6 px-5 py-3 bg-amber-50 border border-amber-200 rounded-2xl text-sm text-amber-700 text-center">
                         決済がキャンセルされました。いつでも再開できます。

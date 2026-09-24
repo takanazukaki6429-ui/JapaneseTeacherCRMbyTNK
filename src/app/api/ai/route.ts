@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AI_USAGE_TYPE, OUTSIDE_GENERAL_BUCKET } from '@/lib/ai-usage';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@/lib/supabase/server';
-import { hasPaidPlan, PAID_ONLY_MESSAGE } from '@/lib/plan-access-server';
+import { hasPaidPlan, PAID_ONLY_MESSAGE, canUseApp, READ_ONLY_MESSAGE } from '@/lib/plan-access-server';
 import { z } from 'zod';
 
 const profileAnalysisSchema = z.object({
@@ -55,6 +55,11 @@ export async function POST(req: NextRequest) {
                 { error: 'Unauthorized', details: 'Authentication required' },
                 { status: 401 }
             );
+        }
+
+        // 解約した先生は「見るだけ」（2026-09-25 案B）。AI は使えない
+        if (!(await canUseApp(supabase, user.id))) {
+            return NextResponse.json({ error: READ_ONLY_MESSAGE, original: '', japanese: '' }, { status: 402 });
         }
 
         // 有料の機能（2026-09-24 案A）：生徒の1枚の「本日の授業指針」（授業前の1枚の自動作成＝prep_sheet）は契約中の先生だけ

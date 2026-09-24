@@ -93,9 +93,12 @@ export async function middleware(request: NextRequest) {
     }
 
     // 5. Subscription check（門番・2026-09-24 かずき「これでOK」で動かす）
-    // 通すのは：無料の印がある既存の先生（is_free）・無料お試し中・契約中。それ以外の先生は料金の画面へ案内する。
+    // 通すのは：無料の印がある既存の先生（is_free）・無料お試し中・契約中。
+    // 解約した先生・支払いが止まった先生は「見るだけ」（2026-09-25 かずき決定・案B）：
+    //   ホーム・生徒の一覧・生徒の1枚（過去の記録）・学習計画・設定は見られる。新しい記録・ライブ授業・準備・AI は使えない
+    // 一度も申し込んでいない先生（inactive）は、料金の画面へ案内する。
     // 案内しない画面：公開の画面（料金・規約・ログインなど）・登録の途中・プランの画面・API（APIは各処理が自分で判定する）
-    // 判定は1時間だけ覚えておく（毎回保管庫に聞かない）。覚える値は利用者ごとに変える（同じ端末で別の人がログインしても効かないように）
+    // 判定は利用者ごとに1時間だけ覚える（毎回保管庫に聞かない）
     const isSubscriptionExempt =
         isPublicRoute ||
         request.nextUrl.pathname.startsWith('/onboarding') ||
@@ -103,8 +106,12 @@ export async function middleware(request: NextRequest) {
         request.nextUrl.pathname.startsWith('/api/');
 
     if (user && !isSubscriptionExempt && request.method === 'GET') {
-        const subscriptionActive = request.cookies.get('subscription_active')?.value === user.id;
-        if (!subscriptionActive) {
+        const path = request.nextUrl.pathname;
+        const remembered = request.cookies.get('asta_access')?.value;   // 「利用者ID:full」または「利用者ID:read」
+        let mode: 'full' | 'read' | 'none' | null =
+            remembered === `${user.id}:full` ? 'full' : remembered === `${user.id}:read` ? 'read' : null;
+
+        if (!mode) {
             const { data: settings } = await supabase
                 .from('user_settings')
                 .select('is_free, subscription_status')
@@ -112,15 +119,26 @@ export async function middleware(request: NextRequest) {
                 .maybeSingle();
             const isFree = settings?.is_free ?? false;
             const status = settings?.subscription_status ?? 'inactive';
-            const isActive = isFree || status === 'active' || status === 'trialing';
-            if (!isActive) {
-                return redirectKeepingCookies('/pricing');
+            mode = isFree || status === 'active' || status === 'trialing'
+                ? 'full'
+                : ['canceled', 'past_due', 'unpaid', 'incomplete_expired'].includes(status) ? 'read' : 'none';
+            if (mode !== 'none') {
+                response.cookies.set('asta_access', `${user.id}:${mode}`, { maxAge: 3600, httpOnly: true, sameSite: 'lax' });
             }
-            response.cookies.set('subscription_active', user.id, {
-                maxAge: 3600,
-                httpOnly: true,
-                sameSite: 'lax',
-            });
+        }
+
+        if (mode === 'none') {
+            return redirectKeepingCookies('/pricing');
+        }
+        if (mode === 'read') {
+            const readOnlyOk =
+                path === '/' ||
+                path === '/students' ||
+                (/^\/students\/[^/]+(\/roadmap)?$/.test(path) && !path.startsWith('/students/new')) ||
+                path.startsWith('/settings');
+            if (!readOnlyOk) {
+                return redirectKeepingCookies('/pricing?lapsed=1');
+            }
         }
     }
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { canUseApp, READ_ONLY_MESSAGE } from '@/lib/plan-access-server';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;   // 画像生成は最大60秒近くかかるため既定より長くとる
@@ -124,6 +125,11 @@ export async function POST(req: NextRequest) {
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         if (!user || authError) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // 解約した先生は「見るだけ」（2026-09-25 案B）。AI は使えない
+        if (!(await canUseApp(supabase, user.id))) {
+            return NextResponse.json({ error: READ_ONLY_MESSAGE, original: '', japanese: '' }, { status: 402 });
         }
 
         const body = await req.json();

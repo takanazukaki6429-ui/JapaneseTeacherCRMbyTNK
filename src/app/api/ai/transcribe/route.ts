@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSpeechClient, getTranslateClient, getProjectId, isGoogleCloudConfigured } from '@/lib/google-cloud';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@/lib/supabase/server';
+import { canUseApp, READ_ONLY_MESSAGE } from '@/lib/plan-access-server';
 import { notifyAdmin } from '@/lib/notify';
 import { getTranslationQuota } from '@/lib/translation-quota';
 
@@ -248,6 +249,11 @@ export async function POST(req: NextRequest) {
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         if (!user || authError) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // 解約した先生は「見るだけ」（2026-09-25 案B）。AI は使えない
+        if (!(await canUseApp(supabase, user.id))) {
+            return NextResponse.json({ error: READ_ONLY_MESSAGE, original: '', japanese: '' }, { status: 402 });
         }
 
         // レート制限（transcribe専用カウント。/api/ai・/api/ai/stream の上限とは分離）
