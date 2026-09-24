@@ -57,10 +57,15 @@ export async function POST(req: NextRequest) {
             });
             customerId = customer.id;
 
-            // stripe_customer_id を保存
-            await supabase
+            // stripe_customer_id を保存。失敗したら止める（2026-09-24：保管庫に列が無く、ここが黙って失敗して
+            // Stripe の通知が先生の行を見つけられなかった。保存できないまま決済に進ませない）
+            const { error: saveError } = await supabase
                 .from('user_settings')
                 .upsert({ user_id: user.id, stripe_customer_id: customerId });
+            if (saveError) {
+                console.error('[checkout] stripe_customer_id save failed:', saveError.message);
+                return NextResponse.json({ error: `お客様情報を保存できませんでした（${saveError.message}）。管理者にお知らせください` }, { status: 500 });
+            }
         }
 
         // Checkout セッション作成
