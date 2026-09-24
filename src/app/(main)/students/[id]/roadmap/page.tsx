@@ -4,6 +4,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ArrowLeft, Loader2, Map, Target, BookText, CheckCircle2, Sparkles, BookOpen, Clock, Send, Copy, Check, ExternalLink, Pencil } from 'lucide-react';
+import { usePlanAccess } from '@/lib/plan-access';
+import { PaidLock } from '@/components/paid-lock';
 import Link from 'next/link';
 import { Student } from '@/types/student';
 import { Card, CardContent } from '@/components/ui/card';
@@ -33,7 +35,8 @@ export default function StudentRoadmapPage() {
     const [loading, setLoading] = useState(true);
     const [student, setStudent] = useState<Student | null>(null);
 
-    // 生徒に渡すリンク
+    // 生徒に渡すリンク（有料の機能・2026-09-24 案A）
+    const access = usePlanAccess();
     const [shareOpen, setShareOpen] = useState(false);
     const [shareLocale, setShareLocale] = useState<Locale>('en');
     const [shareUrl, setShareUrl] = useState('');
@@ -171,7 +174,8 @@ export default function StudentRoadmapPage() {
                         >
                             <Pencil size={12} /> 目標・期間・目的を直す
                         </button>
-                        {hasRoadmap && (
+                        {hasRoadmap && !access.loading && !access.paid && <PaidLock compact feature="生徒に渡す" />}
+                        {hasRoadmap && access.paid && (
                             <button
                                 type="button"
                                 onClick={() => setShareOpen(v => !v)}

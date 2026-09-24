@@ -9,6 +9,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Lightbulb, Loader2 } from 'lucide-react';
 import { generatePrepSheet, loadPrepSheet, prepStamp, type PrepSource } from '@/lib/prep-sheet';
+import { usePlanAccess } from '@/lib/plan-access';
 
 type Props = {
     studentId: string;
@@ -23,11 +24,14 @@ export function PrepGuideBand({ studentId, source, fallbackMistakes }: Props) {
     const [guide, setGuide] = useState<string | null>(null);
     const [working, setWorking] = useState(false);
 
+    // ASTAが1枚を作るのは有料の機能（2026-09-24 案A）。無料の先生は、今までどおり前回のつまずきからの決まった文
+    const access = usePlanAccess();
     const srcRef = useRef(source);
     srcRef.current = source;
     const stamp = prepStamp(source.lastDate);
 
     useEffect(() => {
+        if (access.loading) return;
         let alive = true;
         const run = async () => {
             await Promise.resolve();
@@ -37,6 +41,7 @@ export function PrepGuideBand({ studentId, source, fallbackMistakes }: Props) {
                 return;
             }
             if (!srcRef.current.lastDate) return;   // 授業記録がまだ無いときは作らない
+            if (!access.paid) return;
             if (alive) setWorking(true);
             try {
                 const sheet = await generatePrepSheet(studentId, stamp, srcRef.current, 'prep_sheet');
@@ -49,7 +54,7 @@ export function PrepGuideBand({ studentId, source, fallbackMistakes }: Props) {
         };
         run();
         return () => { alive = false; };
-    }, [studentId, stamp]);
+    }, [studentId, stamp, access.loading, access.paid]);
 
     const fallback = fallbackMistakes
         ? `前回のつまずき「${shorten(fallbackMistakes, 40)}」を5分ほど復習してから、今日の課に入ると理解が深まります。`

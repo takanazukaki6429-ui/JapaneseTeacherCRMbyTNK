@@ -9,6 +9,8 @@ import { LessonChatLogsViewer } from '@/components/lessons/lesson-chat-logs-view
 import { LessonFlowViewer } from '@/components/lessons/lesson-flow-viewer';
 import { linkLessonFlow } from '@/lib/lesson-flow';
 import { nationalityToLangCode } from '@/lib/nationality';
+import { usePlanAccess } from '@/lib/plan-access';
+import { PaidLock } from '@/components/paid-lock';
 
 /**
  * 日時を、日本時間の「YYYY-MM-DDTHH:mm」（日時の入力欄の形）にする。
@@ -33,6 +35,8 @@ export default function NewLessonPage() {
     const [fetchingScheduled, setFetchingScheduled] = useState(false);
     const [isAutoFilling, setIsAutoFilling] = useState(false);
     const [autoFilled, setAutoFilled] = useState(false);
+    // 有料の機能（2026-09-24 案A）：宿題・次回の目標までの下書き／授業中に作った物の見返し
+    const access = usePlanAccess();
     const [fetchingEdit, setFetchingEdit] = useState(!!editLessonId);
     const [formData, setFormData] = useState({
         date: jstForInput(new Date()), // 日本時間の今（日時の入力欄の形 YYYY-MM-DDTHH:mm）
@@ -110,7 +114,7 @@ export default function NewLessonPage() {
     // ASTAがそこから、学習トピック・語彙・つまずき・宿題・次回の目標の下書きを作る。
     // （以前は先生のマイクの文字起こしの先頭1500字だけから、トピック・語彙・つまずきの3欄を作っていた）
     useEffect(() => {
-        if (!studentId || editLessonId) return;
+        if (!studentId || editLessonId || access.loading) return;
         const sessionKey = `live_session_${studentId}`;
         const saved = localStorage.getItem(sessionKey);
         if (!saved) return;
@@ -156,8 +160,9 @@ ${clipped}`,
                             topics: result.topics || prev.topics,
                             vocabulary: result.vocabulary || prev.vocabulary,
                             mistakes: result.mistakes || prev.mistakes,
-                            homework: result.homework || prev.homework,
-                            next_goal: result.next_goal || prev.next_goal,
+                            // 宿題・次回の目標の下書きは有料の機能（今の本番と同じ3欄＝トピック・語彙・つまずきは無料）
+                            homework: access.paid ? (result.homework || prev.homework) : prev.homework,
+                            next_goal: access.paid ? (result.next_goal || prev.next_goal) : prev.next_goal,
                         }));
                         setAutoFilled(true);
                     } catch { /* 読めない答えは使わない */ }
@@ -165,7 +170,7 @@ ${clipped}`,
                 .catch(err => console.error('Record draft error:', err))
                 .finally(() => setIsAutoFilling(false));
         } catch { /* ignore */ }
-    }, [studentId]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [studentId, access.loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -384,6 +389,9 @@ ${clipped}`,
                     ASTAが授業の会話（先生と生徒）から記録を下書きしました。内容を確かめて、直してから保存してください。
                 </div>
             )}
+            {autoFilled && !access.paid && (
+                <PaidLock compact feature="宿題・次回の目標の下書き" />
+            )}
             <div className="flex items-center gap-3">
                 <Link href={`/students/${studentId}`} className="p-2 text-[#484550] hover:text-[#3a3350] hover:bg-[#f0ebf8] rounded-full transition-colors">
                     <ArrowLeft size={18} />
@@ -551,7 +559,9 @@ ${clipped}`,
                 {/* 授業中にASTAが作った物（絵・例文・練習問題・言い換え・質問と答え）2026-09-20
                     保存した記録を開き直したときは lessonId（editLessonId）、
                     予定から始めた授業のときは scheduledLessonId で引く */}
-                <LessonFlowViewer studentId={studentId} lessonId={editLessonId ?? scheduledLessonId} />
+                {access.paid
+                    ? <LessonFlowViewer studentId={studentId} lessonId={editLessonId ?? scheduledLessonId} />
+                    : !access.loading && <PaidLock feature="この授業でASTAが作った物の見返し" className="mt-6" />}
             </form>
         </div>
     );

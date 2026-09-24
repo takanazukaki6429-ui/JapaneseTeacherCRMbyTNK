@@ -12,6 +12,8 @@
  *   - StudentLessonFlows    … 生徒の1枚（過去の授業の一覧・2026-09-20 かずき指示で追加）
  */
 import { useEffect, useState } from 'react';
+import { usePlanAccess } from '@/lib/plan-access';
+import { PaidLock } from '@/components/paid-lock';
 import { ChevronDown, ChevronRight, Loader2, History } from 'lucide-react';
 import { loadLessonFlow, listLessonFlows, signImagePaths, type LessonFlowRow } from '@/lib/lesson-flow';
 import { LessonFlowItems, dateOf } from './lesson-flow-items';
@@ -99,6 +101,14 @@ export function LessonFlowViewer({ studentId, lessonId }: { studentId: string; l
 // ② 生徒の1枚：過去の授業の中身を見る（一覧）
 // ────────────────────────────────────────────
 export function StudentLessonFlows({ studentId }: { studentId: string }) {
+    // 過去の授業の中身の見返しは有料の機能（2026-09-24 案A）
+    const access = usePlanAccess();
+    if (access.loading) return null;
+    if (!access.paid) return <PaidLock feature="過去の授業でASTAが作った物の見返し" />;
+    return <StudentLessonFlowsInner studentId={studentId} />;
+}
+
+function StudentLessonFlowsInner({ studentId }: { studentId: string }) {
     const [rows, setRows] = useState<LessonFlowRow[]>([]);
     const [signed, setSigned] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { generatePrepSheet, loadPrepSheet, prepStamp, type PrepSheet, type PrepSource } from '@/lib/prep-sheet';
+import { usePlanAccess } from '@/lib/plan-access';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -137,9 +138,11 @@ export default function LessonPreparePage() {
     }, [prepSource, studentId]);
 
     // 開いた時点でできている状態にする：保存済みがあれば読み、無ければ自動で作る（自動は1回だけ）
+    // 開いた時点で自動で作るのは有料の機能（2026-09-24 案A）。無料の先生は、保存済みを読むだけ（ボタンで作るのは今までどおり）
+    const access = usePlanAccess();
     const autoTried = useRef(false);
     useEffect(() => {
-        if (!studentId || !student || autoTried.current) return;
+        if (!studentId || !student || autoTried.current || access.loading) return;
         autoTried.current = true;
         const run = async () => {
             const src = prepSource();
@@ -147,10 +150,11 @@ export default function LessonPreparePage() {
             const cached = loadPrepSheet(studentId, prepStamp(src.lastDate));
             if (cached) { setPrepContent(cached); return; }
             if (!src.lastDate) return;   // 授業記録がまだ無いときは作らない
+            if (!access.paid) return;    // 無料の先生は自動では作らない
             await handleGeneratePlan();
         };
         run();
-    }, [studentId, student, prepSource, handleGeneratePlan]);
+    }, [studentId, student, prepSource, handleGeneratePlan, access.loading, access.paid]);
 
     /* ── 教材生成（新機能） ──────────────────────── */
     const handleGenerateMaterial = async () => {

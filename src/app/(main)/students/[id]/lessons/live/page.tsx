@@ -5,6 +5,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { SpeechSegmenter, rmsOf } from '@/lib/speech-segmenter';
 import { saveLessonFlow } from '@/lib/lesson-flow';
+import { usePlanAccess } from '@/lib/plan-access';
 import {
     ArrowLeft, Send, Sparkles, Mic, Loader2, Download, ChevronDown, Headphones, Lightbulb, Image as ImageIcon, BookOpen, PencilLine, Repeat2, Home, GraduationCap, Settings,
 } from 'lucide-react';
@@ -231,6 +232,7 @@ export default function LiveLessonPage() {
     const translateTeacherRef = useRef(true);
     useEffect(() => { translateTeacherRef.current = translateTeacher; }, [translateTeacher]);
     const lowQuotaNoticedRef = useRef(false);   // 翻訳モードの残りわずかの案内を1回だけ出す
+    const access = usePlanAccess();             // 授業中に作った物の保存は有料の機能（2026-09-24 案A）
 
 
     // ── 生徒向け翻訳（先生 → 生徒方向）──
@@ -1032,7 +1034,7 @@ export default function LiveLessonPage() {
         // 授業の流れ（絵・例文・練習問題・言い換え・質問と答え・発話）をまるごと保存する
         // （2026-09-20 かずき決定・案3フル版）。直す前はどれも保存されず画面を閉じると消えていた。
         // 保存に失敗しても授業の終わりは止めない（記録の画面へは必ず進む）
-        if (flow.length > 0) {
+        if (flow.length > 0 && access.paid) {
             setSavingFlow(true);
             try {
                 await saveLessonFlow({

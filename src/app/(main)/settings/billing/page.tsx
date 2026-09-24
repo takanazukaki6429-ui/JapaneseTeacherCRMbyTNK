@@ -155,7 +155,7 @@ function BillingContent() {
                     </p>
                     <p className="text-xs text-[#484550]">上限に達すると翻訳モードだけ止まります。ほかの機能はそのまま使えます。上限は毎月1日にリセットされます。</p>
 
-                    {PACK_PRICE_JPY !== null && isActive && (
+                    {PACK_PRICE_JPY !== null && subscribed && (
                         <div className="pt-2 border-t border-[#f0ebf8]">
                             <p className="text-xs text-[#484550] mb-2">{PACK_SENTENCE}。買った日から{PACK_VALID_DAYS}日の間、今月の上限に足されます。</p>
                             {packError && <p className="text-xs text-red-600 mb-2">{packError}</p>}

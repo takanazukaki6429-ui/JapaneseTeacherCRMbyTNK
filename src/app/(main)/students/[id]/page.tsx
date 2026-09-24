@@ -22,6 +22,7 @@ import { LessonScheduler } from '@/components/lessons/lesson-scheduler';
 import { AIProfileAnalyzer } from '@/components/students/ai-profile-analyzer';
 import { StudentMaterials } from '@/components/students/student-materials';
 import { AskAstaStudent } from '@/components/students/ask-asta-student';
+import { ShareButton } from '@/components/students/share-button';
 import { getLevelDescription } from '@/lib/roadmap/generators';
 import { ja } from '@/app/(main)/roadmap/ja';
 
@@ -169,9 +170,7 @@ export default async function StudentDetailPage({ params }: Props) {
                                 <p className="text-xs font-bold text-[#484550]">目標</p>
                                 <p className="text-[20px] leading-[30px] font-bold text-[#6b5ca5] mt-0.5">{plan.months}か月で{plan.target}へ</p>
                                 {/* Eの良い所：生徒に渡すを大きいボタンに */}
-                                <Link prefetch href={`/students/${student.id}/roadmap?share=1`} className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#6b5ca5] hover:bg-[#5a4c94] text-white text-[15px] font-bold shadow-sm transition-colors">
-                                    <Send size={16} /> 生徒に渡す
-                                </Link>
+                                <ShareButton studentId={student.id} />
                                 <div className="mt-3 flex items-center justify-between text-sm">
                                     <Link prefetch href={`/students/${student.id}/roadmap`} className="text-[#6b5ca5] font-semibold hover:underline flex items-center gap-1"><Map size={14} /> ロードマップを見る</Link>
                                     <Link prefetch href={`/students/${student.id}/initial-hearing`} className="text-[#484550] hover:text-[#6b5ca5] hover:underline">体験レッスンを見る</Link>

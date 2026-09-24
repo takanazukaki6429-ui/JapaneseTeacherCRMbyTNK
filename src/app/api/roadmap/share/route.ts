@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { locales, type Locale } from '@/app/(main)/roadmap/i18n';
 import { roadmapInputFromStudent } from '@/lib/roadmap/from-student';
+import { hasPaidPlan, PAID_ONLY_MESSAGE } from '@/lib/plan-access-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,11 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
         return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 });
+    }
+
+    // 生徒に渡すリンクは有料の機能（2026-09-24 案A）
+    if (!(await hasPaidPlan(supabase, user.id))) {
+        return NextResponse.json({ error: PAID_ONLY_MESSAGE }, { status: 402 });
     }
 
     const body = await req.json().catch(() => null);

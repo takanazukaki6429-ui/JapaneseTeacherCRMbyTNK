@@ -28,8 +28,8 @@ export async function POST(req: NextRequest) {
             .eq('user_id', user.id)
             .single();
 
-        // 契約中（無料お試しを含む）か、既存の無料の先生だけが買える
-        const canBuy = settings?.is_free || settings?.subscription_status === 'active' || settings?.subscription_status === 'trialing';
+        // 契約中（無料お試しを含む）の先生だけが買える（追加パックは有料の機能・2026-09-24 案A）
+        const canBuy = settings?.subscription_status === 'active' || settings?.subscription_status === 'trialing';
         if (!canBuy) {
             return NextResponse.json({ error: 'プランに加入してから追加パックを購入できます' }, { status: 400 });
         }

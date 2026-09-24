@@ -92,39 +92,37 @@ export async function middleware(request: NextRequest) {
         }
     }
 
-    // 5. Subscription check
-    // TODO: 有償化タイミングでコメントアウトを解除する
-    // （解除前にStripeアカウント設定・環境変数・DBマイグレーション適用が必要 → stripe-setup.md 参照）
-    //
-    // const isSubscriptionExempt =
-    //     isPublicRoute ||
-    //     request.nextUrl.pathname.startsWith('/onboarding') ||
-    //     request.nextUrl.pathname.startsWith('/pricing') ||
-    //     request.nextUrl.pathname.startsWith('/settings/billing') ||
-    //     request.nextUrl.pathname.startsWith('/api/') ||
-    //     request.nextUrl.pathname.startsWith('/login');
-    //
-    // if (user && !isSubscriptionExempt && request.method === 'GET') {
-    //     const subscriptionActive = request.cookies.get('subscription_active')?.value;
-    //     if (!subscriptionActive) {
-    //         const { data: settings } = await supabase
-    //             .from('user_settings')
-    //             .select('is_free, subscription_status')
-    //             .eq('user_id', user.id)
-    //             .single();
-    //         const isFree = settings?.is_free ?? false;
-    //         const status = settings?.subscription_status ?? 'inactive';
-    //         const isActive = isFree || status === 'active' || status === 'trialing';
-    //         if (!isActive) {
-    //             return NextResponse.redirect(new URL('/pricing', request.url));
-    //         }
-    //         response.cookies.set('subscription_active', 'true', {
-    //             maxAge: 3600,
-    //             httpOnly: true,
-    //             sameSite: 'lax',
-    //         });
-    //     }
-    // }
+    // 5. Subscription check（門番・2026-09-24 かずき「これでOK」で動かす）
+    // 通すのは：無料の印がある既存の先生（is_free）・無料お試し中・契約中。それ以外の先生は料金の画面へ案内する。
+    // 案内しない画面：公開の画面（料金・規約・ログインなど）・登録の途中・プランの画面・API（APIは各処理が自分で判定する）
+    // 判定は1時間だけ覚えておく（毎回保管庫に聞かない）。覚える値は利用者ごとに変える（同じ端末で別の人がログインしても効かないように）
+    const isSubscriptionExempt =
+        isPublicRoute ||
+        request.nextUrl.pathname.startsWith('/onboarding') ||
+        request.nextUrl.pathname.startsWith('/settings/billing') ||
+        request.nextUrl.pathname.startsWith('/api/');
+
+    if (user && !isSubscriptionExempt && request.method === 'GET') {
+        const subscriptionActive = request.cookies.get('subscription_active')?.value === user.id;
+        if (!subscriptionActive) {
+            const { data: settings } = await supabase
+                .from('user_settings')
+                .select('is_free, subscription_status')
+                .eq('user_id', user.id)
+                .maybeSingle();
+            const isFree = settings?.is_free ?? false;
+            const status = settings?.subscription_status ?? 'inactive';
+            const isActive = isFree || status === 'active' || status === 'trialing';
+            if (!isActive) {
+                return redirectKeepingCookies('/pricing');
+            }
+            response.cookies.set('subscription_active', user.id, {
+                maxAge: 3600,
+                httpOnly: true,
+                sameSite: 'lax',
+            });
+        }
+    }
 
     // Redirect to dashboard if logged in and trying to access login
     if (user && request.nextUrl.pathname.startsWith('/login')) {

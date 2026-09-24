@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AI_USAGE_TYPE, OUTSIDE_GENERAL_BUCKET } from '@/lib/ai-usage';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@/lib/supabase/server';
+import { hasPaidPlan, PAID_ONLY_MESSAGE } from '@/lib/plan-access-server';
 import { z } from 'zod';
 
 const profileAnalysisSchema = z.object({
@@ -54,6 +55,11 @@ export async function POST(req: NextRequest) {
                 { error: 'Unauthorized', details: 'Authentication required' },
                 { status: 401 }
             );
+        }
+
+        // 有料の機能（2026-09-24 案A）：生徒の1枚の「本日の授業指針」（授業前の1枚の自動作成＝prep_sheet）は契約中の先生だけ
+        if (type === 'prep_sheet' && !(await hasPaidPlan(supabase, user.id))) {
+            return NextResponse.json({ error: PAID_ONLY_MESSAGE }, { status: 402 });
         }
 
         // [Rate Limiting] 先生1人ごとに、直近1時間の利用回数で制限する。
