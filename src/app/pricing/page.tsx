@@ -78,7 +78,7 @@ const FAQ: { q: string; a: string }[] = [
     { q: '翻訳モードの「分」はどう数えますか？', a: '翻訳モードをオンにしている間の、\n生徒が話している時間だけを数えます。\n生徒が黙っている間は数えません。\n例：60分の授業で、\n生徒が20分話したら20分です。' },
     { q: '上限に達したらどうなりますか？', a: `翻訳モードだけが止まります。\n授業はそのまま続けられます。\nほかの機能も、そのまま使えます。\n残り30分になると、お知らせします。\n上限は毎月1日にリセットされます。\n急ぐときは、\n追加パック（＋${PACK_MINUTES}分）を買い足せます。` },
     { q: 'プランの目安の「生徒◯人」を超えたら？', a: '生徒の登録に上限はありません。\n目安は「毎回60分つけっぱなし」でも\n足りる人数です。\n実際は、生徒が話す時間だけを数えます。\nそのため目安より多い生徒でも、\n上限に届くことはほとんどありません。' },
-    { q: `${TRIAL_DAYS}日間の無料お試しで何ができますか？`, a: `選んだプランの機能を、すべて使えます。\n翻訳モードは${TRIAL_DAYS}日間で${TRIAL_TRANSLATION_MINUTES}分まで。\n（30分の授業なら6回分）\n${TRIAL_DAYS + 1}日目に、最初の課金が始まります。\n${TRIAL_DAYS}日以内に解約すれば、\n料金はかかりません。` },
+    { q: `${TRIAL_DAYS}日間の無料お試しで何ができますか？`, a: `選んだプランの機能を、すべて使えます。\n翻訳モードは${TRIAL_DAYS}日間で${TRIAL_TRANSLATION_MINUTES}分まで。\n（30分の授業なら6回分）\nお申込み時に、カードの登録が必要です。\n${TRIAL_DAYS + 1}日目に、最初の課金が始まります。\n${TRIAL_DAYS}日以内に解約すれば、\n料金はかかりません。\n無料お試しは、はじめての方が対象です。` },
     { q: 'プランの変更・解約はどこでできますか？', a: '設定の「プラン」でいつでもできます。\n上のプランに変えると、\nその日から使えます。\n差額は日割りになります。\n解約した後も、\nその課金期間の末日までは使えます。' },
     { q: 'Zoom のアプリを使っていますが、翻訳モードは使えますか？', a: '翻訳モードは、\nChrome のタブの音声を聞く仕組みです。\nZoom や Google Meet は、\nChrome のブラウザで開いてください。\nZoom のパソコン用アプリでは、\n生徒の声を拾えません。\nPreply はブラウザなので、\nそのまま使えます。' },
     { q: 'プロより多く使いたい・画像生成を使いたい', a: '「個別に相談する」ボタンから、\n生徒の人数・週の授業数・使いたい機能を\nお送りください。\n内容を確認して、メールでご連絡します。' },
@@ -134,6 +134,12 @@ function PricingContent() {
                         <span className="inline-flex items-center gap-2 bg-[#dff1ea] text-[#2a6f5a] font-bold text-[13px] px-3.5 py-1.5 rounded-full">✓ お試し中の翻訳モードは{TRIAL_TRANSLATION_MINUTES}分まで</span>
                         <span className="inline-flex items-center gap-2 bg-[#dff1ea] text-[#2a6f5a] font-bold text-[13px] px-3.5 py-1.5 rounded-full">✓ いつでも解約できます</span>
                     </div>
+                    {/* 無料お試しの前にカードの登録が要ることを先に伝える（2026-09-24 かずき決定） */}
+                    <p className="mt-3 text-[13px] text-[#6f6884]">
+                        お申込み時に、クレジットカードの登録が必要です。<br />
+                        {TRIAL_DAYS}日以内に解約すれば、料金はかかりません。<br />
+                        無料お試しは、はじめてお申込みの方が対象です。
+                    </p>
                 </header>
 
                 {canceled && (
@@ -156,7 +162,7 @@ function PricingContent() {
                                 key={tier}
                                 className={`relative bg-white rounded-[22px] p-6 flex flex-col border ${pop ? 'border-[#6b5ca5] shadow-[0_10px_40px_rgba(107,92,165,0.12)]' : 'border-[#e4ddf0]'}`}
                             >
-                                {pop && <span className="absolute -top-3 left-6 bg-[#6b5ca5] text-white text-xs font-bold px-3 py-1 rounded-full">いちばん選ばれています</span>}
+                                {pop && <span className="absolute -top-3 left-6 bg-[#6b5ca5] text-white text-xs font-bold px-3 py-1 rounded-full">おすすめ</span>}
                                 <h2 className="text-[22px] font-black mb-1">{t.label}</h2>
                                 <p className="text-[#6f6884] text-[13px] mb-3.5">目安：生徒{t.students}人前後<br />{CARD_WHO[tier]}</p>
                                 <div className="flex items-baseline gap-1.5 tabular-nums">

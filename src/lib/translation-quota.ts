@@ -5,7 +5,7 @@
  *   2026-09-23 以降は token_usage に音声のミリ秒を入れる（それより前の行はバイト数なので数えない）
  * - 上限に届いたら翻訳モードだけ止める。ヒント・例文・記録などはそのまま使える
  * - 上限は先生のプラン（user_settings.plan_tier）と状態で決まる：
- *     無料お試し（trialing）＝180分／既存の無料の先生（is_free）＝仮にライトと同じ／有料＝段ごとの分数
+ *     無料お試し（trialing）＝180分／既存の無料の先生（is_free）＝ライトと同じ（2026-09-24 決定）／有料＝段ごとの分数
  * - 月の区切りは日本時間の1日0時
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -47,12 +47,19 @@ export async function getTranslationQuota(supabase: SupabaseClient, userId: stri
 
     let tier: TranslationQuota['tier'] = 'light';
     let capMin = PLAN_TIERS.light.translationMinutes;
-    if (settings?.is_free) {
+    // 契約中（有料・お試し）を先に見る。既存の無料の先生が申し込んだ場合も、プランの上限になる（2026-09-24）
+    const status = settings?.subscription_status;
+    if (status === 'trialing') {
+        // 既存の無料の先生がお試しを始めても、無料の上限（ライトと同じ）より下げない
+        tier = 'trial';
+        capMin = settings?.is_free ? Math.max(TRIAL_TRANSLATION_MINUTES, FREE_LEGACY_TRANSLATION_MINUTES) : TRIAL_TRANSLATION_MINUTES;
+    } else if (status === 'active' && settings?.plan_tier && settings.plan_tier in PLAN_TIERS) {
+        tier = settings.plan_tier as PlanTier;
+        capMin = PLAN_TIERS[tier].translationMinutes;
+    } else if (settings?.is_free) {
+        // 既存の無料の先生：ライトと同じ（2026-09-24 かずき決定）
         tier = 'free';
         capMin = FREE_LEGACY_TRANSLATION_MINUTES;
-    } else if (settings?.subscription_status === 'trialing') {
-        tier = 'trial';
-        capMin = TRIAL_TRANSLATION_MINUTES;
     } else if (settings?.plan_tier && settings.plan_tier in PLAN_TIERS) {
         tier = settings.plan_tier as PlanTier;
         capMin = PLAN_TIERS[tier].translationMinutes;

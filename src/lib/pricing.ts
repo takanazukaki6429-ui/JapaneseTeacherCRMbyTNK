@@ -70,7 +70,7 @@ export const ALL_TIER_PRICES_SET = PLAN_TIER_KEYS.every(t => PLAN_TIERS[t].price
 
 /** 無料お試し（7日）の間の翻訳モードの上限（分）。2026-09-23 かずき決定 */
 export const TRIAL_TRANSLATION_MINUTES = 180;
-/** 既存の先生（is_free）の翻訳モードの月の上限（分）。⚠️ 仮の値＝ライトと同じ。数字はかずき未決（2026-09-22「翻訳と絵に月の上限」のみ決定） */
+/** 既存の先生（is_free）の翻訳モードの月の上限（分）。ライトと同じ（2026-09-24 かずき決定） */
 export const FREE_LEGACY_TRANSLATION_MINUTES = 2580;
 
 /**

@@ -88,9 +88,12 @@ function BillingContent() {
 
     const status = info?.subscription_status ?? 'inactive';
     const statusInfo = STATUS_LABEL[status] ?? STATUS_LABEL['inactive'];
-    const isActive = info?.is_free || status === 'active' || status === 'trialing';
+    const subscribed = status === 'active' || status === 'trialing';
+    const isActive = info?.is_free || subscribed;
     const tier = isPlanTier(info?.plan_tier) ? info.plan_tier : 'light';
-    const planLabel = info?.is_free
+    // 既存の無料の先生が申し込んだ場合は、申し込んだプランを出す（2026-09-24）
+    const legacyFreeOnly = !!info?.is_free && !subscribed;
+    const planLabel = legacyFreeOnly
         ? '無償プラン（招待）'
         : `${PLAN_TIERS[tier].label}プラン ${tierPriceLabel(tier)}/月`;
     const usedPct = quota && quota.capMin > 0 ? Math.min(100, Math.round(quota.usedMin / quota.capMin * 100)) : 0;
@@ -124,7 +127,7 @@ function BillingContent() {
                 <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-[#484550]">状態</span>
                     <span className={`text-xs font-bold px-3 py-1 rounded-full border ${statusInfo.color}`}>
-                        {info?.is_free ? '無償（永続）' : statusInfo.label}
+                        {legacyFreeOnly ? '無償（永続）' : statusInfo.label}
                     </span>
                 </div>
 
@@ -170,7 +173,7 @@ function BillingContent() {
             )}
 
             {/* Stripe Customer Portal（プランの変更・キャンセル・カード変更） */}
-            {info?.stripe_customer_id && !info?.is_free && (
+            {info?.stripe_customer_id && subscribed && (
                 <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] p-6">
                     <p className="text-sm font-bold text-[#3a3350] mb-1">プランの変更・支払い情報の管理</p>
                     <p className="text-xs text-[#484550] mb-4">

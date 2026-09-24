@@ -35,10 +35,7 @@ export async function POST(req: NextRequest) {
             .eq('user_id', user.id)
             .single();
 
-        // 無償ユーザーはCheckoutをスキップ
-        if (settings?.is_free) {
-            return NextResponse.json({ error: 'Free user — no checkout needed' }, { status: 400 });
-        }
+        // 既存の無料の先生（is_free）も申し込める（2026-09-24 かずき決定：新しい機能も使いたい人は同じ料金で課金）
 
         // 既にアクティブなサブスクがある場合はスキップ（段の変更は Stripe のポータルで行う）
         if (settings?.subscription_status === 'active' || settings?.subscription_status === 'trialing') {
@@ -68,6 +65,15 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        // 無料お試しは「初めて申し込む人」だけ（2026-09-24）。解約して申し込み直すと何度でも7日無料になっていた
+        let hadSubscription = false;
+        try {
+            const past = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 1 });
+            hadSubscription = past.data.length > 0;
+        } catch (err) {
+            console.error('[checkout] past subscription lookup failed:', err instanceof Error ? err.message : err);
+        }
+
         // Checkout セッション作成
         const session = await stripe.checkout.sessions.create({
             customer: customerId,
@@ -79,7 +85,7 @@ export async function POST(req: NextRequest) {
             locale: 'ja',
             subscription_data: {
                 // 無料期間（2026-09-22 かずき決定＝7日）。画面の表示と同じ値を使う（lib/pricing.ts）
-                trial_period_days: TRIAL_DAYS,
+                ...(hadSubscription ? {} : { trial_period_days: TRIAL_DAYS }),
                 metadata: { supabase_user_id: user.id, plan_tier: tier },
             },
         });
