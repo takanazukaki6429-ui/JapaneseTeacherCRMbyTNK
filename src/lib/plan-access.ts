@@ -43,3 +43,34 @@ export function usePlanAccess(): PlanAccess {
     }, []);
     return state;
 }
+
+/**
+ * 「見るだけ」か（2026-09-25 かずき決定・案B）。解約・支払いが止まった先生（無料の印なし）が true。
+ * その間は、書き換える操作（削除・直す・予定・ASTAに聞く・生徒の追加など）を隠す
+ */
+const LAPSED = ['canceled', 'past_due', 'unpaid', 'incomplete_expired'];
+let cachedReadOnly: Promise<boolean> | null = null;
+
+function fetchReadOnly(): Promise<boolean> {
+    if (!cachedReadOnly) {
+        cachedReadOnly = (async () => {
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return false;
+            const { data } = await supabase.from('user_settings').select('is_free, subscription_status').eq('user_id', user.id).maybeSingle();
+            const row = data as { is_free?: boolean; subscription_status?: string } | null;
+            return !!row && !row.is_free && LAPSED.includes(row.subscription_status ?? '');
+        })().catch(() => false);
+    }
+    return cachedReadOnly;
+}
+
+export function useReadOnly(): { loading: boolean; readOnly: boolean } {
+    const [state, setState] = useState({ loading: true, readOnly: false });
+    useEffect(() => {
+        let alive = true;
+        fetchReadOnly().then(readOnly => { if (alive) setState({ loading: false, readOnly }); });
+        return () => { alive = false; };
+    }, []);
+    return state;
+}

@@ -14,6 +14,7 @@ import { CalendarDays, ClipboardList, ListChecks, CalendarClock } from 'lucide-r
 import { createClient } from '@/lib/supabase/server';
 import { AddStudentInline } from '@/components/home/add-student-inline';
 import { AskAsta } from '@/components/home/ask-asta';
+import { FullOnly } from '@/components/full-only';
 
 export const revalidate = 0;
 
@@ -150,7 +151,7 @@ export default async function Home() {
                     <h1 className="text-[24px] leading-[36px] font-semibold text-[#3a3350] mt-1">{teacherName}、お疲れさまです</h1>
                 </header>
                 {/* 上：ASTAに聞く（授業の相談）。2026-09-12 かずき指示で最上段へ */}
-                <AskAsta />
+                <FullOnly><AskAsta /></FullOnly>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-10">
                     {/* 左：生徒の様子 */}
@@ -221,7 +222,7 @@ export default async function Home() {
                             )}
                         </div>
 
-                        <AddStudentInline openByDefault={total === 0} />
+                        <FullOnly><AddStudentInline openByDefault={total === 0} /></FullOnly>
                     </section>
 
                     {/* 右：ASTAからの声かけ（0件なら出さない） */}

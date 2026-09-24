@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { ArrowLeft, Loader2, Map, Target, BookText, CheckCircle2, Sparkles, BookOpen, Clock, Send, Copy, Check, ExternalLink, Pencil } from 'lucide-react';
 import { usePlanAccess } from '@/lib/plan-access';
 import { PaidLock } from '@/components/paid-lock';
+import { FullOnly } from '@/components/full-only';
 import Link from 'next/link';
 import { Student } from '@/types/student';
 import { Card, CardContent } from '@/components/ui/card';
@@ -167,6 +168,7 @@ export default function StudentRoadmapPage() {
                         </h1>
                     </div>
                     <div className="flex items-center gap-2">
+                        <FullOnly>
                         <button
                             type="button"
                             onClick={openEdit}
@@ -174,6 +176,7 @@ export default function StudentRoadmapPage() {
                         >
                             <Pencil size={12} /> 目標・期間・目的を直す
                         </button>
+                        </FullOnly>
                         {hasRoadmap && !access.loading && !access.paid && <PaidLock compact feature="生徒に渡す" />}
                         {hasRoadmap && access.paid && (
                             <button
@@ -184,12 +187,14 @@ export default function StudentRoadmapPage() {
                                 <Send size={12} /> 生徒に渡す
                             </button>
                         )}
+                        <FullOnly>
                         <Link
                             href={`/students/${studentId}/initial-hearing`}
                             className="text-xs font-bold text-[#6b5ca5] bg-[#efe9ff] hover:bg-[#e7deff] px-3 py-1.5 rounded-xl transition-colors"
                         >
                             再作成
                         </Link>
+                        </FullOnly>
                     </div>
                 </div>
             </div>

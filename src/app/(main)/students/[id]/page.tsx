@@ -23,6 +23,7 @@ import { AIProfileAnalyzer } from '@/components/students/ai-profile-analyzer';
 import { StudentMaterials } from '@/components/students/student-materials';
 import { AskAstaStudent } from '@/components/students/ask-asta-student';
 import { ShareButton } from '@/components/students/share-button';
+import { FullOnly } from '@/components/full-only';
 import { getLevelDescription } from '@/lib/roadmap/generators';
 import { ja } from '@/app/(main)/roadmap/ja';
 
@@ -86,10 +87,13 @@ export default async function StudentDetailPage({ params }: Props) {
                     <h1 className="text-[28px] leading-[40px] font-bold text-[#3a3350] tracking-wide">{student.name}さん</h1>
                     {student.nationality && <span className="text-xs font-semibold border border-[#d6cfe2] text-[#484550] px-2.5 py-0.5 rounded-full">{student.nationality}</span>}
                     {student.jlpt_level && <span className="text-xs font-semibold bg-[#dff1ea] text-[#2a6f5a] px-2.5 py-0.5 rounded-full">{student.jlpt_level}</span>}
-                    <Link prefetch href={`/students/${student.id}/edit`} title="生徒の情報を直す" className="p-2 text-[#484550] hover:text-[#6b5ca5] hover:bg-[#efe9ff] rounded-full transition-colors">
-                        <Pencil size={16} />
-                    </Link>
-                    <DeleteStudentButton id={student.id} />
+                    {/* 見るだけ（解約後・案B）の間は、直す・削除を隠す */}
+                    <FullOnly>
+                        <Link prefetch href={`/students/${student.id}/edit`} title="生徒の情報を直す" className="p-2 text-[#484550] hover:text-[#6b5ca5] hover:bg-[#efe9ff] rounded-full transition-colors">
+                            <Pencil size={16} />
+                        </Link>
+                        <DeleteStudentButton id={student.id} />
+                    </FullOnly>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
                     <Link prefetch href={`/students/${student.id}/lessons/live`} className="flex items-center gap-2 px-5 py-2.5 rounded-[10px] bg-[#6b5ca5] hover:bg-[#5a4c94] text-white text-[15px] font-bold shadow-sm transition-colors">
@@ -126,9 +130,11 @@ export default async function StudentDetailPage({ params }: Props) {
                     <section className={card}>
                         <div className="flex items-center justify-between pb-4 border-b border-[#efe9f8] mb-5">
                             <h2 className="text-[20px] leading-[30px] font-bold text-[#3a3350]">学習の現在地</h2>
-                            <Link prefetch href={`/students/${student.id}/edit`} className="text-xs text-[#484550] hover:text-[#6b5ca5] flex items-center gap-1 transition-colors">
-                                <Pencil size={12} /> 項目を直す
-                            </Link>
+                            <FullOnly>
+                                <Link prefetch href={`/students/${student.id}/edit`} className="text-xs text-[#484550] hover:text-[#6b5ca5] flex items-center gap-1 transition-colors">
+                                    <Pencil size={12} /> 項目を直す
+                                </Link>
+                            </FullOnly>
                         </div>
                         <div className="grid grid-cols-2 gap-y-5 gap-x-6">
                             <Field label="使用教材">{student.textbook || '未設定'}</Field>
@@ -186,9 +192,9 @@ export default async function StudentDetailPage({ params }: Props) {
                         )}
                     </section>
 
-                    <AskAstaStudent studentName={student.name} />
+                    <FullOnly><AskAstaStudent studentName={student.name} /></FullOnly>
 
-                    <LessonScheduler studentId={student.id} studentName={student.name} />
+                    <FullOnly><LessonScheduler studentId={student.id} studentName={student.name} /></FullOnly>
 
                     <StudentMaterials studentId={student.id} studentName={student.name} />
                 </div>

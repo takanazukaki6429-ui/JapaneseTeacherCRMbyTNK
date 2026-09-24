@@ -98,7 +98,7 @@ export async function middleware(request: NextRequest) {
     //   ホーム・生徒の一覧・生徒の1枚（過去の記録）・学習計画・設定は見られる。新しい記録・ライブ授業・準備・AI は使えない
     // 一度も申し込んでいない先生（inactive）は、料金の画面へ案内する。
     // 案内しない画面：公開の画面（料金・規約・ログインなど）・登録の途中・プランの画面・API（APIは各処理が自分で判定する）
-    // 判定は利用者ごとに1時間だけ覚える（毎回保管庫に聞かない）
+    // 判定は利用者ごとに5分だけ覚える（毎回保管庫に聞かない。解約・再開を5分以内に反映する・2026-09-25 1時間→5分）
     const isSubscriptionExempt =
         isPublicRoute ||
         request.nextUrl.pathname.startsWith('/onboarding') ||
@@ -123,7 +123,7 @@ export async function middleware(request: NextRequest) {
                 ? 'full'
                 : ['canceled', 'past_due', 'unpaid', 'incomplete_expired'].includes(status) ? 'read' : 'none';
             if (mode !== 'none') {
-                response.cookies.set('asta_access', `${user.id}:${mode}`, { maxAge: 3600, httpOnly: true, sameSite: 'lax' });
+                response.cookies.set('asta_access', `${user.id}:${mode}`, { maxAge: 300, httpOnly: true, sameSite: 'lax' });
             }
         }
 
