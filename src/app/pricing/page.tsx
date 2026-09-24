@@ -43,7 +43,7 @@ type Group = { title: string; rows: Row[] };
 
 function buildGroups(): Group[] {
     const minutes = (t: PlanTier) => <b>月{PLAN_TIERS[t].translationMinutes.toLocaleString('ja-JP')}分</b>;
-    const students = (t: PlanTier) => <>上限なし<span className="block text-[12px] text-[#6f6884]">めやす{PLAN_TIERS[t].students}人</span></>;
+    const students = (t: PlanTier) => <>上限なし<span className="block text-[12px] text-[#6f6884]">目安{PLAN_TIERS[t].students}人</span></>;
     const all4 = [OK, OK, OK, OK];
     const pack = PACK_PRICE_JPY === null ? '準備中' : `${PACK_PRICE_LABEL} / 回`;
     return [
@@ -73,7 +73,7 @@ function buildGroups(): Group[] {
             { name: '翻訳モードが上限に達したら', cells: { span: '翻訳モードだけ止まります（毎月1日に戻る）。ヒント・例文・記録はそのまま' } },
             { name: '追加パック', sub: `翻訳モード＋${PACK_MINUTES}分・買った日から${PACK_VALID_DAYS}日間`, cells: [NO, pack, pack, pack] },
             { name: 'プランの変更', cells: { span: 'いつでも。上げた分の差額は日割り。無料お試し中の変更は、お試しをそのまま続けられます' } },
-            { name: 'お支払い', cells: { span: 'クレジットカード（Stripe）・毎月自動更新・日割りの返金なし' } },
+            { name: 'お支払い', cells: { span: 'クレジットカード・毎月自動更新・日割りの返金なし' } },
         ] },
     ];
 }
@@ -88,6 +88,12 @@ const FAQ: { q: string; a: string }[] = [
     { q: '生徒が40人より多い、または教室で複数の先生が使いたい', a: `プロより大きい使い方は個別にご案内します。生徒の人数・週の授業数・翻訳モードを使うかの3点を添えて、${BUSINESS_CONTACT_EMAIL} へお問い合わせください。` },
     { q: '領収書・インボイスは出ますか？', a: 'お支払いごとに Stripe の領収書（メール）が届きます。適格請求書（インボイス）は発行できません。' },
 ];
+
+/** 「。」で改行して描く（かずき指示 2026-09-24） */
+function Br({ text }: { text: string }) {
+    const parts = text.split(/(?<=。)(?=[^）」\s])/);
+    return <>{parts.map((t, i) => <span key={i}>{t}{i < parts.length - 1 && <br />}</span>)}</>;
+}
 
 function PricingContent() {
     const searchParams = useSearchParams();
@@ -122,7 +128,7 @@ function PricingContent() {
                     <p className="text-xs font-black tracking-[0.2em] text-[#6b5ca5] mb-2">日本語教師のためのASTA</p>
                     <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-3">料金プラン</h1>
                     <p className="text-[#6f6884] max-w-[36em] mx-auto">
-                        機能は3つとも同じです。違いは、生徒の声をその場で日本語にする「翻訳モード」を月に使える時間だけ。生徒の数に上限はありません。
+                        機能は3つとも同じです。<br />違いは、生徒の声をその場で日本語にする「翻訳モード」を月に使える時間だけ。<br />生徒の数に上限はありません。
                     </p>
                     <div className="flex justify-center gap-2.5 flex-wrap mt-5">
                         <span className="inline-flex items-center gap-2 bg-[#dff1ea] text-[#2a6f5a] font-bold text-[13px] px-3.5 py-1.5 rounded-full">✓ どのプランも最初の{TRIAL_DAYS}日間は無料（翻訳モードは{TRIAL_TRANSLATION_MINUTES}分まで）</span>
@@ -152,7 +158,7 @@ function PricingContent() {
                             >
                                 {pop && <span className="absolute -top-3 left-6 bg-[#6b5ca5] text-white text-xs font-bold px-3 py-1 rounded-full">いちばん選ばれています</span>}
                                 <h2 className="text-[22px] font-black mb-1">{t.label}</h2>
-                                <p className="text-[#6f6884] text-[13px] mb-3.5 min-h-[2.6em]">{CARD_WHO[tier]}</p>
+                                <p className="text-[#6f6884] text-[13px] mb-3.5 min-h-[2.6em]"><Br text={CARD_WHO[tier]} /></p>
                                 <div className="flex items-baseline gap-1.5 tabular-nums">
                                     <b className="text-[38px] font-black tracking-tight">{tierPriceLabel(tier)}</b>
                                     <span className="text-[#6f6884] text-[13px]">/ 月（税込）</span>
@@ -168,7 +174,7 @@ function PricingContent() {
                                 <button
                                     onClick={() => handleCheckout(tier)}
                                     disabled={loading !== null || !ALL_TIER_PRICES_SET}
-                                    className={`w-full py-3 font-bold rounded-[14px] transition-transform hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2 ${pop ? 'bg-[#6b5ca5] text-white shadow-[0_4px_24px_rgba(107,92,165,0.30)]' : 'bg-[#efe9ff] text-[#3a3350]'}`}
+                                    className="w-full py-3 font-bold rounded-[14px] transition-transform hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2 bg-[#efe9ff] text-[#3a3350]"
                                 >
                                     {loading === tier ? <><Loader2 size={18} className="animate-spin" />決済ページへ移動中…</> : `${t.label}で始める`}
                                 </button>
@@ -202,7 +208,7 @@ function PricingContent() {
                 {/* 比べる表 */}
                 <section className="mt-16">
                     <h2 className="text-[26px] font-black text-center mb-1.5">プランを比べる</h2>
-                    <p className="text-center text-[#6f6884] mb-6">上限に達しても、止まるのは翻訳モードだけ。ほかの機能はそのまま使えます。</p>
+                    <p className="text-center text-[#6f6884] mb-6">上限に達しても、止まるのは翻訳モードだけ。<br />ほかの機能はそのまま使えます。</p>
                     <div className="overflow-x-auto border border-[#e4ddf0] rounded-[18px] bg-white">
                         <table className="w-full min-w-[720px] text-[14px] border-collapse">
                             <thead>
@@ -232,13 +238,15 @@ function PricingContent() {
                                 <summary className="cursor-pointer font-bold py-3.5 list-none flex justify-between gap-3 items-center [&::-webkit-details-marker]:hidden">
                                     {q}<span className="text-[#6b5ca5] font-black group-open:hidden">＋</span><span className="text-[#6b5ca5] font-black hidden group-open:inline">−</span>
                                 </summary>
-                                <p className="text-[#6f6884] pb-3.5 leading-relaxed">{a}</p>
+                                <p className="text-[#6f6884] pb-3.5 leading-relaxed"><Br text={a} /></p>
                             </details>
                         ))}
                     </div>
                     <div className="max-w-[760px] mx-auto mt-10 text-[12px] text-[#6f6884] leading-relaxed">
-                        <p>※ 金額はすべて消費税込みです。※ 「授業1回あたり」は、月額 ÷（生徒の目安の人数 × 月4.3回）で計算した参考値です。</p>
-                        <p>※ 翻訳モードの分数は、生徒が話している時間を1秒単位で数えます。{PACK_PRICE_JPY !== null && `※ ${PACK_SENTENCE}。`}</p>
+                        <p>※ 金額はすべて消費税込みです。</p>
+                        <p>※ 「授業1回あたり」は、月額 ÷（生徒の目安の人数 × 月4.3回）で計算した参考値です。</p>
+                        <p>※ 翻訳モードの分数は、生徒が話している時間を1秒単位で数えます。</p>
+                        {PACK_PRICE_JPY !== null && <p>※ {PACK_SENTENCE}。</p>}
                         <p>※ <a href="/legal/terms" className="text-[#6b5ca5] underline">利用規約・特定商取引法に基づく表記</a>もご覧ください。</p>
                     </div>
                 </section>
@@ -260,11 +268,11 @@ function GroupRows({ group }: { group: Group }) {
                 <tr key={r.name}>
                     <td className="px-4 py-3 border-b border-[#e4ddf0] align-top">
                         {r.name}
-                        {r.sub && <span className="block text-[#6f6884] text-[12px] leading-snug">{r.sub}</span>}
+                        {r.sub && <span className="block text-[#6f6884] text-[12px] leading-snug"><Br text={r.sub} /></span>}
                     </td>
                     {Array.isArray(r.cells)
                         ? r.cells.map((c, i) => <td key={i} className="px-4 py-3 border-b border-[#e4ddf0] text-center align-top tabular-nums">{c}</td>)
-                        : <td colSpan={4} className="px-4 py-3 border-b border-[#e4ddf0] text-center align-top">{r.cells.span}</td>}
+                        : <td colSpan={4} className="px-4 py-3 border-b border-[#e4ddf0] text-center align-top"><Br text={r.cells.span} /></td>}
                 </tr>
             ))}
         </>
