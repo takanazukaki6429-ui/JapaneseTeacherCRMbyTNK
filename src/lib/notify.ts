@@ -31,8 +31,9 @@ const LEVEL_EMOJI: Record<NotifyLevel, string> = {
 
 /**
  * 運営者（かずき）に通知を送る。失敗してもメイン処理は止めない。
+ * 戻り値＝メールを送れたか（毎月の知らせが「送れなかった月」を見分けるため・2026-09-29）。
  */
-export async function notifyAdmin(input: NotifyInput): Promise<void> {
+export async function notifyAdmin(input: NotifyInput): Promise<boolean> {
     const subject = `${LEVEL_EMOJI[input.level]} [ASTA/${input.level.toUpperCase()}] ${input.title}`;
     const contextStr = input.context
         ? `\n\n--- Context ---\n${JSON.stringify(input.context, null, 2)}`
@@ -42,7 +43,7 @@ export async function notifyAdmin(input: NotifyInput): Promise<void> {
     // Resend 未設定時はログのみ（開発環境・未設定環境で例外を出さない）
     if (!RESEND_API_KEY) {
         console.warn(`[notify:${input.level}] ${input.title}\n${fullBody}`);
-        return;
+        return false;
     }
 
     try {
@@ -61,8 +62,11 @@ export async function notifyAdmin(input: NotifyInput): Promise<void> {
         });
         if (!res.ok) {
             console.error(`[notify] Resend failed: HTTP ${res.status}`, await res.text());
+            return false;
         }
+        return true;
     } catch (e) {
         console.error('[notify] unexpected error:', e);
+        return false;
     }
 }
