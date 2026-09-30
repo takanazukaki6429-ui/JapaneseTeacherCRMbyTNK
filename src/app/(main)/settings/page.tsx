@@ -32,6 +32,11 @@ export default function SettingsPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [exporting, setExporting] = useState(false);
+    // 管理者の画面から「二段階認証が必要」で案内されてきたか（2026-09-30・門番が ?mfa=required を付ける）
+    const [mfaRequired, setMfaRequired] = useState(false);
+    useEffect(() => {
+        setMfaRequired(new URLSearchParams(window.location.search).get('mfa') === 'required');
+    }, []);
 
     // パスワード変更
     const [pwOpen, setPwOpen] = useState(false);
@@ -146,6 +151,13 @@ export default function SettingsPage() {
                 <h1 className="text-2xl font-bold tracking-tight text-[#3a3350]">設定</h1>
                 <p className="text-sm text-[#484550] mt-0.5">アプリケーションの各種設定を行います</p>
             </div>
+
+            {mfaRequired && (
+                <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                    <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+                    <p>管理者の画面を使うには、二段階認証が必要です。下の「二要素認証（MFA）」を有効にしてから、もう一度開いてください。</p>
+                </div>
+            )}
 
             <SectionCard icon={<User size={16} className="text-[#6b5ca5]" />} title="アカウント設定">
                 <MfaSection />

@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { decideMfa, MFA_VERIFY_PATH, needsMfaCode } from '@/lib/mfa';
 
 export async function middleware(request: NextRequest) {
     let response = NextResponse.next({
@@ -65,9 +66,36 @@ export async function middleware(request: NextRequest) {
         return redirectKeepingCookies('/login');
     }
 
+    // 二段階認証（2026-09-30）：登録した人は、ログインのあと6桁のコードを入れるまで先へ進めない。
+    // 管理者の画面は、コードを入れた人（aal2）だけ。判定の決まりは lib/mfa.ts。
+    // 登録の途中・門番の判定より先に行う（コードがまだの人は保管庫を読めないので、後だと登録の画面へ誤って案内される）
+    // コードがまだの人（mfaPending）は、公開の画面（6桁のコードの画面を含む）でも下の「登録の途中か」の確認を走らせない。
+    // 走らせると保管庫を読めずに登録の画面へ送られ、6桁のコードの画面との間で行ったり来たりになる
+    let mfaPending = false;
+    if (user) {
+        const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        mfaPending = needsMfaCode(aal);
+        const decision = decideMfa(request.nextUrl.pathname, isPublicRoute, aal);
+        if (decision === 'verify-page') {
+            const next = request.nextUrl.pathname + request.nextUrl.search;
+            return redirectKeepingCookies(`${MFA_VERIFY_PATH}?next=${encodeURIComponent(next)}`);
+        }
+        if (decision === 'admin-setup-page') {
+            return redirectKeepingCookies('/settings?mfa=required');
+        }
+        if (decision === 'verify-api' || decision === 'admin-api-forbidden') {
+            const denied = NextResponse.json(
+                { error: decision === 'verify-api' ? '二段階認証のコードを入れてください' : '管理者の操作には二段階認証が必要です' },
+                { status: decision === 'verify-api' ? 401 : 403 },
+            );
+            response.cookies.getAll().forEach(cookie => denied.cookies.set(cookie));
+            return denied;
+        }
+    }
+
     // 4. Onboarding check (Redirect if no display_name)
     // Use cookie cache to avoid DB query on every request
-    if (user && !request.nextUrl.pathname.startsWith('/onboarding') && request.method === 'GET') {
+    if (user && !mfaPending && !request.nextUrl.pathname.startsWith('/onboarding') && request.method === 'GET') {
         // 記録する値は利用者ごとに変える。以前は 'true' 固定だったため、
         // 同じ端末で別の人がログインすると前の人の記録が効いて登録画面を飛ばし、
         // 設定が無いまま利用開始してしまっていた（2026-08-13 実機で再現確認）。
@@ -144,7 +172,8 @@ export async function middleware(request: NextRequest) {
     }
 
     // Redirect to dashboard if logged in and trying to access login
-    if (user && request.nextUrl.pathname.startsWith('/login')) {
+    // 6桁のコードの画面（/login/mfa）は、ログインした後に使う画面なので除く
+    if (user && request.nextUrl.pathname.startsWith('/login') && request.nextUrl.pathname !== MFA_VERIFY_PATH) {
         return redirectKeepingCookies('/');
     }
 

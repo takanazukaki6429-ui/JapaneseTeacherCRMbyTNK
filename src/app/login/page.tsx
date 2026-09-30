@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2, KeyRound } from 'lucide-react';
 import { parseAppError, AppError } from '@/lib/error-handler';
 import { checkPasswordStrength, getStrengthLabel } from '@/lib/password-policy';
+import { MFA_VERIFY_PATH, needsMfaCode } from '@/lib/mfa';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -46,7 +47,9 @@ export default function LoginPage() {
             } else {
                 const { error } = await supabase.auth.signInWithPassword({ email, password });
                 if (error) throw error;
-                router.push('/');
+                // 二段階認証を登録している人は、6桁のコードの画面へ（2026-09-30）。門番も同じ判定で案内する
+                const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+                router.push(needsMfaCode(aal) ? MFA_VERIFY_PATH : '/');
                 router.refresh();
             }
         } catch (err: unknown) {
