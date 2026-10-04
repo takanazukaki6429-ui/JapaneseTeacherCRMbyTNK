@@ -34,7 +34,7 @@ export const TRIAL_DAYS = 7;
 export const PLAN_TRIAL_SENTENCE = `最初の${TRIAL_DAYS}日間は無料です。${TRIAL_DAYS + 1}日目に最初の課金が始まります`;
 
 /**
- * プランの段（2026-09-23 かずき決定・案B）。段の差は「翻訳モードの月の分数」だけ（機能は同じ・絵は0）。
+ * プランの段（2026-09-23 かずき決定・案B）。段の差は「翻訳モードの月の分数」と、ライトで使えない機能（2026-10-04 かずき決定・lib/plan-features.ts）。絵は0。
  * 分数は「毎回60分つけっぱなし × 生徒のめやす × 月4.3回」で置く＝ふつうの使い方なら届かない。
  * 金額はここに書かない（環境変数から。上の注意のとおり）
  */
@@ -85,9 +85,12 @@ export const PACK_SENTENCE: string = PACK_PRICE_JPY === null
     ? '追加パックは準備中です'
     : `追加パック（翻訳モード ${PACK_MINUTES}分・${PACK_VALID_DAYS}日間有効）1回 ${PACK_PRICE_LABEL}（消費税込み）`;
 
+/** ライトで使えない機能の一文（2026-10-04 かずき決定）。規約・特商法の料金の文に入れる */
+export const LIGHT_LIMIT_SENTENCE = '授業前の1枚・例文と練習問題と言い換えの作成・ASTAに聞く・みんなの教材は使えません';
+
 /** 3段の料金の一文（規約 第5条・特商法の「販売価格」で使う）。1つでも未設定なら準備中 */
 export const PLAN_PRICE_SENTENCE: string = ALL_TIER_PRICES_SET
-    ? PLAN_TIER_KEYS.map(t => `${PLAN_TIERS[t].label}プラン 月額 ${tierPriceLabel(t)}（翻訳モード ${PLAN_TIERS[t].translationMinutes.toLocaleString('ja-JP')}分/月まで）`).join('／') + '（いずれも消費税込み）'
+    ? PLAN_TIER_KEYS.map(t => `${PLAN_TIERS[t].label}プラン 月額 ${tierPriceLabel(t)}（翻訳モード ${PLAN_TIERS[t].translationMinutes.toLocaleString('ja-JP')}分/月まで${t === 'light' ? `。${LIGHT_LIMIT_SENTENCE}` : ''}）`).join('／') + '（いずれも消費税込み）'
     : '料金は準備中です（確定次第、事前にご案内します）';
 
 /** 規約・特商法表記の施行日。課金開始に合わせて更新する */

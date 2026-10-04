@@ -14,6 +14,7 @@
  */
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { decideFeature, type FeatureDecision, type GatedFeature } from '@/lib/plan-features';
 
 export type PlanAccess = { loading: boolean; paid: boolean };
 
@@ -41,6 +42,43 @@ export function usePlanAccess(): PlanAccess {
         fetchPaid().then(paid => { if (alive) setState({ loading: false, paid }); });
         return () => { alive = false; };
     }, []);
+    return state;
+}
+
+/**
+ * プランごとの機能を使えるか（2026-10-04 かずき決定・ライトでは一部の機能を使えない）。決め方は lib/plan-features.ts。
+ * 読み込み中は loading=true（その間は鍵も中身も出さない）
+ */
+type SettingsRow = { is_free?: boolean; subscription_status?: string; plan_tier?: string } | null;
+let cachedSettings: Promise<SettingsRow> | null = null;
+
+function fetchSettings(): Promise<SettingsRow> {
+    if (!cachedSettings) {
+        cachedSettings = (async () => {
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return null;
+            const withTier = await supabase.from('user_settings').select('is_free, subscription_status, plan_tier').eq('user_id', user.id).maybeSingle();
+            if (!withTier.error) return withTier.data as SettingsRow;
+            const noTier = await supabase.from('user_settings').select('is_free, subscription_status').eq('user_id', user.id).maybeSingle();
+            return noTier.data as SettingsRow;
+        })().catch(() => null);
+    }
+    return cachedSettings;
+}
+
+export type FeatureAccess = { loading: boolean; decision: FeatureDecision };
+
+export function useFeatureAccess(feature: GatedFeature): FeatureAccess {
+    const [state, setState] = useState<FeatureAccess>({ loading: true, decision: { allowed: false, reason: 'needs_plan' } });
+    useEffect(() => {
+        let alive = true;
+        fetchSettings().then(row => {
+            if (!alive) return;
+            setState({ loading: false, decision: decideFeature(feature, { isFree: row?.is_free, status: row?.subscription_status, tier: row?.plan_tier }) });
+        });
+        return () => { alive = false; };
+    }, [feature]);
     return state;
 }
 

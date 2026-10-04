@@ -1,11 +1,12 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { User, Globe, BookOpen } from 'lucide-react';
+import { User, Globe, BookOpen, Lock } from 'lucide-react';
 
-type Props = { currentTab: string };
+/** communityLocked：ライトでは みんなの教材 を見られない（2026-10-04 かずき決定）。タブは出したまま鍵を付ける */
+type Props = { currentTab: string; communityLocked?: boolean };
 
-export function MaterialsTabBar({ currentTab }: Props) {
+export function MaterialsTabBar({ currentTab, communityLocked = false }: Props) {
     const router = useRouter();
     return (
         <div className="flex gap-1 bg-white p-1 rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] w-fit">
@@ -37,7 +38,7 @@ export function MaterialsTabBar({ currentTab }: Props) {
                         : 'text-[#484550] hover:text-[#3a3350] hover:bg-[#f0ebf8]'
                 }`}
             >
-                <Globe size={14} />みんなの教材
+                {communityLocked ? <Lock size={14} /> : <Globe size={14} />}みんなの教材
             </button>
         </div>
     );

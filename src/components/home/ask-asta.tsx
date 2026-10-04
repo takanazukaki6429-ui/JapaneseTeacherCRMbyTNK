@@ -8,6 +8,8 @@
  */
 import { useState } from 'react';
 import { MessagesSquare, Send, Loader2, X } from 'lucide-react';
+import { useFeatureAccess } from '@/lib/plan-access';
+import { PaidLock } from '@/components/paid-lock';
 
 /** AIの答えに混ざる記号（** や #）を落として、素直な文にする */
 function readable(md: string): string {
@@ -19,6 +21,8 @@ function readable(md: string): string {
 }
 
 export function AskAsta() {
+    // ライトでは使えない（2026-10-04 かずき決定）。既存の無料の先生は今まで通り使える（lib/plan-features.ts）
+    const access = useFeatureAccess('ask');
     const [prompt, setPrompt] = useState('');
     const [answer, setAnswer] = useState('');
     const [loading, setLoading] = useState(false);
@@ -52,6 +56,9 @@ export function AskAsta() {
                     <h2 className="text-[18px] leading-[28px] font-bold text-[#3a3350]">ASTAに聞く（授業の相談）</h2>
                 </div>
                 <p className="text-[12px] leading-[18px] text-[#484550] -mt-1">生徒の情報（レベル・前回の内容・前回のつまずき）を踏まえて答えます。ASTAの使い方は、右下の「？」（使い方ヘルプ）で聞いてください。</p>
+                {access.loading ? null : !access.decision.allowed ? (
+                    <PaidLock feature="ASTAに聞く" needsRegular={access.decision.reason === 'needs_regular'} className="mt-1" />
+                ) : (
                 <form onSubmit={ask} className="relative flex items-center mt-1">
                     <input
                         value={prompt}
@@ -69,6 +76,7 @@ export function AskAsta() {
                         {!loading && <Send size={16} strokeWidth={1.8} />}
                     </button>
                 </form>
+                )}
                 {loading && <p className="text-[15px] text-[#484550]">ASTAが考えています…</p>}
                 {answer && (
                     <div className="relative bg-[#f8f1ff] rounded-2xl p-5 pr-12 border border-[#e8ddff]/40">

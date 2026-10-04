@@ -6,8 +6,20 @@ import { formatDate } from '@/lib/utils';
 import { ArrowLeft, Zap, FileText } from 'lucide-react';
 import { PublicToggleButton } from './public-toggle';
 import { DeleteMaterialButton } from './delete-button';
+import { getFeatureDecision } from '@/lib/plan-access-server';
+import { PaidLock } from '@/components/paid-lock';
+import type { FeatureDecision } from '@/lib/plan-features';
 
 export const revalidate = 0;
+
+/** ほかの先生の教材（みんなの教材）を開けるか。ライトでは自分の教材だけ（2026-10-04 かずき決定・lib/plan-features.ts） */
+async function getViewerDecision(authorId: string | null | undefined): Promise<FeatureDecision> {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { allowed: false, reason: 'needs_plan' };
+    if (authorId && authorId === user.id) return { allowed: true };
+    return getFeatureDecision(supabase, user.id, 'shared_materials');
+}
 
 async function getMaterial(id: string) {
     const supabase = await createClient();
@@ -22,6 +34,18 @@ export default async function MaterialDetailPage({ params }: Props) {
     const { id } = await params;
     const material = await getMaterial(id);
     if (!material) notFound();
+    const viewer = await getViewerDecision((material as { author_id?: string | null }).author_id);
+    if (!viewer.allowed) {
+        return (
+            <div className="max-w-3xl mx-auto space-y-5">
+                <Link href="/materials" className="inline-flex items-center gap-1.5 text-sm text-[#484550] hover:text-[#3a3350] transition-colors">
+                    <ArrowLeft size={16} />
+                    教材一覧
+                </Link>
+                <PaidLock feature="みんなの教材" needsRegular={viewer.reason === 'needs_regular'} />
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-3xl mx-auto space-y-5">

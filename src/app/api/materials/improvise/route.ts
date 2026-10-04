@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@/lib/supabase/server';
-import { canUseApp, READ_ONLY_MESSAGE } from '@/lib/plan-access-server';
+import { canUseApp, READ_ONLY_MESSAGE, getFeatureDecision, featureDeniedMessage } from '@/lib/plan-access-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,6 +54,12 @@ export async function POST(req: NextRequest) {
         // 解約した先生は「見るだけ」（2026-09-25 案B）。AI は使えない
         if (!(await canUseApp(supabase, user.id))) {
             return NextResponse.json({ error: READ_ONLY_MESSAGE, original: '', japanese: '' }, { status: 402 });
+        }
+
+        // ライトでは例文・練習問題・言い換えを使えない（2026-10-04 かずき決定）。既存の無料の先生は今まで通り使える
+        const decision = await getFeatureDecision(supabase, user.id, 'improvise');
+        if (!decision.allowed) {
+            return NextResponse.json({ error: featureDeniedMessage(decision) }, { status: 402 });
         }
 
         const body = await req.json();
