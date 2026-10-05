@@ -3,8 +3,12 @@
 import { useState } from 'react';
 import { Sparkles, Send, Loader2, Copy, Check, Save, X } from "lucide-react";
 import { createClient } from '@/lib/supabase/client';
+import { useFeatureAccess } from '@/lib/plan-access';
+import { PaidLock } from '@/components/paid-lock';
 
 export default function AIToolsPage() {
+    // 自由な相談は「ASTAに聞く」と同じ扱い。ライトでは使えない（2026-10-04 かずき決定・lib/plan-features.ts）
+    const access = useFeatureAccess('ask');
     const [prompt, setPrompt] = useState('');
     const [response, setResponse] = useState('');
     const [loading, setLoading] = useState(false);
@@ -110,6 +114,9 @@ export default function AIToolsPage() {
                             <h2 className="font-bold text-sm text-[#3a3350]">AIアシスタント</h2>
                         </div>
                         <div className="p-5 space-y-4">
+                            {access.loading ? null : !access.decision.allowed ? (
+                                <PaidLock feature="AIアシスタント（ASTAに聞く）" needsRegular={access.decision.reason === 'needs_regular'} />
+                            ) : (
                             <form onSubmit={handleSubmit} className="space-y-3">
                                 <textarea
                                     placeholder="ここに依頼内容を入力してください..."
@@ -130,6 +137,7 @@ export default function AIToolsPage() {
                                     </button>
                                 </div>
                             </form>
+                            )}
 
                             {response && (
                                 <div className="border-t border-[#f0ebf8] pt-4 space-y-3">

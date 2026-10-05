@@ -9,7 +9,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Lightbulb, Loader2 } from 'lucide-react';
 import { generatePrepSheet, loadPrepSheet, prepStamp, type PrepSource } from '@/lib/prep-sheet';
-import { usePlanAccess } from '@/lib/plan-access';
+import { useFeatureAccess } from '@/lib/plan-access';
 
 type Props = {
     studentId: string;
@@ -25,7 +25,9 @@ export function PrepGuideBand({ studentId, source, fallbackMistakes }: Props) {
     const [working, setWorking] = useState(false);
 
     // ASTAが1枚を作るのは有料の機能（2026-09-24 案A）。無料の先生は、今までどおり前回のつまずきからの決まった文
-    const access = usePlanAccess();
+    // ライトでも作らない（2026-10-04 かずき決定・lib/plan-features.ts）。決まった文はそのまま出す
+    const prepAuto = useFeatureAccess('prep_sheet');
+    const access = { loading: prepAuto.loading, paid: prepAuto.decision.allowed };
     const srcRef = useRef(source);
     srcRef.current = source;
     const stamp = prepStamp(source.lastDate);

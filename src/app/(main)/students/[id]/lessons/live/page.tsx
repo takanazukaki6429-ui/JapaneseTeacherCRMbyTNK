@@ -5,9 +5,10 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { SpeechSegmenter, rmsOf } from '@/lib/speech-segmenter';
 import { saveLessonFlow } from '@/lib/lesson-flow';
-import { usePlanAccess } from '@/lib/plan-access';
+import { usePlanAccess, useFeatureAccess } from '@/lib/plan-access';
+import { NEEDS_REGULAR_MESSAGE } from '@/lib/plan-features';
 import {
-    ArrowLeft, Send, Sparkles, Mic, Loader2, Download, ChevronDown, Headphones, Lightbulb, Image as ImageIcon, BookOpen, PencilLine, Repeat2, Home, GraduationCap, Settings,
+    ArrowLeft, Send, Sparkles, Mic, Loader2, Download, ChevronDown, Headphones, Lightbulb, Image as ImageIcon, BookOpen, PencilLine, Repeat2, Home, GraduationCap, Settings, Lock,
 } from 'lucide-react';
 import Link from 'next/link';
 import { GuidePanel } from './guide-panel';
@@ -233,6 +234,12 @@ export default function LiveLessonPage() {
     useEffect(() => { translateTeacherRef.current = translateTeacher; }, [translateTeacher]);
     const lowQuotaNoticedRef = useRef(false);   // 翻訳モードの残りわずかの案内を1回だけ出す
     const access = usePlanAccess();             // 授業中に作った物の保存は有料の機能（2026-09-24 案A）
+    // ライトでは、例文・練習問題・言い換えと ASTAに聞く を使えない（2026-10-04 かずき決定・lib/plan-features.ts）。
+    // 授業中なので別の画面へは移らず、ここで案内だけ出す
+    const improviseAccess = useFeatureAccess('improvise');
+    const askAccess = useFeatureAccess('ask');
+    const improviseLocked = !improviseAccess.loading && !improviseAccess.decision.allowed;
+    const askLocked = !askAccess.loading && !askAccess.decision.allowed;
 
 
     // ── 生徒向け翻訳（先生 → 生徒方向）──
@@ -687,7 +694,7 @@ export default function LiveLessonPage() {
     // ────────────────────────────────────────────
     const handleSendMessage = async (e?: React.FormEvent) => {
         e?.preventDefault();
-        if (!input.trim()) return;
+        if (!input.trim() || askLocked) return;
 
         const supabase = createClient();
         const userContent = input;
@@ -993,6 +1000,10 @@ export default function LiveLessonPage() {
     } as const;
 
     const makeMaterial = async (mode: keyof typeof MATERIAL_MODES) => {
+        if (improviseLocked) {
+            setIllustError(`${NEEDS_REGULAR_MESSAGE}（授業が終わった後に、設定のプランの画面から変えられます）`);
+            return;
+        }
         if (!selectedLessonId) {
             setIllustError('左の「きょうの進め方」で課を選ぶと、例文・問題・言い換えが作れます。');
             return;
@@ -1071,12 +1082,12 @@ export default function LiveLessonPage() {
     const ASK_BUTTONS = [
         ...(ILLUST_ENABLED ? [{ key: 'illust', title: '絵で見せる', hint: 'いまの内容を1枚の絵に', Icon: ImageIcon, tile: 'bg-[#ede8fa] text-[#6b5ca5] group-hover:bg-[#6b5ca5]',
           busy: illustBusy, disabled: illustBusy, onClick: generateIllustration, tip: 'いまの会話と課に合う絵を約5秒で作る。文字まできれいな版は、できた絵の下のボタンで頼める' }] : []),
-        { key: 'examples', title: '例文', hint: MATERIAL_MODES.examples.hint, Icon: BookOpen, tile: 'bg-[#dff1ea] text-[#2a6f5a] group-hover:bg-[#2a6f5a]',
-          busy: materialBusy === 'examples', disabled: materialBusy !== null, onClick: () => makeMaterial('examples'), tip: MATERIAL_MODES.examples.hint },
-        { key: 'exercises', title: '練習問題', hint: MATERIAL_MODES.exercises.hint, Icon: PencilLine, tile: 'bg-[#efe9f8] text-[#55488a] group-hover:bg-[#55488a]',
-          busy: materialBusy === 'exercises', disabled: materialBusy !== null, onClick: () => makeMaterial('exercises'), tip: MATERIAL_MODES.exercises.hint },
-        { key: 'explain', title: 'やさしく言い換え', hint: MATERIAL_MODES.explain.hint, Icon: Repeat2, tile: 'bg-[#dff1ea] text-[#2a6f5a] group-hover:bg-[#2a6f5a]',
-          busy: materialBusy === 'explain', disabled: materialBusy !== null, onClick: () => makeMaterial('explain'), tip: MATERIAL_MODES.explain.hint },
+        { key: 'examples', title: '例文', hint: improviseLocked ? 'レギュラー以上のプラン' : MATERIAL_MODES.examples.hint, Icon: BookOpen, tile: 'bg-[#dff1ea] text-[#2a6f5a] group-hover:bg-[#2a6f5a]',
+          busy: materialBusy === 'examples', disabled: materialBusy !== null, onClick: () => makeMaterial('examples'), tip: improviseLocked ? NEEDS_REGULAR_MESSAGE : MATERIAL_MODES.examples.hint, locked: improviseLocked },
+        { key: 'exercises', title: '練習問題', hint: improviseLocked ? 'レギュラー以上のプラン' : MATERIAL_MODES.exercises.hint, Icon: PencilLine, tile: 'bg-[#efe9f8] text-[#55488a] group-hover:bg-[#55488a]',
+          busy: materialBusy === 'exercises', disabled: materialBusy !== null, onClick: () => makeMaterial('exercises'), tip: improviseLocked ? NEEDS_REGULAR_MESSAGE : MATERIAL_MODES.exercises.hint, locked: improviseLocked },
+        { key: 'explain', title: 'やさしく言い換え', hint: improviseLocked ? 'レギュラー以上のプラン' : MATERIAL_MODES.explain.hint, Icon: Repeat2, tile: 'bg-[#dff1ea] text-[#2a6f5a] group-hover:bg-[#2a6f5a]',
+          busy: materialBusy === 'explain', disabled: materialBusy !== null, onClick: () => makeMaterial('explain'), tip: improviseLocked ? NEEDS_REGULAR_MESSAGE : MATERIAL_MODES.explain.hint, locked: improviseLocked },
     ];
 
     return (
@@ -1487,7 +1498,7 @@ export default function LiveLessonPage() {
                                                 {b.busy ? <Loader2 size={18} className="animate-spin" /> : <Icon size={20} strokeWidth={1.8} />}
                                             </span>
                                             <span className="min-w-0">
-                                                <span className="block text-[16px] font-bold text-[#3a3350]">{b.title}</span>
+                                                <span className="flex items-center gap-1 text-[16px] font-bold text-[#3a3350]">{'locked' in b && b.locked && <Lock size={13} className="text-[#6f6884] shrink-0" />}{b.title}</span>
                                                 {toolsOut && <span className="block text-[12px] text-[#5d5868] truncate">{b.hint}</span>}
                                             </span>
                                         </button>
@@ -1497,6 +1508,11 @@ export default function LiveLessonPage() {
 
                             {/* 聞きたい時だけ使う入力欄。授業中の入力は不要だが、
                                 聞きたくなったらここで聞ける（2026-08-20 チャットタブを統合） */}
+                            {askLocked ? (
+                                <p className={`${toolsOut ? 'flex' : 'hidden'} items-center gap-1.5 text-[13px] text-[#6f6884]`}>
+                                    <Lock size={13} className="shrink-0" />ASTAに聞くは、レギュラー・プロのプランで使えます（授業が終わった後に、設定のプランの画面から変えられます）
+                                </p>
+                            ) : (
                             <form onSubmit={handleSendMessage} className={`${toolsOut ? 'flex' : 'hidden'} items-center gap-2`}>
                                 <input
                                     type="text"
@@ -1515,6 +1531,7 @@ export default function LiveLessonPage() {
                                     {!isTyping && <Send size={15} />}
                                 </button>
                             </form>
+                            )}
                         </div>
                     </section>
                 </div>

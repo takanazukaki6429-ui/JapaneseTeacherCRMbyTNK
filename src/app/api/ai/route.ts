@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AI_USAGE_TYPE, OUTSIDE_GENERAL_BUCKET } from '@/lib/ai-usage';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@/lib/supabase/server';
-import { hasPaidPlan, PAID_ONLY_MESSAGE, canUseApp, READ_ONLY_MESSAGE } from '@/lib/plan-access-server';
+import { canUseApp, READ_ONLY_MESSAGE, getFeatureDecision, featureDeniedMessage } from '@/lib/plan-access-server';
+import { featureForAiType } from '@/lib/plan-features';
 import { z } from 'zod';
 
 const profileAnalysisSchema = z.object({
@@ -62,9 +63,15 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: READ_ONLY_MESSAGE, original: '', japanese: '' }, { status: 402 });
         }
 
-        // 有料の機能（2026-09-24 案A）：生徒の1枚の「本日の授業指針」（授業前の1枚の自動作成＝prep_sheet）は契約中の先生だけ
-        if (type === 'prep_sheet' && !(await hasPaidPlan(supabase, user.id))) {
-            return NextResponse.json({ error: PAID_ONLY_MESSAGE }, { status: 402 });
+        // プランごとの機能（lib/plan-features.ts）：
+        //   授業前の1枚の自動作成（prep_sheet）は契約中の先生だけ（2026-09-24 案A）
+        //   ライトでは、授業前の1枚・今日の教材・ASTAに聞く を使えない（2026-10-04 かずき決定）。既存の無料の先生は今まで通り使える
+        const feature = featureForAiType(type);
+        if (feature) {
+            const decision = await getFeatureDecision(supabase, user.id, feature);
+            if (!decision.allowed) {
+                return NextResponse.json({ error: featureDeniedMessage(decision) }, { status: 402 });
+            }
         }
 
         // [Rate Limiting] 先生1人ごとに、直近1時間の利用回数で制限する。

@@ -3,6 +3,15 @@ import Link from 'next/link';
 import { BookOpen, Image as ImageIcon } from 'lucide-react';
 import { MaterialsTabBar } from '../tab-bar';
 import { LevelTabs } from './level-tabs';
+import { getFeatureDecision } from '@/lib/plan-access-server';
+
+/** みんなの教材のタブに鍵を付けるか（ライト・2026-10-04 かずき決定） */
+async function isCommunityLocked(): Promise<boolean> {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return true;
+    return !(await getFeatureDecision(supabase, user.id, 'shared_materials')).allowed;
+}
 import type { JlptLevel, MasterMaterialRow } from '@/types/master-material';
 
 export const revalidate = 0;
@@ -38,7 +47,7 @@ type Props = { searchParams: Promise<{ level?: string }> };
 export default async function TextbookPage({ searchParams }: Props) {
     const { level: raw } = await searchParams;
     const level = (LEVELS.includes(raw as JlptLevel) ? raw : 'N5') as JlptLevel;
-    const [lessons, counts] = await Promise.all([getLessons(level), getCounts()]);
+    const [lessons, counts, communityLocked] = await Promise.all([getLessons(level), getCounts(), isCommunityLocked()]);
 
     return (
         <div className="space-y-5">
@@ -46,7 +55,7 @@ export default async function TextbookPage({ searchParams }: Props) {
                 <h1 className="text-2xl font-bold tracking-tight text-[#3a3350]">教材</h1>
             </div>
 
-            <MaterialsTabBar currentTab="textbook" />
+            <MaterialsTabBar currentTab="textbook" communityLocked={communityLocked} />
 
             <div className="bg-white px-5 py-4 rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)]">
                 <div className="flex items-center gap-2 mb-1">

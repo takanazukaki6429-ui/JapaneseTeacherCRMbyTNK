@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { generatePrepSheet, loadPrepSheet, prepStamp, type PrepSheet, type PrepSource } from '@/lib/prep-sheet';
-import { usePlanAccess } from '@/lib/plan-access';
+import { useFeatureAccess } from '@/lib/plan-access';
+import { PaidLock } from '@/components/paid-lock';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -139,10 +140,14 @@ export default function LessonPreparePage() {
 
     // 開いた時点でできている状態にする：保存済みがあれば読み、無ければ自動で作る（自動は1回だけ）
     // 開いた時点で自動で作るのは有料の機能（2026-09-24 案A）。無料の先生は、保存済みを読むだけ（ボタンで作るのは今までどおり）
-    const access = usePlanAccess();
+    // ライトでは授業前の1枚（自動・ボタン）と今日の教材を使えない（2026-10-04 かずき決定・lib/plan-features.ts）
+    const prepAuto = useFeatureAccess('prep_sheet');
+    const prepManual = useFeatureAccess('prep_manual');
+    const prepMaterial = useFeatureAccess('prep_material');
+    const autoAllowed = prepAuto.decision.allowed;
     const autoTried = useRef(false);
     useEffect(() => {
-        if (!studentId || !student || autoTried.current || access.loading) return;
+        if (!studentId || !student || autoTried.current || prepAuto.loading) return;
         autoTried.current = true;
         const run = async () => {
             const src = prepSource();
@@ -150,11 +155,11 @@ export default function LessonPreparePage() {
             const cached = loadPrepSheet(studentId, prepStamp(src.lastDate));
             if (cached) { setPrepContent(cached); return; }
             if (!src.lastDate) return;   // 授業記録がまだ無いときは作らない
-            if (!access.paid) return;    // 無料の先生は自動では作らない
+            if (!autoAllowed) return;    // 無料の先生・ライトの先生は自動では作らない
             await handleGeneratePlan();
         };
         run();
-    }, [studentId, student, prepSource, handleGeneratePlan, access.loading, access.paid]);
+    }, [studentId, student, prepSource, handleGeneratePlan, prepAuto.loading, autoAllowed]);
 
     /* ── 教材生成（新機能） ──────────────────────── */
     const handleGenerateMaterial = async () => {
@@ -385,7 +390,9 @@ ${typeInstructions[selectedType]}
 
                     {prepExpanded && (
                         <div className="px-5 pb-5 border-t border-[#f0ebf8]">
-                            {!prepContent ? (
+                            {!prepContent && !prepManual.loading && !prepManual.decision.allowed ? (
+                                <PaidLock feature="授業前の1枚（準備プラン）" needsRegular={prepManual.decision.reason === 'needs_regular'} className="mt-5" />
+                            ) : !prepContent ? (
                                 <div className="flex justify-center pt-5">
                                     <button
                                         onClick={handleGeneratePlan}
@@ -489,8 +496,11 @@ ${typeInstructions[selectedType]}
                     </div>
                 )}
 
-                {/* 生成ボタン */}
-                {!generatedMaterial && (
+                {/* 生成ボタン（ライトでは使えない・2026-10-04 かずき決定） */}
+                {!generatedMaterial && !prepMaterial.loading && !prepMaterial.decision.allowed && (
+                    <PaidLock feature="今日の教材を作る" needsRegular={prepMaterial.decision.reason === 'needs_regular'} />
+                )}
+                {!generatedMaterial && (prepMaterial.loading || prepMaterial.decision.allowed) && (
                     <button
                         onClick={handleGenerateMaterial}
                         disabled={generatingMaterial}

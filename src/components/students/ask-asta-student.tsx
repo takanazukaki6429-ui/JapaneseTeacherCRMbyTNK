@@ -6,6 +6,8 @@
  */
 import { useState } from 'react';
 import { MessageCircleQuestion, ArrowUp, Loader2, X } from 'lucide-react';
+import { useFeatureAccess } from '@/lib/plan-access';
+import { PaidLock } from '@/components/paid-lock';
 
 /** AIの答えに混ざる記号（** や #）を落として、素直な文にする */
 function readable(md: string): string {
@@ -17,6 +19,8 @@ function readable(md: string): string {
 }
 
 export function AskAstaStudent({ studentName }: { studentName: string }) {
+    // ライトでは使えない（2026-10-04 かずき決定）。既存の無料の先生は今まで通り使える（lib/plan-features.ts）
+    const access = useFeatureAccess('ask');
     const [prompt, setPrompt] = useState('');
     const [answer, setAnswer] = useState('');
     const [loading, setLoading] = useState(false);
@@ -49,6 +53,9 @@ export function AskAstaStudent({ studentName }: { studentName: string }) {
                 <h2 className="text-[17px] font-bold text-[#3a3350]">ASTAに聞く</h2>
             </div>
             <p className="text-xs text-[#484550] mb-2">{studentName}さんの記録を踏まえて、教え方を答えます。</p>
+            {access.loading ? null : !access.decision.allowed ? (
+                <PaidLock feature="ASTAに聞く" needsRegular={access.decision.reason === 'needs_regular'} />
+            ) : (
             <form onSubmit={ask}>
                 <textarea
                     value={prompt}
@@ -63,6 +70,7 @@ export function AskAstaStudent({ studentName }: { studentName: string }) {
                     </button>
                 </div>
             </form>
+            )}
             {loading && <p className="text-sm text-[#484550] mt-2">ASTAが考えています…</p>}
             {answer && (
                 <div className="relative bg-[#f8f1ff] rounded-lg p-4 pr-10 mt-3">

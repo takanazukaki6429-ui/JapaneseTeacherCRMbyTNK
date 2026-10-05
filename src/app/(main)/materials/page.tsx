@@ -5,8 +5,19 @@ import { formatDate } from '@/lib/utils';
 import Link from 'next/link';
 import { Plus, Search, FileText, Zap, Globe } from 'lucide-react';
 import { MaterialsTabBar } from './tab-bar';
+import { getFeatureDecision } from '@/lib/plan-access-server';
+import { PaidLock } from '@/components/paid-lock';
+import type { FeatureDecision } from '@/lib/plan-features';
 
 export const revalidate = 0;
+
+/** みんなの教材を見られるか（ライトでは自分の教材だけ・2026-10-04 かずき決定・lib/plan-features.ts） */
+async function getCommunityDecision(): Promise<FeatureDecision> {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { allowed: false, reason: 'needs_plan' };
+    return getFeatureDecision(supabase, user.id, 'shared_materials');
+}
 
 async function getMyMaterials() {
     const supabase = await createClient();
@@ -37,7 +48,9 @@ type Props = { searchParams: Promise<{ tab?: string }> };
 export default async function MaterialsPage({ searchParams }: Props) {
     const { tab = 'mine' } = await searchParams;
     const isCommunity = tab === 'community';
-    const materials = isCommunity ? await getPublicMaterials() : await getMyMaterials();
+    const community = await getCommunityDecision();
+    const communityLocked = !community.allowed;
+    const materials = isCommunity ? (communityLocked ? [] : await getPublicMaterials()) : await getMyMaterials();
 
     return (
         <div className="space-y-5">
@@ -52,7 +65,7 @@ export default async function MaterialsPage({ searchParams }: Props) {
                 </Link>
             </div>
 
-            <MaterialsTabBar currentTab={tab} />
+            <MaterialsTabBar currentTab={tab} communityLocked={communityLocked} />
 
             {/* Search */}
             <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)]">
@@ -64,7 +77,9 @@ export default async function MaterialsPage({ searchParams }: Props) {
                 />
             </div>
 
-            {materials.length === 0 ? (
+            {isCommunity && !community.allowed ? (
+                <PaidLock feature="みんなの教材" needsRegular={community.reason === 'needs_regular'} />
+            ) : materials.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border-2 border-dashed border-[#d6cfe2]/40 text-center">
                     <div className="text-4xl mb-4">📚</div>
                     <h3 className="text-base font-bold text-[#3a3350] mb-1">
