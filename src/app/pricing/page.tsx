@@ -9,6 +9,8 @@ import {
     TRIAL_DAYS, TRIAL_TRANSLATION_MINUTES, PACK_PRICE_JPY, PACK_PRICE_LABEL, PACK_MINUTES, PACK_VALID_DAYS,
     type PlanTier,
 } from '@/lib/pricing';
+import { useCourseStatus } from '@/lib/plan-access';
+import { formatJpDate } from '@/lib/course';
 
 // useSearchParams を使うため静的プリレンダリングを無効化
 export const dynamic = 'force-dynamic';
@@ -18,6 +20,8 @@ export const dynamic = 'force-dynamic';
  * 構成は ChatGPT の料金ページと同じ：見出し → プランのカード3枚 → 40人超の問い合わせ → 比べる表 → よくある質問 → 注釈。
  * 3段の差は翻訳モードの月の分数（案B・2026-09-23）と、ライトで使えない機能（授業前の1枚・例文と練習問題と言い換え・ASTAに聞く・みんなの教材＝2026-10-04 かずき決定・lib/plan-features.ts）。
  * お試し7日間はレギュラーと同じ機能。金額は環境変数（lib/pricing.ts）。
+ * コンサルの受講生（2026-10-06）：ログインしている受講生には、お試しの代わりに「受講中は無料・料金は受講期間の後から」／
+ * 「受講期間が終わった・お試しなし」を出す（create-checkout-session と同じ決め方）
  * 元の案＝my-company/03/strategy/料金プラン比較ページ案_2026-09-24.html
  */
 
@@ -105,6 +109,11 @@ function PricingContent() {
     const [loading, setLoading] = useState<PlanTier | null>(null);
     const [error, setError] = useState('');
     const groups = buildGroups();
+    // コンサルの受講生（ログインしていない人・受講生でない人は endDate が null＝今までどおりの表示）
+    const course = useCourseStatus();
+    const courseEnd = course.loading ? null : course.endDate;
+    const inCourse = !!courseEnd && course.inCourse;
+    const showTrial = !courseEnd;
 
     const handleCheckout = async (tier: PlanTier) => {
         setLoading(tier);
@@ -141,17 +150,37 @@ function PricingContent() {
                         機能は3つとも同じです。<br />違いは「翻訳モード」を月に使える時間。<br />翻訳モードは、生徒の声をその場で日本語にします。<br />生徒の数に上限はありません。
                     </p>
                     <div className="flex justify-center gap-2.5 flex-wrap mt-5">
-                        <span className="inline-flex items-center gap-2 bg-[#dff1ea] text-[#2a6f5a] font-bold text-[13px] px-3.5 py-1.5 rounded-full">✓ どのプランも最初の{TRIAL_DAYS}日間は無料</span>
-                        <span className="inline-flex items-center gap-2 bg-[#dff1ea] text-[#2a6f5a] font-bold text-[13px] px-3.5 py-1.5 rounded-full">✓ お試し中の翻訳モードは{TRIAL_TRANSLATION_MINUTES}分まで</span>
+                        {showTrial && <span className="inline-flex items-center gap-2 bg-[#dff1ea] text-[#2a6f5a] font-bold text-[13px] px-3.5 py-1.5 rounded-full">✓ どのプランも最初の{TRIAL_DAYS}日間は無料</span>}
+                        {showTrial && <span className="inline-flex items-center gap-2 bg-[#dff1ea] text-[#2a6f5a] font-bold text-[13px] px-3.5 py-1.5 rounded-full">✓ お試し中の翻訳モードは{TRIAL_TRANSLATION_MINUTES}分まで</span>}
                         <span className="inline-flex items-center gap-2 bg-[#dff1ea] text-[#2a6f5a] font-bold text-[13px] px-3.5 py-1.5 rounded-full">✓ いつでも解約できます</span>
                     </div>
                     {/* 無料お試しの前にカードの登録が要ることを先に伝える（2026-09-24 かずき決定） */}
-                    <p className="mt-3 text-[13px] text-[#6f6884]">
-                        お申込み時に、クレジットカードの登録が必要です。<br />
-                        {TRIAL_DAYS}日以内に解約すれば、料金はかかりません。<br />
-                        無料お試しは、はじめてお申込みの方が対象です。
-                    </p>
+                    {showTrial && (
+                        <p className="mt-3 text-[13px] text-[#6f6884]">
+                            お申込み時に、クレジットカードの登録が必要です。<br />
+                            {TRIAL_DAYS}日以内に解約すれば、料金はかかりません。<br />
+                            無料お試しは、はじめてお申込みの方が対象です。
+                        </p>
+                    )}
                 </header>
+
+                {/* コンサルの受講生への案内（2026-10-06） */}
+                {courseEnd && (
+                    <div className="mb-6 px-5 py-3 bg-[#f6f2ff] border border-[#d9cff5] rounded-2xl text-sm text-[#4a3f73] text-center leading-relaxed">
+                        {inCourse ? (
+                            <>
+                                受講期間中は、<b>{formatJpDate(courseEnd)}</b> まで無料で使えます（レギュラーと同じ機能）。<br />
+                                今お申込みいただくと、料金は受講期間が終わった後からかかります（お申込み時に、カードの登録が必要です）。
+                            </>
+                        ) : (
+                            <>
+                                受講期間（{formatJpDate(courseEnd)}まで）が終わりました。<br />
+                                続けて使うには、下のプランからお申込みください。<br />
+                                受講中に使っていただいたため、無料お試しはありません（お申込みの日から料金がかかります）。
+                            </>
+                        )}
+                    </div>
+                )}
 
                 {lapsed && (
                     <div className="mb-6 px-5 py-3 bg-[#fdf6e7] border border-[#ecd9a8] rounded-2xl text-sm text-[#8a6d1f] text-center leading-relaxed">
@@ -203,7 +232,13 @@ function PricingContent() {
                                     {loading === tier ? <><Loader2 size={18} className="animate-spin" />決済ページへ移動中…</> : `${t.label}で始める`}
                                 </button>
                                 <p className="text-center text-[12px] text-[#6f6884] mt-2 mb-4">
-                                    {ALL_TIER_PRICES_SET ? <>{TRIAL_DAYS}日間無料<br />→ {TRIAL_DAYS + 1}日目から {tierPriceLabel(tier)}/月</> : '料金が確定しだいお申込みいただけます'}
+                                    {!ALL_TIER_PRICES_SET
+                                        ? '料金が確定しだいお申込みいただけます'
+                                        : inCourse && courseEnd
+                                            ? <>{formatJpDate(courseEnd)}まで無料（受講中）<br />→ 受講期間の後から {tierPriceLabel(tier)}/月</>
+                                            : courseEnd
+                                                ? <>お申込みの日から {tierPriceLabel(tier)}/月</>
+                                                : <>{TRIAL_DAYS}日間無料<br />→ {TRIAL_DAYS + 1}日目から {tierPriceLabel(tier)}/月</>}
                                 </p>
                                 <ul className="grid gap-2 text-[14px]">
                                     {CARD_FEATURES[tier].map((f) => (

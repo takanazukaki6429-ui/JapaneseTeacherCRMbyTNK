@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TRIAL_DAYS, isPlanTier, type PlanTier } from '@/lib/pricing';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { getStripe, getStripePriceId } from '@/lib/stripe';
+import { courseBillingStart, isInCourse, isMissingCourseColumn, normalizeCourseEndDate } from '@/lib/course';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,12 +30,22 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'このプランの価格がまだ設定されていません' }, { status: 400 });
         }
 
-        // 既存のstripe_customer_idを取得
-        const { data: settings } = await supabase
+        // 既存のstripe_customer_idを取得（コースの列がまだ無い保管庫では列なしで読み直す）
+        type Settings = { stripe_customer_id?: string | null; is_free?: boolean | null; subscription_status?: string | null; course_end_date?: string | null };
+        let settingsResult = await supabase
             .from('user_settings')
-            .select('stripe_customer_id, is_free, subscription_status')
+            .select('stripe_customer_id, is_free, subscription_status, course_end_date')
             .eq('user_id', user.id)
             .single();
+        if (settingsResult.error && isMissingCourseColumn(settingsResult.error)) {
+            settingsResult = await supabase
+                .from('user_settings')
+                .select('stripe_customer_id, is_free, subscription_status')
+                .eq('user_id', user.id)
+                .single();
+        }
+        const settings = settingsResult.data as Settings | null;
+        const courseEndDate = normalizeCourseEndDate(settings?.course_end_date ?? null);
 
         // 既存の無料の先生（is_free）も申し込める（2026-09-24 かずき決定：新しい機能も使いたい人は同じ料金で課金）
 
@@ -56,9 +68,11 @@ export async function POST(req: NextRequest) {
 
             // stripe_customer_id を保存。失敗したら止める（2026-09-24：保管庫に列が無く、ここが黙って失敗して
             // Stripe の通知が先生の行を見つけられなかった。保存できないまま決済に進ませない）
-            const { error: saveError } = await supabase
+            // 課金の列は先生の権限では書き換えられない決まりにした（2026-10-06・SQL）ので、運営の権限で書く
+            const { error: saveError } = await createAdminClient()
                 .from('user_settings')
-                .upsert({ user_id: user.id, stripe_customer_id: customerId });
+                .update({ stripe_customer_id: customerId })
+                .eq('user_id', user.id);
             if (saveError) {
                 console.error('[checkout] stripe_customer_id save failed:', saveError.message);
                 return NextResponse.json({ error: `お客様情報を保存できませんでした（${saveError.message}）。管理者にお知らせください` }, { status: 500 });
@@ -74,6 +88,17 @@ export async function POST(req: NextRequest) {
             console.error('[checkout] past subscription lookup failed:', err instanceof Error ? err.message : err);
         }
 
+        // 無料の期間の決め方（2026-10-06）：
+        //   受講中に先回りして申し込んだ → コースが終わった翌日から課金（受講中はコンサル料に含まれているため）
+        //   受講を終えた人 → お試しなし（受講中に使っているため）
+        //   それ以外の初めての人 → 7日間のお試し
+        const inCourse = isInCourse(courseEndDate);
+        const trial = inCourse && courseEndDate
+            ? { trial_end: courseBillingStart(courseEndDate) }
+            : courseEndDate || hadSubscription
+                ? {}
+                : { trial_period_days: TRIAL_DAYS };
+
         // Checkout セッション作成
         const session = await stripe.checkout.sessions.create({
             customer: customerId,
@@ -84,8 +109,8 @@ export async function POST(req: NextRequest) {
             cancel_url: `${origin}/pricing?canceled=1`,
             locale: 'ja',
             subscription_data: {
-                // 無料期間（2026-09-22 かずき決定＝7日）。画面の表示と同じ値を使う（lib/pricing.ts）
-                ...(hadSubscription ? {} : { trial_period_days: TRIAL_DAYS }),
+                // 無料期間（2026-09-22 かずき決定＝7日）。画面の表示と同じ値を使う（lib/pricing.ts）。受講生の扱いは上
+                ...trial,
                 metadata: { supabase_user_id: user.id, plan_tier: tier },
             },
         });

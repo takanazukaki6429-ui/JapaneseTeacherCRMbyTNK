@@ -5,6 +5,7 @@ import { checkPasswordStrength } from '@/lib/password-policy';
 import { checkRateLimit, getRequestIdentifier } from '@/lib/rate-limit';
 import { logAudit } from '@/lib/audit';
 import { notifyAdmin } from '@/lib/notify';
+import { formatJpDate, isMissingCourseColumn, normalizeCourseEndDate, normalizeCourseMonths } from '@/lib/course';
 
 const signUpSchema = z.object({
     email: z.string().email(),
@@ -44,11 +45,22 @@ export async function POST(req: NextRequest) {
         const supabase = createAdminClient();
 
         // 1. Verify Invite Code
-        const { data: codeData, error: codeError } = await supabase
+        //    コンサルの受講生に渡すコードには、コースが終わる日が入っている（2026-10-06）。列がまだ無い保管庫では列なしで読み直す
+        type CodeRow = { id: string; used_at: string | null; expires_at: string | null; course_months?: number | null; course_end_date?: string | null };
+        let codeResult = await supabase
             .from('invite_codes')
-            .select('id, used_at, expires_at')
+            .select('id, used_at, expires_at, course_months, course_end_date')
             .eq('code', inviteCode)
             .single();
+        if (codeResult.error && isMissingCourseColumn(codeResult.error)) {
+            codeResult = await supabase
+                .from('invite_codes')
+                .select('id, used_at, expires_at')
+                .eq('code', inviteCode)
+                .single();
+        }
+        const codeData = codeResult.data as CodeRow | null;
+        const codeError = codeResult.error;
 
         if (codeError || !codeData) {
             return NextResponse.json({ error: '無効な招待コードです。もう一度ご確認ください。' }, { status: 400 });
@@ -121,6 +133,23 @@ export async function POST(req: NextRequest) {
             console.error('Failed to link code to user:', markError);
         }
 
+        // 5. コンサルの受講生なら、コースが終わる日まで無料にする（先生の設定の行は、登録と同時に保管庫の仕組みで作られている）
+        const courseEndDate = normalizeCourseEndDate(codeData.course_end_date ?? null);
+        const courseMonths = normalizeCourseMonths(codeData.course_months ?? null);
+        let courseNote = '';
+        if (courseEndDate) {
+            const { error: courseError } = await supabase
+                .from('user_settings')
+                .update({ course_end_date: courseEndDate, course_months: courseMonths })
+                .eq('user_id', newUserId);
+            if (courseError) {
+                console.error('Failed to set course end date:', courseError);
+                courseNote = `\n⚠️ 受講中の設定に失敗しました（${courseError.message}）。管理画面の招待コードで、コースが終わる日を入れ直してください`;
+            } else {
+                courseNote = `\n受講中：${courseMonths ? `${courseMonths}か月コース・` : ''}${formatJpDate(courseEndDate)}まで無料`;
+            }
+        }
+
         // v1.0 §4.13 監査ログ: signup成功を記録
         await logAudit({
             action: 'auth.signup',
@@ -136,7 +165,7 @@ export async function POST(req: NextRequest) {
         await notifyAdmin({
             level: 'info',
             title: '新しい先生が登録しました',
-            body: `メール: ${email}\n招待コード: ${inviteCode}`,
+            body: `メール: ${email}\n招待コード: ${inviteCode}${courseNote}`,
         });
 
         return NextResponse.json({

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PACK_MINUTES, PACK_PRICE_JPY } from '@/lib/pricing';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { getStripe, getStripePackPriceId } from '@/lib/stripe';
+import { loadAccessSettings } from '@/lib/access-settings';
+import { isInCourse } from '@/lib/course';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,8 +31,9 @@ export async function POST(req: NextRequest) {
             .eq('user_id', user.id)
             .single();
 
-        // 契約中（無料お試しを含む）の先生だけが買える（追加パックは有料の機能・2026-09-24 案A）
-        const canBuy = settings?.subscription_status === 'active' || settings?.subscription_status === 'trialing';
+        // 契約中（無料お試しを含む）の先生と、コンサルの受講中の先生が買える（追加パックは有料の機能・2026-09-24 案A／受講中は 2026-10-06）
+        const access = await loadAccessSettings(supabase, user.id);
+        const canBuy = settings?.subscription_status === 'active' || settings?.subscription_status === 'trialing' || isInCourse(access?.course_end_date);
         if (!canBuy) {
             return NextResponse.json({ error: 'プランに加入してから追加パックを購入できます' }, { status: 400 });
         }
@@ -41,7 +45,8 @@ export async function POST(req: NextRequest) {
         if (!customerId) {
             const customer = await stripe.customers.create({ email: user.email, metadata: { supabase_user_id: user.id } });
             customerId = customer.id;
-            await supabase.from('user_settings').upsert({ user_id: user.id, stripe_customer_id: customerId });
+            // 課金の列は先生の権限では書き換えられない決まりにした（2026-10-06・SQL）ので、運営の権限で書く
+            await createAdminClient().from('user_settings').update({ stripe_customer_id: customerId }).eq('user_id', user.id);
         }
 
         const session = await stripe.checkout.sessions.create({

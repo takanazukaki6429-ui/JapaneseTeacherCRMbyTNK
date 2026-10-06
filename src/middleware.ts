@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { decideMfa, MFA_VERIFY_PATH, needsMfaCode } from '@/lib/mfa';
+import { loadAccessSettings } from '@/lib/access-settings';
+import { isInCourse } from '@/lib/course';
 
 export async function middleware(request: NextRequest) {
     let response = NextResponse.next({
@@ -122,7 +124,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // 5. Subscription check（門番・2026-09-24 かずき「これでOK」で動かす）
-    // 通すのは：無料の印がある既存の先生（is_free）・無料お試し中・契約中。
+    // 通すのは：無料の印がある既存の先生（is_free）・無料お試し中・契約中・コンサルの受講中（コースが終わる日まで・2026-10-06）。
     // 解約した先生・支払いが止まった先生は「見るだけ」（2026-09-25 かずき決定・案B）：
     //   ホーム・生徒の一覧・生徒の1枚（過去の記録）・学習計画・設定は見られる。新しい記録・ライブ授業・準備・AI は使えない
     // 一度も申し込んでいない先生（inactive）は、料金の画面へ案内する。
@@ -141,14 +143,12 @@ export async function middleware(request: NextRequest) {
             remembered === `${user.id}:full` ? 'full' : remembered === `${user.id}:read` ? 'read' : null;
 
         if (!mode) {
-            const { data: settings } = await supabase
-                .from('user_settings')
-                .select('is_free, subscription_status')
-                .eq('user_id', user.id)
-                .maybeSingle();
+            // コンサルの受講中（コースが終わる日まで）も通す（2026-10-06）。
+            // 列がまだ無い保管庫でも全員を料金の画面へ回さないよう、読み込みは列を減らして読み直す（lib/access-settings.ts）
+            const settings = await loadAccessSettings(supabase, user.id);
             const isFree = settings?.is_free ?? false;
             const status = settings?.subscription_status ?? 'inactive';
-            mode = isFree || status === 'active' || status === 'trialing'
+            mode = isFree || status === 'active' || status === 'trialing' || isInCourse(settings?.course_end_date)
                 ? 'full'
                 : ['canceled', 'past_due', 'unpaid', 'incomplete_expired'].includes(status) ? 'read' : 'none';
             if (mode !== 'none') {

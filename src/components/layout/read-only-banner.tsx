@@ -4,30 +4,15 @@
  * 解約した先生への「見るだけ」の帯（2026-09-25 かずき決定・案B）。
  * 解約・支払いが止まった先生は、ホーム・生徒の1枚（過去の記録）・学習計画・設定を見られる。
  * 新しい記録・ライブ授業・準備・AI は使えない（門番＝middleware と各処理が止める）。
- * 帯で理由と戻り方（申込み）を先に伝える
+ * 帯で理由と戻り方（申込み）を先に伝える。コンサルの受講中（コースが終わる日まで）は出さない（2026-10-06）
  */
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Eye } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
-
-const LAPSED = ['canceled', 'past_due', 'unpaid', 'incomplete_expired'];
+import { useReadOnly } from '@/lib/plan-access';
 
 export function ReadOnlyBanner() {
-    const [lapsed, setLapsed] = useState(false);
-
-    useEffect(() => {
-        let alive = true;
-        (async () => {
-            const supabase = createClient();
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-            const { data } = await supabase.from('user_settings').select('is_free, subscription_status').eq('user_id', user.id).maybeSingle();
-            const row = data as { is_free?: boolean; subscription_status?: string } | null;
-            if (alive && row && !row.is_free && LAPSED.includes(row.subscription_status ?? '')) setLapsed(true);
-        })().catch(() => {});
-        return () => { alive = false; };
-    }, []);
+    // 判定は lib/plan-access.ts の useReadOnly（コンサルの受講中は見るだけにしない・2026-10-06）
+    const { readOnly: lapsed } = useReadOnly();
 
     if (!lapsed) return null;
     return (

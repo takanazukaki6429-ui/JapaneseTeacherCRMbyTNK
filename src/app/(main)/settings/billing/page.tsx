@@ -3,8 +3,9 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { CheckCircle, CreditCard, Loader2, AlertCircle, Languages } from 'lucide-react';
+import { CheckCircle, CreditCard, Loader2, AlertCircle, Languages, GraduationCap } from 'lucide-react';
 import { PLAN_TIERS, isPlanTier, tierPriceLabel, PACK_SENTENCE, PACK_PRICE_JPY, PACK_MINUTES, PACK_VALID_DAYS } from '@/lib/pricing';
+import { formatJpDate, isInCourse, normalizeCourseEndDate } from '@/lib/course';
 
 // useSearchParams を使う＋認証必須のユーザー固有ページのため静的化を無効
 export const dynamic = 'force-dynamic';
@@ -14,7 +15,16 @@ type BillingInfo = {
     subscription_status: string | null;
     stripe_customer_id: string | null;
     plan_tier?: string | null;
+    /** コンサルの受講中は、この日まで無料（2026-10-06・lib/course.ts） */
+    course_end_date?: string | null;
 };
+
+// 列がまだ無い保管庫（SQL を流す前）でも動くよう、読めなければ列を減らして読み直す
+const BILLING_COLUMNS = [
+    'is_free, subscription_status, stripe_customer_id, plan_tier, course_end_date',
+    'is_free, subscription_status, stripe_customer_id, plan_tier',
+    'is_free, subscription_status, stripe_customer_id',
+] as const;
 
 type Quota = { tier: string; capMin: number; planCapMin: number; packMin: number; usedMin: number; remainingMin: number };
 
@@ -42,9 +52,14 @@ function BillingContent() {
         const supabase = createClient();
         supabase.auth.getUser().then(async ({ data: { user } }) => {
             if (!user) return;
-            // plan_tier の列がまだ無い保管庫でも動くよう、失敗したら列なしで読み直す
-            let row: BillingInfo | null = (await supabase.from('user_settings').select('is_free, subscription_status, stripe_customer_id, plan_tier').eq('user_id', user.id).single()).data as BillingInfo | null;
-            if (!row) row = (await supabase.from('user_settings').select('is_free, subscription_status, stripe_customer_id').eq('user_id', user.id).single()).data as BillingInfo | null;
+            let row: BillingInfo | null = null;
+            for (const columns of BILLING_COLUMNS) {
+                const { data, error } = await supabase.from('user_settings').select(columns).eq('user_id', user.id).maybeSingle();
+                if (!error) {
+                    row = data as BillingInfo | null;
+                    break;
+                }
+            }
             setInfo(row);
             setLoading(false);
         });
@@ -89,13 +104,26 @@ function BillingContent() {
     const status = info?.subscription_status ?? 'inactive';
     const statusInfo = STATUS_LABEL[status] ?? STATUS_LABEL['inactive'];
     const subscribed = status === 'active' || status === 'trialing';
-    const isActive = info?.is_free || subscribed;
+    // コンサルの受講中（コースが終わる日まで無料・2026-10-06）
+    const courseEnd = normalizeCourseEndDate(info?.course_end_date ?? null);
+    const inCourse = isInCourse(courseEnd);
+    const courseDone = !!courseEnd && !inCourse;
+    const isActive = info?.is_free || subscribed || inCourse;
     const tier = isPlanTier(info?.plan_tier) ? info.plan_tier : 'light';
     // 既存の無料の先生が申し込んだ場合は、申し込んだプランを出す（2026-09-24）
     const legacyFreeOnly = !!info?.is_free && !subscribed;
-    const planLabel = legacyFreeOnly
-        ? '無償プラン（招待）'
-        : `${PLAN_TIERS[tier].label}プラン ${tierPriceLabel(tier)}/月`;
+    const courseOnly = inCourse && !subscribed;
+    const planLabel = courseOnly
+        ? 'コンサルの受講中（レギュラーと同じ機能）'
+        : legacyFreeOnly
+            ? '無償プラン（招待）'
+            : `${PLAN_TIERS[tier].label}プラン ${tierPriceLabel(tier)}/月`;
+    // 受講中に先回りして申し込んだ先生は、Stripe ではお試し中。料金は受講の後から（「無料お試し中」とは出さない）
+    const statusText = courseOnly
+        ? `受講中・${formatJpDate(courseEnd as string)}まで無料`
+        : inCourse && status === 'trialing'
+            ? '受講中（申込み済み）'
+            : legacyFreeOnly ? '無償（永続）' : statusInfo.label;
     const usedPct = quota && quota.capMin > 0 ? Math.min(100, Math.round(quota.usedMin / quota.capMin * 100)) : 0;
 
     return (
@@ -126,10 +154,32 @@ function BillingContent() {
 
                 <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-[#484550]">状態</span>
-                    <span className={`text-xs font-bold px-3 py-1 rounded-full border ${statusInfo.color}`}>
-                        {legacyFreeOnly ? '無償（永続）' : statusInfo.label}
+                    <span className={`text-xs font-bold px-3 py-1 rounded-full border ${inCourse ? 'text-[#4a3f73] bg-[#f6f2ff] border-[#d9cff5]' : statusInfo.color}`}>
+                        {statusText}
                     </span>
                 </div>
+
+                {/* コンサルの受講生への案内（2026-10-06）。終わった後の無料お試しは無い（受講中に使っているため） */}
+                {inCourse && courseEnd && (
+                    <div className="flex items-start gap-2 p-3 bg-[#f6f2ff] border border-[#d9cff5] rounded-xl text-sm text-[#4a3f73] leading-relaxed">
+                        <GraduationCap size={16} className="mt-0.5 flex-shrink-0" />
+                        {subscribed ? (
+                            <span>お申込みありがとうございます。料金は、受講期間（{formatJpDate(courseEnd)}まで）が終わった後からかかります。</span>
+                        ) : (
+                            <span>
+                                受講期間中は、<b>{formatJpDate(courseEnd)}</b> まで無料で使えます（カードの登録はいりません）。<br />
+                                そのあとも使う場合は、プランをお申し込みください。今お申込みいただくと、料金は受講期間が終わった後からかかります。
+                                受講期間の後に、無料お試しはありません。
+                            </span>
+                        )}
+                    </div>
+                )}
+                {courseDone && !subscribed && !info?.is_free && courseEnd && (
+                    <div className="flex items-start gap-2 p-3 bg-[#f6f2ff] border border-[#d9cff5] rounded-xl text-sm text-[#4a3f73] leading-relaxed">
+                        <GraduationCap size={16} className="mt-0.5 flex-shrink-0" />
+                        <span>受講期間（{formatJpDate(courseEnd)}まで）は終わりました。続けて使うには、プランをお申し込みください（無料お試しはありません）。</span>
+                    </div>
+                )}
 
                 {!isActive && !info?.is_free && (
                     <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
@@ -155,7 +205,7 @@ function BillingContent() {
                     </p>
                     <p className="text-xs text-[#484550]">上限に達すると翻訳モードだけ止まります。ほかの機能はそのまま使えます。上限は毎月1日にリセットされます。</p>
 
-                    {PACK_PRICE_JPY !== null && subscribed && (
+                    {PACK_PRICE_JPY !== null && (subscribed || inCourse) && (
                         <div className="pt-2 border-t border-[#f0ebf8]">
                             <p className="text-xs text-[#484550] mb-2">{PACK_SENTENCE}。買った日から{PACK_VALID_DAYS}日の間、今月の上限に足されます。</p>
                             {packError && <p className="text-xs text-red-600 mb-2">{packError}</p>}
@@ -190,12 +240,12 @@ function BillingContent() {
                 </div>
             )}
 
-            {!isActive && !info?.is_free ? (
+            {(!isActive && !info?.is_free) || courseOnly ? (
                 <a
                     href="/pricing"
                     className="block w-full text-center py-3.5 bg-[#6b5ca5] text-white font-bold rounded-2xl hover:scale-[1.02] transition-transform shadow-[0_4px_24px_rgba(107,92,165,0.25)]"
                 >
-                    プランに加入する
+                    {courseOnly ? 'プランを選ぶ（料金は受講期間の後から）' : 'プランに加入する'}
                 </a>
             ) : (
                 // 契約中・無料の先生も、ほかのプランを見比べられるように（2026-09-24 かずき指示）

@@ -85,3 +85,32 @@ describe('featureForAiType', () => {
         }
     });
 });
+
+describe('コンサルの受講中（2026-10-06）', () => {
+    const IN = new Date('2026-11-01T00:00:00Z');      // 日本時間 11/1
+    const AFTER = new Date('2027-01-01T00:00:00Z');   // 日本時間 2027/1/1（コースは 12/31 まで）
+    const COURSE = { isFree: false, status: 'inactive', tier: 'light', courseEndDate: '2026-12-31' };
+
+    it('受講中は、申し込んでいなくてもレギュラー扱いで全部使える', () => {
+        expect(featureTier({ ...COURSE, now: IN })).toBe('regular');
+        for (const f of ALL) expect(canUseFeature(f, { ...COURSE, now: IN })).toBe(true);
+    });
+    it('コースが終わったら、申し込むまで使えない（理由は申込み）', () => {
+        for (const f of ALL) expect(decideFeature(f, { ...COURSE, now: AFTER })).toEqual({ allowed: false, reason: 'needs_plan' });
+    });
+    it('受講中にライトで先回りして申し込んだ（お試し中）・ライトで契約中でも、受講中はレギュラー扱い', () => {
+        for (const f of ALL) {
+            expect(canUseFeature(f, { ...COURSE, status: 'trialing', now: IN })).toBe(true);
+            expect(canUseFeature(f, { ...COURSE, status: 'active', now: IN })).toBe(true);
+        }
+    });
+    it('受講が終わってライトで契約中なら、ライトの制限', () => {
+        expect(decideFeature('ask', { ...COURSE, status: 'active', now: AFTER })).toEqual({ allowed: false, reason: 'needs_regular' });
+    });
+    it('プロで契約中なら受講中もプロ', () => {
+        expect(featureTier({ ...COURSE, status: 'active', tier: 'pro', now: IN })).toBe('pro');
+    });
+    it('解約した先生でも、受講中は使える', () => {
+        for (const f of ALL) expect(canUseFeature(f, { ...COURSE, status: 'canceled', now: IN })).toBe(true);
+    });
+});

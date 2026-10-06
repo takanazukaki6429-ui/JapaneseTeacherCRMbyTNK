@@ -16,6 +16,7 @@
  * ここは判定だけの純粋な関数（テスト対象）。画面は lib/plan-access.ts、サーバーは lib/plan-access-server.ts から使う。
  */
 import { isPlanTier, type PlanTier } from '@/lib/pricing';
+import { isInCourse } from '@/lib/course';
 
 export type GatedFeature =
     | 'prep_sheet'        // 授業前の1枚を開いた時に自動で作る（生徒の1枚の「本日の授業指針」も）
@@ -39,16 +40,22 @@ export type FeatureInput = {
     isFree?: boolean | null;
     status?: string | null;
     tier?: string | null;
+    /** コンサルの受講中は、この日までレギュラー扱い（lib/course.ts・2026-10-06） */
+    courseEndDate?: string | null;
+    /** 判定する時点（テスト用。省略すると今） */
+    now?: Date;
 };
 
 /**
  * 機能の判定に使うプラン。お試し中はレギュラー扱い。契約中は保存されたプラン（読めなければ一番狭いライト）。
+ * コンサルの受講中（コースが終わる日まで）は、契約していなくても・ライトで契約していても、レギュラー扱い。
  * 契約していない・止まっている時は null
  */
 export function featureTier(input: FeatureInput): PlanTier | null {
     if (input.status === 'trialing') return 'regular';
-    if (input.status === 'active') return isPlanTier(input.tier) ? input.tier : 'light';
-    return null;
+    const paid: PlanTier | null = input.status === 'active' ? (isPlanTier(input.tier) ? input.tier : 'light') : null;
+    if ((paid === null || paid === 'light') && isInCourse(input.courseEndDate, input.now)) return 'regular';
+    return paid;
 }
 
 export type FeatureDecision =
