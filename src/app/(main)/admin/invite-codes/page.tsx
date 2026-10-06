@@ -10,8 +10,8 @@ import { toast } from 'sonner';
 import { showAppError } from '@/lib/error-handler';
 import { isAdminEmail } from '@/lib/admin';
 import { PLAN_TIERS, PLAN_TIER_KEYS } from '@/lib/pricing';
-import { CONSULTANT_MAX_LENGTH, periodLabel, jstDateOf, type ConsultantReport, type CourseInvoice } from '@/lib/consultant-report';
-import { COURSE_FEE_JPY, formatJpDate, isInCourse } from '@/lib/course';
+import { CONSULTANT_MAX_LENGTH, type ConsultantReport } from '@/lib/consultant-report';
+import { formatJpDate, isInCourse } from '@/lib/course';
 
 type InviteCode = {
     id: string;
@@ -28,53 +28,6 @@ type InviteCode = {
 type CourseDraft = { months: string; end: string };
 
 const yenOrDash = (n: number | null) => (n === null ? '金額未設定' : `¥${n.toLocaleString('ja-JP')}`);
-
-/** 受講生の ASTA 代（その月に、コースつきのコードで登録した受講生）の表 */
-function CourseInvoiceTable({ invoice, title }: { invoice: CourseInvoice; title: string }) {
-    return (
-        <div>
-            <p className="mb-2 text-sm font-bold text-slate-700">
-                {title}（{periodLabel(invoice.period)}）：{invoice.lines.length}人・¥{invoice.totalYen.toLocaleString('ja-JP')}
-            </p>
-            {invoice.lines.length === 0 ? (
-                <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">該当なし</p>
-            ) : (
-                <div className="relative overflow-x-auto">
-                    <table className="w-full text-sm text-left text-slate-600">
-                        <thead className="text-xs text-slate-700 bg-slate-50">
-                            <tr>
-                                <th className="px-3 py-2">渡した相手</th>
-                                <th className="px-3 py-2">受講生</th>
-                                <th className="px-3 py-2">コース</th>
-                                <th className="px-3 py-2">登録した日</th>
-                                <th className="px-3 py-2 text-right">ASTA代</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {invoice.lines.map(l => {
-                                const day = jstDateOf(l.registeredAt);
-                                return (
-                                    <tr key={`${l.consultant}-${l.registeredAt}-${l.name ?? ''}`} className="bg-white border-b">
-                                        <td className="px-3 py-2">{l.consultant}</td>
-                                        <td className="px-3 py-2">{l.name ?? '（表示名なし）'}</td>
-                                        <td className="px-3 py-2">{l.months}か月{l.endDate ? `（${formatJpDate(l.endDate)}まで）` : ''}</td>
-                                        <td className="px-3 py-2">{day ? formatJpDate(day) : '—'}</td>
-                                        <td className="px-3 py-2 text-right">¥{l.feeYen.toLocaleString('ja-JP')}</td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-            {invoice.byConsultant.length > 1 && (
-                <p className="mt-2 text-xs text-slate-500">
-                    {invoice.byConsultant.map(g => `${g.consultant} ${g.count}人 ¥${g.totalYen.toLocaleString('ja-JP')}`).join('／')}
-                </p>
-            )}
-        </div>
-    );
-}
 
 export default function InviteCodesAdminPage() {
     const [codes, setCodes] = useState<InviteCode[]>([]);
@@ -324,8 +277,8 @@ export default function InviteCodesAdminPage() {
                             className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 disabled:bg-slate-50"
                         >
                             <option value="">なし</option>
-                            <option value="3">3か月（ASTA代 ¥{COURSE_FEE_JPY[3].toLocaleString('ja-JP')}）</option>
-                            <option value="6">6か月（ASTA代 ¥{COURSE_FEE_JPY[6].toLocaleString('ja-JP')}）</option>
+                            <option value="3">3か月</option>
+                            <option value="6">6か月</option>
                         </select>
                     </label>
                     <label className="text-sm text-slate-700">
@@ -418,22 +371,6 @@ export default function InviteCodesAdminPage() {
                     )}
                 </CardContent>
             </Card>
-
-            {report?.courseInvoices && (
-                <Card className="shadow-sm">
-                    <CardHeader>
-                        <CardTitle className="text-lg">受講生の ASTA 代（請求の目安）</CardTitle>
-                        <CardDescription>
-                            コースつきのコードで登録した受講生を、登録した月ごとに並べます（3か月コース ¥{COURSE_FEE_JPY[3].toLocaleString('ja-JP')}・6か月コース ¥{COURSE_FEE_JPY[6].toLocaleString('ja-JP')}）。
-                            受講開始時にまとめて受け取る分です（2026-10-04 決定）。先月の分は、毎月1日のメールにも載ります。
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-5">
-                        <CourseInvoiceTable invoice={report.courseInvoices.previous} title="先月" />
-                        <CourseInvoiceTable invoice={report.courseInvoices.current} title="今月（ここまで）" />
-                    </CardContent>
-                </Card>
-            )}
 
             <Card className="shadow-sm">
                 <CardHeader>
