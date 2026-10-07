@@ -39,6 +39,8 @@ export const PLAN_TRIAL_SENTENCE = `最初の${TRIAL_DAYS}日間は無料です�
  * 金額はここに書かない（環境変数から。上の注意のとおり）
  */
 export type PlanTier = 'light' | 'regular' | 'pro';
+/** member＝受講生価格・general＝一般価格（lib/audience.ts） */
+export type PriceSet = 'member' | 'general';
 export const PLAN_TIER_KEYS: PlanTier[] = ['light', 'regular', 'pro'];
 
 /** 段ごとの月額（税込・円）。環境変数 NEXT_PUBLIC_PLAN_PRICE_JPY_LIGHT / _REGULAR / _PRO。未設定なら null＝準備中 */
@@ -53,15 +55,35 @@ export const PLAN_TIERS: Record<PlanTier, { label: string; students: number; tra
 };
 export const isPlanTier = (v: unknown): v is PlanTier => typeof v === 'string' && (PLAN_TIER_KEYS as string[]).includes(v);
 
+/**
+ * 一般価格（2026-10-07 かずき決定：基準の料金は一般の先生向け。上の PLAN_TIERS の金額は「受講生価格」）。
+ * 金額は未定（かずき・あいちゃん）。環境変数 NEXT_PUBLIC_PLAN_PRICE_JPY_LIGHT_GENERAL / _REGULAR_GENERAL / _PRO_GENERAL。
+ * 3つとも決まるまでは、一般の先生も受講生価格で表示・申込みする（どちらで申し込むかは lib/audience.ts）
+ */
+const GENERAL_PRICES: Record<PlanTier, number | null> = {
+    light: priceFromEnv(process.env.NEXT_PUBLIC_PLAN_PRICE_JPY_LIGHT_GENERAL),
+    regular: priceFromEnv(process.env.NEXT_PUBLIC_PLAN_PRICE_JPY_REGULAR_GENERAL),
+    pro: priceFromEnv(process.env.NEXT_PUBLIC_PLAN_PRICE_JPY_PRO_GENERAL),
+};
+/** 一般価格が3つとも決まっているか */
+export const GENERAL_PRICES_SET = PLAN_TIER_KEYS.every(t => GENERAL_PRICES[t] !== null);
+
+/** 実際に使う料金（一般価格が決まるまでは、一般の先生も受講生価格） */
+export const effectivePriceSet = (set: PriceSet): PriceSet => (set === 'general' && GENERAL_PRICES_SET ? 'general' : 'member');
+
+/** 段の月額（税込・円）。未設定なら null */
+export const tierPriceJpy = (tier: PlanTier, set: PriceSet = 'member'): number | null =>
+    effectivePriceSet(set) === 'general' ? GENERAL_PRICES[tier] : PLAN_TIERS[tier].priceJpy;
+
 export const yen = (n: number) => `¥${n.toLocaleString('ja-JP')}`;
-/** 段の月額の表記（「¥2,980」／未設定なら「準備中」） */
-export const tierPriceLabel = (tier: PlanTier): string => {
-    const p = PLAN_TIERS[tier].priceJpy;
+/** 段の月額の表記（「¥2,980」／未設定なら「準備中」）。set＝受講生価格（既定）か一般価格 */
+export const tierPriceLabel = (tier: PlanTier, set: PriceSet = 'member'): string => {
+    const p = tierPriceJpy(tier, set);
     return p === null ? '準備中' : yen(p);
 };
 /** 授業1回あたりの金額（月額 ÷ 生徒のめやす × 月4.3回）。全プランに併記する＝かずき指示 2026-09-23 */
-export const tierPerLessonLabel = (tier: PlanTier): string | null => {
-    const p = PLAN_TIERS[tier].priceJpy;
+export const tierPerLessonLabel = (tier: PlanTier, set: PriceSet = 'member'): string | null => {
+    const p = tierPriceJpy(tier, set);
     if (p === null) return null;
     return yen(Math.round(p / (PLAN_TIERS[tier].students * 4.3)));
 };
@@ -88,10 +110,18 @@ export const PACK_SENTENCE: string = PACK_PRICE_JPY === null
 /** ライトで使えない機能の一文（2026-10-04 かずき決定）。規約・特商法の料金の文に入れる */
 export const LIGHT_LIMIT_SENTENCE = '授業前の1枚・例文と練習問題と言い換えの作成・ASTAに聞く・みんなの教材は使えません';
 
-/** 3段の料金の一文（規約 第5条・特商法の「販売価格」で使う）。1つでも未設定なら準備中 */
-export const PLAN_PRICE_SENTENCE: string = ALL_TIER_PRICES_SET
-    ? PLAN_TIER_KEYS.map(t => `${PLAN_TIERS[t].label}プラン 月額 ${tierPriceLabel(t)}（翻訳モード ${PLAN_TIERS[t].translationMinutes.toLocaleString('ja-JP')}分/月まで${t === 'light' ? `。${LIGHT_LIMIT_SENTENCE}` : ''}）`).join('／') + '（いずれも消費税込み）'
-    : '料金は準備中です（確定次第、事前にご案内します）';
+const tierSentence = (set: PriceSet) =>
+    PLAN_TIER_KEYS.map(t => `${PLAN_TIERS[t].label}プラン 月額 ${tierPriceLabel(t, set)}（翻訳モード ${PLAN_TIERS[t].translationMinutes.toLocaleString('ja-JP')}分/月まで${t === 'light' ? `。${LIGHT_LIMIT_SENTENCE}` : ''}）`).join('／');
+
+/**
+ * 3段の料金の一文（規約 第5条・特商法の「販売価格」で使う）。1つでも未設定なら準備中。
+ * 一般価格が決まったら、一般価格と受講生価格（規約 第5条第10項の対象の方）を並べて書く
+ */
+export const PLAN_PRICE_SENTENCE: string = !ALL_TIER_PRICES_SET
+    ? '料金は準備中です（確定次第、事前にご案内します）'
+    : GENERAL_PRICES_SET
+        ? `一般価格：${tierSentence('general')}。受講生価格（第5条第10項の対象の方）：${tierSentence('member')}（いずれも消費税込み）`
+        : `${tierSentence('member')}（いずれも消費税込み）`;
 
 /** 規約・特商法表記の施行日。課金開始に合わせて更新する */
 export const LEGAL_EFFECTIVE_DATE = process.env.NEXT_PUBLIC_LEGAL_EFFECTIVE_DATE || '2026年10月1日';

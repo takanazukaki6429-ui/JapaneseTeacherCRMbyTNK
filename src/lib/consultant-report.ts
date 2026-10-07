@@ -9,6 +9,9 @@
  *   - 有料＝subscription_status が active（お試し中 trialing は含めない）
  *   - コンサルの受講中（コースが終わる日まで無料・2026-10-06）は「受講中」として別に数える（紹介の取り分なし）。
  *     受講中の ASTA 代は ASTA の外でやり取りするので、ここでは数えない
+ *   - 受講が終わって申し込んでいない受講生は「受講後・未申込み」（2026-10-07 案2：かずき・あいちゃんが声をかける）
+ *   - コードの数（2026-10-07）：出したコード・使われたコード・使われていない有効なコード（期限切れ・取り消しは数えない）。
+ *     使われていないコードが多い時は、漏れや渡し忘れの目印
  *   - 無料の印（is_free）の先生で契約していない人は「無料の先生」として別に数える
  *   - 金額＝有料の先生の段の月額（税込）の合計。実際の入金額ではない（手数料・日割り・返金は入らない）
  *
@@ -19,6 +22,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { PLAN_TIERS, PLAN_TIER_KEYS, isPlanTier, type PlanTier } from '@/lib/pricing';
 import { isInCourse } from '@/lib/course';
+import { courseFinished } from '@/lib/audience';
+import { inviteCodeStatus } from '@/lib/invite-code';
 
 /** 渡した相手を記録し始めた日（これより後に、相手が空のコードで登録した先生は「入れ忘れ」の可能性として数える） */
 export const ATTRIBUTION_START_ISO = '2026-10-01T00:00:00+09:00';
@@ -44,6 +49,9 @@ export type UsedCodeRow = {
     consultant: string | null;
     used_by: string | null;
     used_at: string | null;
+    /** 使える期限・取り消し（2026-10-07）。列が無い保管庫では来ない */
+    expires_at?: string | null;
+    revoked_at?: string | null;
 };
 
 export type TeacherSettingsRow = {
@@ -58,19 +66,25 @@ export type TeacherSettingsRow = {
 export type ReferredTeacher = {
     userId: string;
     name: string | null;
-    bucket: 'paid' | 'course' | 'trialing' | 'past_due' | 'canceled' | 'free' | 'none';
+    bucket: 'paid' | 'course' | 'course_finished' | 'trialing' | 'past_due' | 'canceled' | 'free' | 'none';
     tier: PlanTier;
     registeredAt: string | null;
 };
 
 export type ConsultantSummary = {
     consultant: string;
+    /** そのコンサルタントに渡したコードの数（使われた物・期限切れ・取り消しも含む） */
+    issued: number;
+    /** 使われていない有効なコードの数（期限切れ・取り消しは除く） */
+    unusedValid: number;
     /** そのコンサルタントに渡したコードで登録した先生 */
     registered: number;
     paid: Record<PlanTier, number>;
     paidTotal: number;
     /** コンサルの受講中（コースが終わる日まで無料・紹介の取り分なし） */
     course: number;
+    /** 受講が終わって申し込んでいない受講生 */
+    courseFinished: number;
     trialing: number;
     pastDue: number;
     canceled: number;
@@ -104,10 +118,11 @@ function bucketOf(s: TeacherSettingsRow | undefined, now: Date): ReferredTeacher
     if (status === 'trialing') return 'trialing';
     if (status === 'past_due' || status === 'unpaid') return 'past_due';
     if (status === 'canceled' || status === 'incomplete_expired') return 'canceled';
-    return s?.is_free ? 'free' : 'none';
+    if (s?.is_free) return 'free';
+    return courseFinished({ courseEndDate: s?.course_end_date, now }) ? 'course_finished' : 'none';
 }
 
-/** 使われたコードと先生の設定から、コンサルタントごとに数える（純粋な集計・テスト対象） */
+/** 出したコードと先生の設定から、コンサルタントごとに数える（純粋な集計・テスト対象） */
 export function buildConsultantReport(
     codes: UsedCodeRow[],
     settings: TeacherSettingsRow[],
@@ -120,10 +135,9 @@ export function buildConsultantReport(
     let unattributedSinceStart = 0;
 
     for (const code of codes) {
-        if (!code.used_by) continue;
         const consultant = normalizeConsultant(code.consultant);
         if (!consultant) {
-            if (code.used_at && Date.parse(code.used_at) >= startMs) unattributedSinceStart++;
+            if (code.used_by && code.used_at && Date.parse(code.used_at) >= startMs) unattributedSinceStart++;
             continue;
         }
 
@@ -131,10 +145,13 @@ export function buildConsultantReport(
         if (!summary) {
             summary = {
                 consultant,
+                issued: 0,
+                unusedValid: 0,
                 registered: 0,
                 paid: { light: 0, regular: 0, pro: 0 },
                 paidTotal: 0,
                 course: 0,
+                courseFinished: 0,
                 trialing: 0,
                 pastDue: 0,
                 canceled: 0,
@@ -146,6 +163,14 @@ export function buildConsultantReport(
             byConsultant.set(consultant, summary);
         }
 
+        summary.issued++;
+        if (!code.used_by) {
+            if (inviteCodeStatus({ used_at: code.used_at, expires_at: code.expires_at, revoked_at: code.revoked_at }, now) === 'unused') {
+                summary.unusedValid++;
+            }
+            continue;
+        }
+
         const s = settingsById.get(code.used_by);
         const tier: PlanTier = isPlanTier(s?.plan_tier) ? s!.plan_tier as PlanTier : 'light';
         const bucket = bucketOf(s, now);
@@ -154,6 +179,7 @@ export function buildConsultantReport(
             summary.paid[tier]++;
             summary.paidTotal++;
         } else if (bucket === 'course') summary.course++;
+        else if (bucket === 'course_finished') summary.courseFinished++;
         else if (bucket === 'trialing') summary.trialing++;
         else if (bucket === 'past_due') summary.pastDue++;
         else if (bucket === 'canceled') summary.canceled++;
@@ -199,10 +225,19 @@ const SETTINGS_COLUMNS = [
 export async function loadConsultantReport(
     db: SupabaseClient,
 ): Promise<ConsultantReport & { columnMissing: boolean }> {
-    const { data: codes, error } = await db
-        .from('invite_codes')
-        .select('consultant, used_by, used_at')
-        .not('used_by', 'is', null);
+    // 出したコードの数・使われていない数も数えるので、使われていないコードも読む（期限・取り消しの列が無い保管庫では列を減らす）
+    let codes: unknown[] | null = null;
+    let error: { message?: string } | null = null;
+    for (const columns of ['consultant, used_by, used_at, expires_at, revoked_at', 'consultant, used_by, used_at, expires_at', 'consultant, used_by, used_at']) {
+        const result = await db.from('invite_codes').select(columns);
+        if (!result.error) {
+            codes = result.data;
+            error = null;
+            break;
+        }
+        error = result.error;
+        if (isMissingConsultantColumn(result.error)) break;
+    }
 
     if (error) {
         if (isMissingConsultantColumn(error)) {
@@ -237,6 +272,7 @@ export async function loadConsultantReport(
 const BUCKET_LABEL: Record<ReferredTeacher['bucket'], string> = {
     paid: '有料',
     course: '受講中',
+    course_finished: '受講後・未申込み',
     trialing: 'お試し中',
     past_due: '支払い遅れ',
     canceled: '解約',
@@ -259,7 +295,8 @@ export function formatConsultantReportText(report: ConsultantReport, asOfLabel: 
     for (const s of report.summaries) {
         const tiers = PLAN_TIER_KEYS.filter(t => s.paid[t] > 0).map(t => `${PLAN_TIERS[t].label}${s.paid[t]}`).join('・');
         lines.push(`■ ${s.consultant}`);
-        lines.push(`  登録した先生 ${s.registered}人／有料 ${s.paidTotal}人${tiers ? `（${tiers}）` : ''}／受講中 ${s.course}人／お試し中 ${s.trialing}人／支払い遅れ ${s.pastDue}人／解約 ${s.canceled}人／無料の先生 ${s.free}人／未契約 ${s.none}人`);
+        lines.push(`  出したコード ${s.issued}件（使われていない有効なコード ${s.unusedValid}件）`);
+        lines.push(`  登録した先生 ${s.registered}人／有料 ${s.paidTotal}人${tiers ? `（${tiers}）` : ''}／受講中 ${s.course}人／受講後・未申込み ${s.courseFinished}人／お試し中 ${s.trialing}人／支払い遅れ ${s.pastDue}人／解約 ${s.canceled}人／無料の先生 ${s.free}人／未契約 ${s.none}人`);
         lines.push(`  有料の月額の合計（税込・目安）：${yenOrUnknown(s.monthlyYen)}`);
         for (const t of s.teachers) {
             lines.push(`   - ${t.name ?? '（表示名なし）'}：${BUCKET_LABEL[t.bucket]}${t.bucket === 'paid' ? `・${PLAN_TIERS[t.tier].label}` : ''}`);
@@ -278,7 +315,7 @@ export function formatConsultantReportText(report: ConsultantReport, asOfLabel: 
         lines.push('');
     }
     lines.push('※ 有料＝契約中（active）。お試し中は含めない。金額は段の月額の合計で、実際の入金額（手数料・日割り・返金）とは違う。');
-    lines.push('※ 受講中＝コンサルの受講生（コースが終わる日まで無料）。紹介の取り分は無い。');
+    lines.push('※ 受講中＝コンサルの受講生（コースが終わる日まで無料）。紹介の取り分は無い。受講後・未申込み＝受講が終わって、まだ申し込んでいない受講生（声をかける相手）。');
     lines.push('※ 取り分のルールは未決。この知らせは数えるだけ。');
     return lines.join('\n');
 }

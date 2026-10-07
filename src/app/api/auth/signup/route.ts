@@ -5,7 +5,20 @@ import { checkPasswordStrength } from '@/lib/password-policy';
 import { checkRateLimit, getRequestIdentifier } from '@/lib/rate-limit';
 import { logAudit } from '@/lib/audit';
 import { notifyAdmin } from '@/lib/notify';
-import { formatJpDate, isMissingCourseColumn, normalizeCourseEndDate, normalizeCourseMonths } from '@/lib/course';
+import { formatJpDate, normalizeCourseEndDate, normalizeCourseMonths } from '@/lib/course';
+import { AUDIENCE_LABEL, normalizeAudience } from '@/lib/audience';
+import { inviteCodeRejection } from '@/lib/invite-code';
+
+type CodeRow = {
+    id: string;
+    used_at: string | null;
+    expires_at: string | null;
+    revoked_at?: string | null;
+    email?: string | null;
+    audience?: string | null;
+    course_months?: number | null;
+    course_end_date?: string | null;
+};
 
 const signUpSchema = z.object({
     email: z.string().email(),
@@ -45,46 +58,44 @@ export async function POST(req: NextRequest) {
         const supabase = createAdminClient();
 
         // 1. Verify Invite Code
-        //    コンサルの受講生に渡すコードには、コースが終わる日が入っている（2026-10-06）。列がまだ無い保管庫では列なしで読み直す
-        type CodeRow = { id: string; used_at: string | null; expires_at: string | null; course_months?: number | null; course_end_date?: string | null };
-        let codeResult = await supabase
-            .from('invite_codes')
-            .select('id, used_at, expires_at, course_months, course_end_date')
-            .eq('code', inviteCode)
-            .single();
-        if (codeResult.error && isMissingCourseColumn(codeResult.error)) {
-            codeResult = await supabase
-                .from('invite_codes')
-                .select('id, used_at, expires_at')
-                .eq('code', inviteCode)
-                .single();
+        //    受講生・卒業生・一般の区分、コース、紐づけたメールアドレス、取り消しを読む（2026-10-06・10-07）。
+        //    列がまだ無い保管庫では、列を減らして読み直す
+        const CODE_COLUMNS = [
+            'id, used_at, expires_at, revoked_at, email, audience, course_months, course_end_date',
+            'id, used_at, expires_at, course_months, course_end_date',
+            'id, used_at, expires_at',
+        ];
+        let codeData: CodeRow | null = null;
+        let hasRevokedColumn = false;
+        for (const [i, columns] of CODE_COLUMNS.entries()) {
+            const { data, error } = await supabase.from('invite_codes').select(columns).eq('code', inviteCode).maybeSingle();
+            if (!error) {
+                codeData = data as unknown as CodeRow | null;
+                hasRevokedColumn = i === 0;
+                break;
+            }
+            if (!/column|schema cache/i.test(error.message ?? '')) break;
         }
-        const codeData = codeResult.data as CodeRow | null;
-        const codeError = codeResult.error;
 
-        if (codeError || !codeData) {
+        if (!codeData) {
             return NextResponse.json({ error: '無効な招待コードです。もう一度ご確認ください。' }, { status: 400 });
         }
 
-        if (codeData.used_at !== null) {
-            return NextResponse.json({ error: 'この招待コードは既に使用されています。' }, { status: 400 });
-        }
-
-        if (codeData.expires_at) {
-            const expDate = new Date(codeData.expires_at);
-            if (expDate < new Date()) {
-                return NextResponse.json({ error: 'この招待コードは有効期限切れです。コンサルタントに再発行を依頼してください。' }, { status: 400 });
-            }
+        // 使用済み・取り消し・期限切れ・別のメールアドレス用のコードは使えない（lib/invite-code.ts）
+        const rejection = inviteCodeRejection(codeData, email);
+        if (rejection) {
+            return NextResponse.json({ error: rejection }, { status: 400 });
         }
 
         // 2. 先にコードを消し込む（同じコードでの同時登録レースを防ぐ。
         //    used_at IS NULL 条件付き更新なので、2人同時でも勝者は1人だけになる）
-        const { data: claimed, error: claimError } = await supabase
+        let claimQuery = supabase
             .from('invite_codes')
             .update({ used_at: new Date().toISOString() })
             .eq('id', codeData.id)
-            .is('used_at', null)
-            .select('id');
+            .is('used_at', null);
+        if (hasRevokedColumn) claimQuery = claimQuery.is('revoked_at', null);
+        const { data: claimed, error: claimError } = await claimQuery.select('id');
 
         if (claimError || !claimed || claimed.length === 0) {
             return NextResponse.json({ error: 'この招待コードは既に使用されています。' }, { status: 400 });
@@ -133,20 +144,28 @@ export async function POST(req: NextRequest) {
             console.error('Failed to link code to user:', markError);
         }
 
-        // 5. コンサルの受講生なら、コースが終わる日まで無料にする（先生の設定の行は、登録と同時に保管庫の仕組みで作られている）
+        // 5. 先生の設定に、区分（一般・受講生・卒業生）とコースを写す（先生の設定の行は、登録と同時に保管庫の仕組みで作られている）。
+        //    受講生はコースが終わる日まで無料（lib/course.ts）。どちらの料金で申し込むかは lib/audience.ts
+        const audience = normalizeAudience(codeData.audience ?? null);
         const courseEndDate = normalizeCourseEndDate(codeData.course_end_date ?? null);
         const courseMonths = normalizeCourseMonths(codeData.course_months ?? null);
-        let courseNote = '';
+        const settingsUpdate: Record<string, unknown> = {};
+        if (audience) settingsUpdate.audience = audience;
         if (courseEndDate) {
+            settingsUpdate.course_end_date = courseEndDate;
+            settingsUpdate.course_months = courseMonths;
+        }
+        let courseNote = audience ? `\n区分：${AUDIENCE_LABEL[audience]}` : '';
+        if (Object.keys(settingsUpdate).length > 0) {
             const { error: courseError } = await supabase
                 .from('user_settings')
-                .update({ course_end_date: courseEndDate, course_months: courseMonths })
+                .update(settingsUpdate)
                 .eq('user_id', newUserId);
             if (courseError) {
-                console.error('Failed to set course end date:', courseError);
-                courseNote = `\n⚠️ 受講中の設定に失敗しました（${courseError.message}）。管理画面の招待コードで、コースが終わる日を入れ直してください`;
-            } else {
-                courseNote = `\n受講中：${courseMonths ? `${courseMonths}か月コース・` : ''}${formatJpDate(courseEndDate)}まで無料`;
+                console.error('Failed to set audience/course:', courseError);
+                courseNote += `\n⚠️ 区分・受講中の設定に失敗しました（${courseError.message}）。管理画面の招待コードで、コースを入れ直してください`;
+            } else if (courseEndDate) {
+                courseNote += `\n受講中：${courseMonths ? `${courseMonths}か月コース・` : ''}${formatJpDate(courseEndDate)}まで無料`;
             }
         }
 

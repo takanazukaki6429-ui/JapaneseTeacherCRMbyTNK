@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr';
 import { decideMfa, MFA_VERIFY_PATH, needsMfaCode } from '@/lib/mfa';
 import { loadAccessSettings } from '@/lib/access-settings';
 import { isInCourse } from '@/lib/course';
+import { courseFinished } from '@/lib/audience';
 
 export async function middleware(request: NextRequest) {
     let response = NextResponse.next({
@@ -125,7 +126,7 @@ export async function middleware(request: NextRequest) {
 
     // 5. Subscription check（門番・2026-09-24 かずき「これでOK」で動かす）
     // 通すのは：無料の印がある既存の先生（is_free）・無料お試し中・契約中・コンサルの受講中（コースが終わる日まで・2026-10-06）。
-    // 解約した先生・支払いが止まった先生は「見るだけ」（2026-09-25 かずき決定・案B）：
+    // 解約した先生・支払いが止まった先生・受講が終わって申し込んでいない受講生（2026-10-07 案2）は「見るだけ」（2026-09-25 かずき決定・案B）：
     //   ホーム・生徒の一覧・生徒の1枚（過去の記録）・学習計画・設定は見られる。新しい記録・ライブ授業・準備・AI は使えない
     // 一度も申し込んでいない先生（inactive）は、料金の画面へ案内する。
     // 案内しない画面：公開の画面（料金・規約・ログインなど）・登録の途中・プランの画面・API（APIは各処理が自分で判定する）
@@ -150,7 +151,9 @@ export async function middleware(request: NextRequest) {
             const status = settings?.subscription_status ?? 'inactive';
             mode = isFree || status === 'active' || status === 'trialing' || isInCourse(settings?.course_end_date)
                 ? 'full'
-                : ['canceled', 'past_due', 'unpaid', 'incomplete_expired'].includes(status) ? 'read' : 'none';
+                : ['canceled', 'past_due', 'unpaid', 'incomplete_expired'].includes(status) || courseFinished({ courseEndDate: settings?.course_end_date })
+                    ? 'read'
+                    : 'none';
             if (mode !== 'none') {
                 response.cookies.set('asta_access', `${user.id}:${mode}`, { maxAge: 300, httpOnly: true, sameSite: 'lax' });
             }

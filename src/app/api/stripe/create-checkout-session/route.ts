@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { TRIAL_DAYS, isPlanTier, type PlanTier } from '@/lib/pricing';
+import { isPlanTier, type PlanTier } from '@/lib/pricing';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getStripe, getStripePriceId } from '@/lib/stripe';
-import { courseBillingStart, isInCourse, isMissingCourseColumn, normalizeCourseEndDate } from '@/lib/course';
+import { courseBillingStart, normalizeCourseEndDate } from '@/lib/course';
+import { priceSetFor, trialPlanFor } from '@/lib/audience';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * 申込み（定期購入）。2026-09-23 から3段：本文の { tier: 'light' | 'regular' | 'pro' } で段を選ぶ。
- * 段は Stripe の契約の metadata（plan_tier）にも入れ、Stripe からの通知で user_settings.plan_tier に写す
+ * 段は Stripe の契約の metadata（plan_tier）にも入れ、Stripe からの通知で user_settings.plan_tier に写す。
+ * 2026-10-07：先生の区分で、受講生価格か一般価格か・無料の期間を決める（lib/audience.ts）
  */
 export async function POST(req: NextRequest) {
     try {
@@ -25,27 +27,28 @@ export async function POST(req: NextRequest) {
             if (isPlanTier(body?.tier)) tier = body.tier;
         } catch { /* 本文なし＝レギュラー（旧画面との互換） */ }
 
-        const priceId = getStripePriceId(tier);
+        // 既存のstripe_customer_idを取得（区分・コースの列がまだ無い保管庫では、列を減らして読み直す）
+        type Settings = { stripe_customer_id?: string | null; is_free?: boolean | null; subscription_status?: string | null; course_end_date?: string | null; audience?: string | null };
+        let settings: Settings | null = null;
+        for (const columns of [
+            'stripe_customer_id, is_free, subscription_status, course_end_date, audience',
+            'stripe_customer_id, is_free, subscription_status, course_end_date',
+            'stripe_customer_id, is_free, subscription_status',
+        ]) {
+            const { data, error } = await supabase.from('user_settings').select(columns).eq('user_id', user.id).maybeSingle();
+            if (!error) {
+                settings = data as Settings | null;
+                break;
+            }
+        }
+        const courseEndDate = normalizeCourseEndDate(settings?.course_end_date ?? null);
+
+        // 受講生価格か一般価格か（受講生は受講後30日まで受講生価格・卒業生と既存の先生は受講生価格・一般の先生は一般価格）
+        const priceSet = priceSetFor({ audience: settings?.audience, courseEndDate });
+        const priceId = getStripePriceId(tier, priceSet);
         if (!priceId) {
             return NextResponse.json({ error: 'このプランの価格がまだ設定されていません' }, { status: 400 });
         }
-
-        // 既存のstripe_customer_idを取得（コースの列がまだ無い保管庫では列なしで読み直す）
-        type Settings = { stripe_customer_id?: string | null; is_free?: boolean | null; subscription_status?: string | null; course_end_date?: string | null };
-        let settingsResult = await supabase
-            .from('user_settings')
-            .select('stripe_customer_id, is_free, subscription_status, course_end_date')
-            .eq('user_id', user.id)
-            .single();
-        if (settingsResult.error && isMissingCourseColumn(settingsResult.error)) {
-            settingsResult = await supabase
-                .from('user_settings')
-                .select('stripe_customer_id, is_free, subscription_status')
-                .eq('user_id', user.id)
-                .single();
-        }
-        const settings = settingsResult.data as Settings | null;
-        const courseEndDate = normalizeCourseEndDate(settings?.course_end_date ?? null);
 
         // 既存の無料の先生（is_free）も申し込める（2026-09-24 かずき決定：新しい機能も使いたい人は同じ料金で課金）
 
@@ -88,16 +91,16 @@ export async function POST(req: NextRequest) {
             console.error('[checkout] past subscription lookup failed:', err instanceof Error ? err.message : err);
         }
 
-        // 無料の期間の決め方（2026-10-06）：
+        // 無料の期間の決め方（2026-10-06・10-07。lib/audience.ts）：
         //   受講中に先回りして申し込んだ → コースが終わった翌日から課金（受講中はコンサル料に含まれているため）
-        //   受講を終えた人 → お試しなし（受講中に使っているため）
-        //   それ以外の初めての人 → 7日間のお試し
-        const inCourse = isInCourse(courseEndDate);
-        const trial = inCourse && courseEndDate
-            ? { trial_end: courseBillingStart(courseEndDate) }
-            : courseEndDate || hadSubscription
-                ? {}
-                : { trial_period_days: TRIAL_DAYS };
+        //   受講を終えた人・卒業生・前に申し込んだことがある人 → お試しなし
+        //   それ以外の初めての人（一般・既存の先生）→ 7日間のお試し
+        const plan = trialPlanFor({ audience: settings?.audience, courseEndDate, hadSubscription });
+        const trial = plan.kind === 'until_course_end'
+            ? { trial_end: courseBillingStart(plan.courseEndDate) }
+            : plan.kind === 'days'
+                ? { trial_period_days: plan.days }
+                : {};
 
         // Checkout セッション作成
         const session = await stripe.checkout.sessions.create({
@@ -111,7 +114,7 @@ export async function POST(req: NextRequest) {
             subscription_data: {
                 // 無料期間（2026-09-22 かずき決定＝7日）。画面の表示と同じ値を使う（lib/pricing.ts）。受講生の扱いは上
                 ...trial,
-                metadata: { supabase_user_id: user.id, plan_tier: tier },
+                metadata: { supabase_user_id: user.id, plan_tier: tier, price_set: priceSet },
             },
         });
 
