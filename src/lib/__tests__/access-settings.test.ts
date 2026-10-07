@@ -18,20 +18,27 @@ function fakeDb(existing: string[], row: Record<string, unknown> | null, calls: 
     } as unknown as SupabaseClient;
 }
 
-const ROW = { is_free: false, subscription_status: 'inactive', plan_tier: 'light', course_end_date: '2026-12-31' };
+const ROW = { is_free: false, subscription_status: 'inactive', plan_tier: 'light', course_end_date: '2026-12-31', audience: 'course' };
 
 describe('loadAccessSettings（門番などが使う、先生の設定の読み込み）', () => {
-    it('コースの列がある保管庫では、コースが終わる日まで読む', async () => {
+    it('全部の列がある保管庫では、区分とコースが終わる日まで1回で読む', async () => {
         const calls: string[] = [];
         const s = await loadAccessSettings(fakeDb(Object.keys(ROW), ROW, calls), 'u');
         expect(s?.course_end_date).toBe('2026-12-31');
+        expect(s?.audience).toBe('course');
         expect(calls).toHaveLength(1);
+    });
+    it('区分の列だけ無い保管庫（10/6 の列はある）でも、コースが終わる日は読める', async () => {
+        const calls: string[] = [];
+        const s = await loadAccessSettings(fakeDb(['is_free', 'subscription_status', 'plan_tier', 'course_end_date'], ROW, calls), 'u');
+        expect(s).toEqual({ is_free: false, subscription_status: 'inactive', plan_tier: 'light', course_end_date: '2026-12-31' });
+        expect(calls).toHaveLength(2);
     });
     it('コースの列がまだ無い保管庫（SQL を流す前）でも、列を減らして読み直す＝門番が全員を料金の画面へ回さない', async () => {
         const calls: string[] = [];
         const s = await loadAccessSettings(fakeDb(['is_free', 'subscription_status', 'plan_tier'], ROW, calls), 'u');
         expect(s).toEqual({ is_free: false, subscription_status: 'inactive', plan_tier: 'light' });
-        expect(calls).toHaveLength(2);
+        expect(calls).toHaveLength(3);
     });
     it('プランの段の列も無い保管庫でも読める', async () => {
         const s = await loadAccessSettings(fakeDb(['is_free', 'subscription_status'], { ...ROW, is_free: true }, []), 'u');

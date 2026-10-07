@@ -5,12 +5,13 @@ import { useSearchParams } from 'next/navigation';
 import { Check, Loader2 } from 'lucide-react';
 import { ContactButton } from '@/components/contact-dialog';
 import {
-    PLAN_TIERS, PLAN_TIER_KEYS, tierPriceLabel, tierPerLessonLabel, ALL_TIER_PRICES_SET,
+    PLAN_TIERS, PLAN_TIER_KEYS, tierPriceLabel, tierPerLessonLabel, ALL_TIER_PRICES_SET, GENERAL_PRICES_SET, effectivePriceSet,
     TRIAL_DAYS, TRIAL_TRANSLATION_MINUTES, PACK_PRICE_JPY, PACK_PRICE_LABEL, PACK_MINUTES, PACK_VALID_DAYS,
     type PlanTier,
 } from '@/lib/pricing';
 import { useCourseStatus } from '@/lib/plan-access';
 import { formatJpDate } from '@/lib/course';
+import { MEMBER_PRICE_GRACE_DAYS, PRICE_SET_LABEL } from '@/lib/audience';
 
 // useSearchParams を使うため静的プリレンダリングを無効化
 export const dynamic = 'force-dynamic';
@@ -22,6 +23,8 @@ export const dynamic = 'force-dynamic';
  * お試し7日間はレギュラーと同じ機能。金額は環境変数（lib/pricing.ts）。
  * コンサルの受講生（2026-10-06）：ログインしている受講生には、お試しの代わりに「受講中は無料・料金は受講期間の後から」／
  * 「受講期間が終わった・お試しなし」を出す（create-checkout-session と同じ決め方）
+ * 2026-10-07：基準の料金は一般価格。ログインしていない人・一般の先生は一般価格、受講生（受講後30日まで）・卒業生・既存の先生は受講生価格
+ * （lib/audience.ts）。一般価格の金額が決まるまでは、どちらも今の金額（受講生価格）を出す
  * 元の案＝my-company/03/strategy/料金プラン比較ページ案_2026-09-24.html
  */
 
@@ -113,7 +116,11 @@ function PricingContent() {
     const course = useCourseStatus();
     const courseEnd = course.loading ? null : course.endDate;
     const inCourse = !!courseEnd && course.inCourse;
-    const showTrial = !courseEnd;
+    // どちらの料金を出すか（ログインしていない人は一般価格）。一般価格が未設定なら受講生価格に寄る（lib/pricing.ts）
+    const priceSet = effectivePriceSet(course.loading ? 'general' : course.priceSet);
+    // 無料お試しを出すか：受講生（受講中・受講後）と卒業生には出さない（create-checkout-session と同じ決め方）
+    const noTrial = !course.loading && (!!courseEnd || course.audience === 'alumni');
+    const showTrial = !noTrial;
 
     const handleCheckout = async (tier: PlanTier) => {
         setLoading(tier);
@@ -164,22 +171,37 @@ function PricingContent() {
                     )}
                 </header>
 
-                {/* コンサルの受講生への案内（2026-10-06） */}
+                {/* コンサルの受講生・卒業生への案内（2026-10-06・10-07） */}
                 {courseEnd && (
                     <div className="mb-6 px-5 py-3 bg-[#f6f2ff] border border-[#d9cff5] rounded-2xl text-sm text-[#4a3f73] text-center leading-relaxed">
                         {inCourse ? (
                             <>
                                 受講期間中は、<b>{formatJpDate(courseEnd)}</b> まで無料で使えます（レギュラーと同じ機能）。<br />
-                                今お申込みいただくと、料金は受講期間が終わった後からかかります（お申込み時に、カードの登録が必要です）。
+                                今お申込みいただくと、料金は受講期間が終わった後からかかります（お申込み時に、カードの登録が必要です）。<br />
+                                受講期間が終わってから{MEMBER_PRICE_GRACE_DAYS}日以内のお申込みは受講生価格です。
+                            </>
+                        ) : course.memberPriceDaysLeft !== null && course.memberPriceLastDay ? (
+                            <>
+                                受講期間（{formatJpDate(courseEnd)}まで）が終わりました。<br />
+                                <b>{formatJpDate(course.memberPriceLastDay)}まで（あと{course.memberPriceDaysLeft}日）</b>のお申込みなら、受講生価格で続けられます。<br />
+                                受講中に使っていただいたため、無料お試しはありません（お申込みの日から料金がかかります）。
                             </>
                         ) : (
                             <>
                                 受講期間（{formatJpDate(courseEnd)}まで）が終わりました。<br />
-                                続けて使うには、下のプランからお申込みください。<br />
-                                受講中に使っていただいたため、無料お試しはありません（お申込みの日から料金がかかります）。
+                                続けて使うには、下のプランからお申込みください（無料お試しはありません）。
                             </>
                         )}
                     </div>
+                )}
+                {!courseEnd && !course.loading && course.audience === 'alumni' && (
+                    <div className="mb-6 px-5 py-3 bg-[#f6f2ff] border border-[#d9cff5] rounded-2xl text-sm text-[#4a3f73] text-center leading-relaxed">
+                        講座を修了した方は、受講生価格でお申込みいただけます。<br />
+                        無料お試しはありません（お申込みの日から料金がかかります）。
+                    </div>
+                )}
+                {GENERAL_PRICES_SET && course.signedIn && (
+                    <p className="mb-4 text-center text-[12px] text-[#6f6884]">この画面は{PRICE_SET_LABEL[priceSet]}で表示しています。</p>
                 )}
 
                 {lapsed && (
@@ -202,7 +224,7 @@ function PricingContent() {
                 <section className="grid gap-[18px] md:grid-cols-3" aria-label="プラン">
                     {PLAN_TIER_KEYS.map((tier) => {
                         const t = PLAN_TIERS[tier];
-                        const perLesson = tierPerLessonLabel(tier);
+                        const perLesson = tierPerLessonLabel(tier, priceSet);
                         const pop = tier === 'regular';
                         return (
                             <article
@@ -213,7 +235,7 @@ function PricingContent() {
                                 <h2 className="text-[22px] font-black mb-1">{t.label}</h2>
                                 <p className="text-[#6f6884] text-[13px] mb-3.5">目安：生徒{t.students}人前後<br />{CARD_WHO[tier]}</p>
                                 <div className="flex items-baseline gap-1.5 tabular-nums">
-                                    <b className="text-[38px] font-black tracking-tight">{tierPriceLabel(tier)}</b>
+                                    <b className="text-[38px] font-black tracking-tight">{tierPriceLabel(tier, priceSet)}</b>
                                     <span className="text-[#6f6884] text-[13px]">/ 月（税込）</span>
                                 </div>
                                 {/* 授業1回あたりの金額を全プランに併記（かずき指示 2026-09-23） */}
@@ -235,10 +257,10 @@ function PricingContent() {
                                     {!ALL_TIER_PRICES_SET
                                         ? '料金が確定しだいお申込みいただけます'
                                         : inCourse && courseEnd
-                                            ? <>{formatJpDate(courseEnd)}まで無料（受講中）<br />→ 受講期間の後から {tierPriceLabel(tier)}/月</>
-                                            : courseEnd
-                                                ? <>お申込みの日から {tierPriceLabel(tier)}/月</>
-                                                : <>{TRIAL_DAYS}日間無料<br />→ {TRIAL_DAYS + 1}日目から {tierPriceLabel(tier)}/月</>}
+                                            ? <>{formatJpDate(courseEnd)}まで無料（受講中）<br />→ 受講期間の後から {tierPriceLabel(tier, priceSet)}/月</>
+                                            : noTrial
+                                                ? <>お申込みの日から {tierPriceLabel(tier, priceSet)}/月</>
+                                                : <>{TRIAL_DAYS}日間無料<br />→ {TRIAL_DAYS + 1}日目から {tierPriceLabel(tier, priceSet)}/月</>}
                                 </p>
                                 <ul className="grid gap-2 text-[14px]">
                                     {CARD_FEATURES[tier].map((f) => (
@@ -270,7 +292,7 @@ function PricingContent() {
                                     <th className="sticky top-0 z-10 bg-white shadow-[inset_0_-1px_0_#e4ddf0] text-left px-4 py-3 text-[15px] whitespace-nowrap">機能</th>
                                     <th className="sticky top-0 z-10 bg-white shadow-[inset_0_-1px_0_#e4ddf0] px-4 py-3 text-[15px] w-[19%]">無料お試し<span className="block text-[12px] text-[#6f6884] font-medium">{TRIAL_DAYS}日間</span></th>
                                     {PLAN_TIER_KEYS.map(t => (
-                                        <th key={t} className="sticky top-0 z-10 bg-white shadow-[inset_0_-1px_0_#e4ddf0] px-4 py-3 text-[15px] w-[19%]">{PLAN_TIERS[t].label}<span className="block text-[12px] text-[#6f6884] font-medium">{tierPriceLabel(t)}/月</span></th>
+                                        <th key={t} className="sticky top-0 z-10 bg-white shadow-[inset_0_-1px_0_#e4ddf0] px-4 py-3 text-[15px] w-[19%]">{PLAN_TIERS[t].label}<span className="block text-[12px] text-[#6f6884] font-medium">{tierPriceLabel(t, priceSet)}/月</span></th>
                                     ))}
                                 </tr>
                             </thead>

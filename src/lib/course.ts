@@ -13,8 +13,8 @@
 export const COURSE_MONTHS = [3, 6] as const;
 export type CourseMonths = (typeof COURSE_MONTHS)[number];
 
-/** コースが終わる何日前から、終わりの案内を出すか */
-export const COURSE_NOTICE_DAYS = 7;
+/** コースが終わる何日前から、終わりの案内を出すか（2026-10-07 案2：14日前・7日前・前日。7日前と前日は強く出す） */
+export const COURSE_NOTICE_DAYS = 14;
 
 export const isCourseMonths = (v: unknown): v is CourseMonths => v === 3 || v === 6;
 

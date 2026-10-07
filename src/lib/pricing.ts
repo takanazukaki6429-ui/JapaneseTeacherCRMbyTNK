@@ -115,12 +115,12 @@ const tierSentence = (set: PriceSet) =>
 
 /**
  * 3段の料金の一文（規約 第5条・特商法の「販売価格」で使う）。1つでも未設定なら準備中。
- * 一般価格が決まったら、一般価格と受講生価格（規約 第5条第10項の対象の方）を並べて書く
+ * 一般価格が決まったら、一般価格と受講生価格（規約 第5条第10項・第11項の対象の方）を並べて書く
  */
 export const PLAN_PRICE_SENTENCE: string = !ALL_TIER_PRICES_SET
     ? '料金は準備中です（確定次第、事前にご案内します）'
     : GENERAL_PRICES_SET
-        ? `一般価格：${tierSentence('general')}。受講生価格（第5条第10項の対象の方）：${tierSentence('member')}（いずれも消費税込み）`
+        ? `一般価格：${tierSentence('general')}。受講生価格（第5条第10項・第11項の対象の方）：${tierSentence('member')}（いずれも消費税込み）`
         : `${tierSentence('member')}（いずれも消費税込み）`;
 
 /** 規約・特商法表記の施行日。課金開始に合わせて更新する */

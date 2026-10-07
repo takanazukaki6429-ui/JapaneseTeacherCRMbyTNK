@@ -4,8 +4,9 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { CheckCircle, CreditCard, Loader2, AlertCircle, Languages, GraduationCap } from 'lucide-react';
-import { PLAN_TIERS, isPlanTier, tierPriceLabel, PACK_SENTENCE, PACK_PRICE_JPY, PACK_MINUTES, PACK_VALID_DAYS } from '@/lib/pricing';
+import { PLAN_TIERS, GENERAL_PRICES_SET, isPlanTier, tierPriceLabel, PACK_SENTENCE, PACK_PRICE_JPY, PACK_MINUTES, PACK_VALID_DAYS } from '@/lib/pricing';
 import { formatJpDate, isInCourse, normalizeCourseEndDate } from '@/lib/course';
+import { memberPriceDaysLeft, memberPriceLastDay, normalizeAudience } from '@/lib/audience';
 
 // useSearchParams を使う＋認証必須のユーザー固有ページのため静的化を無効
 export const dynamic = 'force-dynamic';
@@ -17,10 +18,13 @@ type BillingInfo = {
     plan_tier?: string | null;
     /** コンサルの受講中は、この日まで無料（2026-10-06・lib/course.ts） */
     course_end_date?: string | null;
+    /** 先生の区分（一般・受講生・卒業生。2026-10-07・lib/audience.ts） */
+    audience?: string | null;
 };
 
 // 列がまだ無い保管庫（SQL を流す前）でも動くよう、読めなければ列を減らして読み直す
 const BILLING_COLUMNS = [
+    'is_free, subscription_status, stripe_customer_id, plan_tier, course_end_date, audience',
     'is_free, subscription_status, stripe_customer_id, plan_tier, course_end_date',
     'is_free, subscription_status, stripe_customer_id, plan_tier',
     'is_free, subscription_status, stripe_customer_id',
@@ -113,11 +117,17 @@ function BillingContent() {
     // 既存の無料の先生が申し込んだ場合は、申し込んだプランを出す（2026-09-24）
     const legacyFreeOnly = !!info?.is_free && !subscribed;
     const courseOnly = inCourse && !subscribed;
+    const audience = normalizeAudience(info?.audience ?? null);
+    const memberLastDay = memberPriceLastDay({ audience, courseEndDate: courseEnd });
+    const memberDaysLeft = memberPriceDaysLeft({ audience, courseEndDate: courseEnd });
+    // 一般価格が決まった後は、契約した時の料金（受講生価格か一般価格か）がここでは分からないので、金額は出さない（Stripe の窓口で見られる）
     const planLabel = courseOnly
         ? 'コンサルの受講中（レギュラーと同じ機能）'
         : legacyFreeOnly
             ? '無償プラン（招待）'
-            : `${PLAN_TIERS[tier].label}プラン ${tierPriceLabel(tier)}/月`;
+            : GENERAL_PRICES_SET
+                ? `${PLAN_TIERS[tier].label}プラン`
+                : `${PLAN_TIERS[tier].label}プラン ${tierPriceLabel(tier)}/月`;
     // 受講中に先回りして申し込んだ先生は、Stripe ではお試し中。料金は受講の後から（「無料お試し中」とは出さない）
     const statusText = courseOnly
         ? `受講中・${formatJpDate(courseEnd as string)}まで無料`
@@ -169,7 +179,7 @@ function BillingContent() {
                             <span>
                                 受講期間中は、<b>{formatJpDate(courseEnd)}</b> まで無料で使えます（カードの登録はいりません）。<br />
                                 そのあとも使う場合は、プランをお申し込みください。今お申込みいただくと、料金は受講期間が終わった後からかかります。
-                                受講期間の後に、無料お試しはありません。
+                                受講期間が終わってから{memberLastDay ? `${formatJpDate(memberLastDay)}まで` : '30日以内'}のお申込みは受講生価格です。受講期間の後に、無料お試しはありません。
                             </span>
                         )}
                     </div>
@@ -177,7 +187,10 @@ function BillingContent() {
                 {courseDone && !subscribed && !info?.is_free && courseEnd && (
                     <div className="flex items-start gap-2 p-3 bg-[#f6f2ff] border border-[#d9cff5] rounded-xl text-sm text-[#4a3f73] leading-relaxed">
                         <GraduationCap size={16} className="mt-0.5 flex-shrink-0" />
-                        <span>受講期間（{formatJpDate(courseEnd)}まで）は終わりました。続けて使うには、プランをお申し込みください（無料お試しはありません）。</span>
+                        <span>
+                            受講期間（{formatJpDate(courseEnd)}まで）は終わりました。続けて使うには、プランをお申し込みください（無料お試しはありません）。
+                            {memberDaysLeft !== null && memberLastDay && <><br />{formatJpDate(memberLastDay)}まで（あと{memberDaysLeft}日）のお申込みなら、受講生価格です。</>}
+                        </span>
                     </div>
                 )}
 

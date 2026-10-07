@@ -1,26 +1,39 @@
--- 受講中の無料（コースが終わる日）の列を足し、課金の列を先生の権限で書き換えられないようにする（2026-10-06）
--- 本番は Supabase Studio で流す（03_japanese-teacher-crm/strategy/sql_2026-10-06_受講中の無料と課金の列を守る.sql。
--- そちらは「先生の権限で課金の列を直せない・運営の権限なら直せる」の自己テストつき・失敗したら全部取り消す）
+-- 受講生と一般の区分の列を足し、課金の列を先生の権限で書き換えられないようにする（2026-10-07）
+-- 本番は Supabase Studio で流す（03_japanese-teacher-crm/strategy/sql_2026-10-07_受講生と一般の区分と課金の列を守る.sql。
+-- そちらは「先生の権限で課金の列と区分を直せない・運営の権限なら直せる」の自己テストつき・失敗したら全部取り消す）
 
 do $$
 begin
   -- A. 列を足す
   alter table public.invite_codes
     add column if not exists course_months   smallint,
-    add column if not exists course_end_date date;
+    add column if not exists course_end_date date,
+    add column if not exists audience        text,
+    add column if not exists email           text,
+    add column if not exists revoked_at      timestamptz,
+    add column if not exists expires_at      timestamptz;
   alter table public.user_settings
     add column if not exists course_months   smallint,
-    add column if not exists course_end_date date;
-  -- コースは 3か月・6か月だけ（何度流しても同じになるよう、外してから付け直す）
+    add column if not exists course_end_date date,
+    add column if not exists audience        text;
+  -- コースは 3か月・6か月だけ／区分は 一般・受講生・卒業生だけ（何度流しても同じになるよう、外してから付け直す）
   alter table public.invite_codes  drop constraint if exists invite_codes_course_months_check;
   alter table public.invite_codes  add  constraint invite_codes_course_months_check  check (course_months in (3, 6));
   alter table public.user_settings drop constraint if exists user_settings_course_months_check;
   alter table public.user_settings add  constraint user_settings_course_months_check check (course_months in (3, 6));
+  alter table public.invite_codes  drop constraint if exists invite_codes_audience_check;
+  alter table public.invite_codes  add  constraint invite_codes_audience_check  check (audience in ('general', 'course', 'alumni'));
+  alter table public.user_settings drop constraint if exists user_settings_audience_check;
+  alter table public.user_settings add  constraint user_settings_audience_check check (audience in ('general', 'course', 'alumni'));
 
   comment on column public.invite_codes.course_months   is 'コンサルの受講生に渡すコードのコース（3か月・6か月）。空＝受講生ではない（2026-10-06）';
   comment on column public.invite_codes.course_end_date is 'コースが終わる日。受講生はこの日まで無料（2026-10-06）';
   comment on column public.user_settings.course_months   is '受講中のコース（3か月・6か月）。登録した招待コードから写す（2026-10-06）';
   comment on column public.user_settings.course_end_date is 'コースが終わる日。この日まで無料でレギュラーと同じ機能（2026-10-06）';
+  comment on column public.invite_codes.audience   is '区分：general（一般）・course（受講生）・alumni（卒業生）。登録した先生の設定に写す（2026-10-07）';
+  comment on column public.invite_codes.email      is 'このメールアドレスでしか登録できない（小文字）。空＝誰でも（2026-10-07）';
+  comment on column public.invite_codes.revoked_at is '取り消した日時。取り消したコードは使えない（2026-10-07）';
+  comment on column public.user_settings.audience  is '区分：general（一般価格）・course（受講生）・alumni（卒業生）・空（2026-10-07 より前からいる先生＝受講生価格）';
 
   -- B. 課金の列を守る仕組み
   create or replace function public.protect_billing_columns()
@@ -44,6 +57,7 @@ begin
       new.stripe_subscription_id := null;
       new.course_months          := null;
       new.course_end_date        := null;
+      new.audience               := null;
       return new;
     end if;
 
@@ -53,7 +67,8 @@ begin
        or new.stripe_customer_id     is distinct from old.stripe_customer_id
        or new.stripe_subscription_id is distinct from old.stripe_subscription_id
        or new.course_months          is distinct from old.course_months
-       or new.course_end_date        is distinct from old.course_end_date then
+       or new.course_end_date        is distinct from old.course_end_date
+       or new.audience               is distinct from old.audience then
       raise exception '課金の情報は、先生の権限では書き換えられません（protect_billing_columns）'
         using errcode = '42501';
     end if;
