@@ -1,9 +1,11 @@
 /**
- * コンサルの受講中は無料（2026-10-04 あいちゃんとの MTG・10/4〜10/6 かずき決定）
+ * コンサルの受講生は無料（2026-10-04 あいちゃんとの MTG・10/4〜10/8 かずき決定）
  *
- * - 招待コードを出す時に「コース（3か月・6か月）」と「コースが終わる日」を入れる（管理画面の招待コード）
- * - 受講生がそのコードで登録すると、先生の設定にもコースが終わる日が入る
- * - コースが終わる日（その日を含む・日本時間）までは、レギュラーと同じ機能・翻訳の分数で無料（カードは要らない）
+ * - 招待コードを出す時に「コース（3か月・6か月）」を選ぶ（管理画面の招待コード）
+ * - 無料の期間は、受講生が ASTA に登録した日から数える（2026-10-08 かずき決定・案A）：
+ *   3か月コース＝2か月・6か月コース＝5か月（講座の最初の1か月は準備で ASTA を使わないため。あいちゃんが払う額＝レギュラー2か月分・5か月分）。
+ *   登録した時に、無料の期間が終わる日を先生の設定（course_end_date）に入れる
+ * - 無料の期間が終わる日（その日を含む・日本時間）までは、レギュラーと同じ機能・翻訳の分数で無料（カードは要らない）
  * - 終わったらカードで申し込む。7日間の無料お試しは付けない（受講中に使っているため）
  * - 受講中の ASTA 代は ASTA の外でやり取りする（ASTA では数えない）。受講中は紹介の取り分なし
  *
@@ -12,6 +14,9 @@
 
 export const COURSE_MONTHS = [3, 6] as const;
 export type CourseMonths = (typeof COURSE_MONTHS)[number];
+
+/** コースごとの無料の月数（登録した日から・2026-10-08 かずき決定・案A） */
+export const COURSE_FREE_MONTHS: Record<CourseMonths, number> = { 3: 2, 6: 5 };
 
 /** コースが終わる何日前から、終わりの案内を出すか（2026-10-07 案2：14日前・7日前・前日。7日前と前日は強く出す） */
 export const COURSE_NOTICE_DAYS = 14;
@@ -32,6 +37,25 @@ export function normalizeCourseEndDate(raw: unknown): string | null {
     const d = new Date(`${s}T00:00:00Z`);
     if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== s) return null;
     return s;
+}
+
+/** 'YYYY-MM-DD' に月を足す（足した先の月に同じ日が無ければ、その月の末日） */
+export function addMonthsYmd(ymd: string, months: number): string {
+    const [y, m, d] = ymd.split('-').map(Number);
+    const target = new Date(Date.UTC(y, m - 1 + months, 1));
+    const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+    target.setUTCDate(Math.min(d, lastDay));
+    return target.toISOString().slice(0, 10);
+}
+
+/**
+ * 登録した日から数えた、無料の期間が終わる日（その日を含む）。
+ * 例：3か月コース（無料2か月）で 10/8 に登録 → 12/7 まで
+ */
+export function freeEndDateFromRegistration(months: CourseMonths, registeredAt: Date = new Date()): string {
+    const start = todayJst(registeredAt);
+    const next = addMonthsYmd(start, COURSE_FREE_MONTHS[months]);
+    return new Date(Date.parse(`${next}T00:00:00Z`) - 86400000).toISOString().slice(0, 10);
 }
 
 /** 日本時間の今日（'YYYY-MM-DD'） */

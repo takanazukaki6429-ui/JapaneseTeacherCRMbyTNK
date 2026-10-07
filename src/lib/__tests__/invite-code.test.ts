@@ -21,14 +21,14 @@ describe('addMonthsYmd', () => {
     });
 });
 
-describe('コースが終わる日の打ち間違いを止める', () => {
-    it('3か月コースは今日から4か月以内・6か月コースは7か月以内', () => {
-        expect(courseEndDateMax(3, NOW)).toBe('2027-02-08');
-        expect(courseEndDateMax(6, NOW)).toBe('2027-05-08');
+describe('無料の期間が終わる日の打ち間違いを止める（登録済みの受講生の終わる日を直す時）', () => {
+    it('3か月コース（無料2か月）は今日から3か月以内・6か月コース（無料5か月）は6か月以内', () => {
+        expect(courseEndDateMax(3, NOW)).toBe('2027-01-08');
+        expect(courseEndDateMax(6, NOW)).toBe('2027-04-08');
+        expect(validateCourseEndDate(3, '2026-12-07', NOW)).toBeNull();
         expect(validateCourseEndDate(3, '2027-01-08', NOW)).toBeNull();
-        expect(validateCourseEndDate(3, '2027-02-08', NOW)).toBeNull();
-        expect(validateCourseEndDate(3, '2027-02-09', NOW)).toContain('2027年2月8日まで');
-        expect(validateCourseEndDate(6, '2028-04-08', NOW)).toContain('打ち間違い'); // 2027 を 2028 と打った
+        expect(validateCourseEndDate(3, '2027-01-09', NOW)).toContain('2027年1月8日まで');
+        expect(validateCourseEndDate(6, '2028-03-07', NOW)).toContain('打ち間違い'); // 2027 を 2028 と打った
     });
     it('過ぎた日は入れられない', () => {
         expect(validateCourseEndDate(3, '2026-10-07', NOW)).toContain('過ぎています');

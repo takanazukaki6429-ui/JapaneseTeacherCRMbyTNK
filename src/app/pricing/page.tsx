@@ -21,8 +21,8 @@ export const dynamic = 'force-dynamic';
  * 構成は ChatGPT の料金ページと同じ：見出し → プランのカード3枚 → 40人超の問い合わせ → 比べる表 → よくある質問 → 注釈。
  * 3段の差は翻訳モードの月の分数（案B・2026-09-23）と、ライトで使えない機能（授業前の1枚・例文と練習問題と言い換え・ASTAに聞く・みんなの教材＝2026-10-04 かずき決定・lib/plan-features.ts）。
  * お試し7日間はレギュラーと同じ機能。金額は環境変数（lib/pricing.ts）。
- * コンサルの受講生（2026-10-06）：ログインしている受講生には、お試しの代わりに「受講中は無料・料金は受講期間の後から」／
- * 「受講期間が終わった・お試しなし」を出す（create-checkout-session と同じ決め方）
+ * コンサルの受講生（2026-10-06）：ログインしている受講生には、お試しの代わりに「受講生の無料の期間・料金はその後から」／
+ * 「無料の期間が終わった・お試しなし」を出す（create-checkout-session と同じ決め方）
  * 2026-10-07：基準の料金は一般価格。ログインしていない人・一般の先生は一般価格、受講生（受講後30日まで）・卒業生・既存の先生は受講生価格
  * （lib/audience.ts）。一般価格の金額が決まるまでは、どちらも今の金額（受講生価格）を出す
  * 元の案＝my-company/03/strategy/料金プラン比較ページ案_2026-09-24.html
@@ -176,19 +176,19 @@ function PricingContent() {
                     <div className="mb-6 px-5 py-3 bg-[#f6f2ff] border border-[#d9cff5] rounded-2xl text-sm text-[#4a3f73] text-center leading-relaxed">
                         {inCourse ? (
                             <>
-                                受講期間中は、<b>{formatJpDate(courseEnd)}</b> まで無料で使えます（レギュラーと同じ機能）。<br />
-                                今お申込みいただくと、料金は受講期間が終わった後からかかります（お申込み時に、カードの登録が必要です）。<br />
-                                受講期間が終わってから{MEMBER_PRICE_GRACE_DAYS}日以内のお申込みは受講生価格です。
+                                受講生の無料の期間中です。<b>{formatJpDate(courseEnd)}</b> まで無料で使えます（レギュラーと同じ機能）。<br />
+                                今お申込みいただくと、料金は無料の期間が終わった後からかかります（お申込み時に、カードの登録が必要です）。<br />
+                                無料の期間が終わってから{MEMBER_PRICE_GRACE_DAYS}日以内のお申込みは受講生価格です。
                             </>
                         ) : course.memberPriceDaysLeft !== null && course.memberPriceLastDay ? (
                             <>
-                                受講期間（{formatJpDate(courseEnd)}まで）が終わりました。<br />
+                                無料の期間（{formatJpDate(courseEnd)}まで）が終わりました。<br />
                                 <b>{formatJpDate(course.memberPriceLastDay)}まで（あと{course.memberPriceDaysLeft}日）</b>のお申込みなら、受講生価格で続けられます。<br />
                                 受講中に使っていただいたため、無料お試しはありません（お申込みの日から料金がかかります）。
                             </>
                         ) : (
                             <>
-                                受講期間（{formatJpDate(courseEnd)}まで）が終わりました。<br />
+                                無料の期間（{formatJpDate(courseEnd)}まで）が終わりました。<br />
                                 続けて使うには、下のプランからお申込みください（無料お試しはありません）。
                             </>
                         )}
@@ -257,7 +257,7 @@ function PricingContent() {
                                     {!ALL_TIER_PRICES_SET
                                         ? '料金が確定しだいお申込みいただけます'
                                         : inCourse && courseEnd
-                                            ? <>{formatJpDate(courseEnd)}まで無料（受講中）<br />→ 受講期間の後から {tierPriceLabel(tier, priceSet)}/月</>
+                                            ? <>{formatJpDate(courseEnd)}まで無料（受講生）<br />→ 無料の期間の後から {tierPriceLabel(tier, priceSet)}/月</>
                                             : noTrial
                                                 ? <>お申込みの日から {tierPriceLabel(tier, priceSet)}/月</>
                                                 : <>{TRIAL_DAYS}日間無料<br />→ {TRIAL_DAYS + 1}日目から {tierPriceLabel(tier, priceSet)}/月</>}

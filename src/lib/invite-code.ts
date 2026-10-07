@@ -6,10 +6,13 @@
  * - まとめて出す：同じ種類・同じコースのコードを、人数分まとめて出す（最大 INVITE_BATCH_MAX）
  * - メールアドレスに紐づける：そのメールアドレスでしか登録できないコード（任意）
  * - 使っていないコードの取り消し
- * - コースが終わる日の打ち間違いを止める：3か月コースは今日から4か月以内・6か月コースは7か月以内（延長は印を付けた時だけ・2年まで）
+ * - 無料の期間が終わる日の打ち間違いを止める：登録済みの受講生の終わる日を直す時、3か月コース（無料2か月）は今日から3か月以内・
+ *   6か月コース（無料5か月）は6か月以内（延長は印を付けた時だけ・2年まで）。発行の時は日付を入れない（登録した日から数える・2026-10-08）
  * ここは判定だけの純粋な関数（テスト対象）。
  */
-import { formatJpDate, todayJst, type CourseMonths } from '@/lib/course';
+import { COURSE_FREE_MONTHS, addMonthsYmd, formatJpDate, todayJst, type CourseMonths } from '@/lib/course';
+
+export { addMonthsYmd };
 
 export const INVITE_VALID_DAYS_DEFAULT = 14;
 export const INVITE_VALID_DAYS_MAX = 90;
@@ -17,21 +20,12 @@ export const INVITE_BATCH_MAX = 30;
 /** 延長の印を付けた時でも、ここより先の日付は入れられない（打ち間違いの止め） */
 export const COURSE_END_EXTENSION_MAX_MONTHS = 24;
 
-/** 'YYYY-MM-DD' に月を足す（足した先の月に同じ日が無ければ、その月の末日） */
-export function addMonthsYmd(ymd: string, months: number): string {
-    const [y, m, d] = ymd.split('-').map(Number);
-    const target = new Date(Date.UTC(y, m - 1 + months, 1));
-    const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
-    target.setUTCDate(Math.min(d, lastDay));
-    return target.toISOString().slice(0, 10);
-}
-
-/** コースが終わる日として受け付ける最後の日（3か月コース＝今日から4か月・6か月コース＝今日から7か月） */
+/** 無料の期間が終わる日として受け付ける最後の日（無料の月数＋1か月：3か月コース＝今日から3か月・6か月コース＝今日から6か月） */
 export function courseEndDateMax(months: CourseMonths, now: Date = new Date()): string {
-    return addMonthsYmd(todayJst(now), months + 1);
+    return addMonthsYmd(todayJst(now), COURSE_FREE_MONTHS[months] + 1);
 }
 
-/** コースが終わる日を確かめる。おかしければ、画面に出す文を返す（よければ null） */
+/** 無料の期間が終わる日を確かめる（登録済みの受講生の終わる日を直す時）。おかしければ、画面に出す文を返す（よければ null） */
 export function validateCourseEndDate(
     months: CourseMonths,
     endDate: string,
@@ -39,14 +33,14 @@ export function validateCourseEndDate(
     options: { allowExtension?: boolean } = {},
 ): string | null {
     const today = todayJst(now);
-    if (endDate < today) return 'コースが終わる日が、もう過ぎています';
+    if (endDate < today) return '無料の期間が終わる日が、もう過ぎています';
     if (options.allowExtension) {
         const hardMax = addMonthsYmd(today, COURSE_END_EXTENSION_MAX_MONTHS);
         return endDate > hardMax ? `延長でも、${formatJpDate(hardMax)}より先の日付は入れられません` : null;
     }
     const max = courseEndDateMax(months, now);
     return endDate > max
-        ? `${months}か月コースの終わる日は、${formatJpDate(max)}までです（打ち間違いの止め）。延長する時は「延長」に印を付けてください`
+        ? `${months}か月コース（無料${COURSE_FREE_MONTHS[months]}か月）の終わる日は、${formatJpDate(max)}までです（打ち間違いの止め）。延長する時は「延長」に印を付けてください`
         : null;
 }
 

@@ -11,7 +11,7 @@ import { showAppError } from '@/lib/error-handler';
 import { isAdminEmail } from '@/lib/admin';
 import { PLAN_TIERS, PLAN_TIER_KEYS } from '@/lib/pricing';
 import { CONSULTANT_MAX_LENGTH, type ConsultantReport } from '@/lib/consultant-report';
-import { formatJpDate, isInCourse, todayJst, type CourseMonths } from '@/lib/course';
+import { COURSE_FREE_MONTHS, formatJpDate, isInCourse, type CourseMonths } from '@/lib/course';
 import { AUDIENCE_LABEL, MEMBER_PRICE_GRACE_DAYS, normalizeAudience } from '@/lib/audience';
 import {
     INVITE_BATCH_MAX,
@@ -46,8 +46,8 @@ type InviteCode = {
 type IssueKind = 'general' | 'course3' | 'course6' | 'alumni';
 const ISSUE_KIND_LABEL: Record<IssueKind, string> = {
     general: '一般の先生',
-    course3: '受講生・3か月コース',
-    course6: '受講生・6か月コース',
+    course3: '受講生・3か月コース（無料2か月）',
+    course6: '受講生・6か月コース（無料5か月）',
     alumni: '卒業生（受講生価格・お試しなし）',
 };
 const kindMonths = (kind: IssueKind): CourseMonths | null => (kind === 'course3' ? 3 : kind === 'course6' ? 6 : null);
@@ -79,7 +79,6 @@ export default function InviteCodesAdminPage() {
     // 種類・コース・守り（2026-10-06・10-07）
     const [guardColumns, setGuardColumns] = useState<boolean | null>(null);
     const [kind, setKind] = useState<IssueKind>('general');
-    const [courseEndInput, setCourseEndInput] = useState('');
     const [validDays, setValidDays] = useState(String(INVITE_VALID_DAYS_DEFAULT));
     const [countInput, setCountInput] = useState('1');
     const [emailsInput, setEmailsInput] = useState('');
@@ -158,7 +157,6 @@ export default function InviteCodesAdminPage() {
     const parsedEmails = parseEmailList(emailsInput);
     const issueCount = parsedEmails.emails.length > 0 ? parsedEmails.emails.length : Number(countInput);
     const issueInvalid =
-        (months !== null && !courseEndInput) ||
         parsedEmails.invalid.length > 0 ||
         !Number.isInteger(issueCount) || issueCount < 1 || issueCount > INVITE_BATCH_MAX;
 
@@ -172,7 +170,7 @@ export default function InviteCodesAdminPage() {
                 body: JSON.stringify({
                     consultant: consultantInput,
                     audience: months ? 'course' : kind,
-                    ...(months ? { course_months: months, course_end_date: courseEndInput } : {}),
+                    ...(months ? { course_months: months } : {}),
                     valid_days: Number(validDays),
                     ...(parsedEmails.emails.length > 0 ? { emails: emailsInput } : { count: issueCount }),
                 }),
@@ -232,8 +230,8 @@ export default function InviteCodesAdminPage() {
                 body: JSON.stringify({
                     id: c.id,
                     course_months: draft.months ? Number(draft.months) : null,
-                    course_end_date: draft.months ? draft.end : null,
-                    allow_extension: draft.extension,
+                    // 登録済みの受講生だけ、無料の期間が終わる日も直す（使っていないコードは、登録した日から数える）
+                    ...(c.used_by && draft.months ? { course_end_date: draft.end, allow_extension: draft.extension } : {}),
                 }),
             });
             const data = await res.json();
@@ -328,7 +326,8 @@ export default function InviteCodesAdminPage() {
                     <CardTitle className="text-lg text-amber-900">新しい招待コードを発行</CardTitle>
                     <CardDescription>
                         1つのコードで作れるアカウントは1つです。コンサルタント経由の先生に渡すコードは、<strong>渡す相手の名前を入れてから</strong>発行してください（紹介の取り分を数えるため）。
-                        受講生は、コースが終わる日まで無料でレギュラーと同じ機能を使えます。終わってから{MEMBER_PRICE_GRACE_DAYS}日以内に申し込めば受講生価格、その後は一般価格です。
+                        受講生は、ASTA に登録した日から、3か月コースは{COURSE_FREE_MONTHS[3]}か月・6か月コースは{COURSE_FREE_MONTHS[6]}か月、無料でレギュラーと同じ機能を使えます（講座の最初の1か月は準備のため）。
+                        無料の期間が終わってから{MEMBER_PRICE_GRACE_DAYS}日以内に申し込めば受講生価格、その後は一般価格です。
                         卒業生（講座をこれまでに修了し、まだ ASTA を使っていない人）は、受講生価格で申し込めます（お試しなし）。
                     </CardDescription>
                 </CardHeader>
@@ -347,23 +346,14 @@ export default function InviteCodesAdminPage() {
                                 ))}
                             </select>
                         </label>
-                        <label className="text-sm text-slate-700">
-                            <span className="block mb-1">コースが終わる日（受講生だけ・この日まで無料）</span>
-                            <input
-                                type="date"
-                                value={courseEndInput}
-                                min={todayJst()}
-                                max={months ? courseEndDateMax(months) : undefined}
-                                disabled={!months}
-                                onChange={e => setCourseEndInput(e.target.value)}
-                                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 disabled:bg-slate-50"
-                            />
-                            {months && (
-                                <span className="mt-1 block text-xs text-slate-500">
-                                    {months}か月コースは {formatJpDate(courseEndDateMax(months))} までの日付だけ入れられます（打ち間違いの止め）
-                                </span>
-                            )}
-                        </label>
+                        <div className="text-sm text-slate-700">
+                            <span className="block mb-1">無料の期間（受講生だけ）</span>
+                            <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                                {months
+                                    ? `受講生が ASTA に登録した日から${COURSE_FREE_MONTHS[months]}か月（日付を入れる必要はありません）`
+                                    : '受講生のコードだけ'}
+                            </p>
+                        </div>
                         <label className="text-sm text-slate-700">
                             <span className="block mb-1">渡す相手（コンサルタントの呼び名・直接渡すときは空のまま）</span>
                             <input
@@ -527,8 +517,9 @@ export default function InviteCodesAdminPage() {
                 <CardHeader>
                     <CardTitle className="text-lg">発行済みコード一覧</CardTitle>
                     <CardDescription>
-                        「受講（コース）」は、受講生のコースを直す所です。今の本番で先に登録した受講生にも、ここでコースと終わる日を入れられます（登録済みの先生の設定も一緒に直ります）。
-                        延長でコースの上限より先の日付にする時は「延長」に印を付けて保存してください。
+                        「受講（コース）」は、受講生のコースを直す所です。使っていないコードはコースだけ（無料の期間は登録した日から数えます）。
+                        登録済みのコードは、無料の期間が終わる日も直せます（登録済みの先生の設定も一緒に直ります）。今の本番で先に登録した受講生にも、ここでコースと終わる日を入れられます。
+                        無料の月数＋1か月より先の日付にする時は「延長」に印を付けて保存してください。
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -561,10 +552,12 @@ export default function InviteCodesAdminPage() {
                                         const current = c.consultant ?? '';
                                         const draft = edits[c.id] ?? current;
                                         const changed = draft.trim() !== current.trim();
+                                        const registered = !!c.used_by;
                                         const courseCurrent: CourseDraft = { months: c.course_months ? String(c.course_months) : '', end: c.course_end_date ?? '', extension: false };
                                         const courseDraft = courseEdits[c.id] ?? courseCurrent;
-                                        const courseChanged = courseDraft.months !== courseCurrent.months || courseDraft.end !== courseCurrent.end;
-                                        const courseInvalid = !!courseDraft.months && !courseDraft.end;
+                                        const courseChanged = courseDraft.months !== courseCurrent.months || (registered && courseDraft.end !== courseCurrent.end);
+                                        const courseInvalid = registered && !!courseDraft.months && !courseDraft.end;
+                                        const draftMonths = courseDraft.months === '3' || courseDraft.months === '6' ? (Number(courseDraft.months) as CourseMonths) : null;
                                         return (
                                             <tr key={c.id} className="bg-white border-b hover:bg-slate-50 align-top">
                                                 <td className="px-4 py-4">
@@ -616,34 +609,42 @@ export default function InviteCodesAdminPage() {
                                                             <option value="3">3か月</option>
                                                             <option value="6">6か月</option>
                                                         </select>
-                                                        <input
-                                                            type="date"
-                                                            value={courseDraft.end}
-                                                            disabled={guardColumns === false || !courseDraft.months}
-                                                            onChange={e => setCourseEdits(prev => ({ ...prev, [c.id]: { ...courseDraft, end: e.target.value } }))}
-                                                            aria-label={`${c.code} のコースが終わる日`}
-                                                            className="rounded-md border border-slate-200 px-1.5 py-1 text-sm disabled:bg-slate-50"
-                                                        />
+                                                        {registered && (
+                                                            <input
+                                                                type="date"
+                                                                value={courseDraft.end}
+                                                                max={!courseDraft.extension && draftMonths ? courseEndDateMax(draftMonths) : undefined}
+                                                                disabled={guardColumns === false || !courseDraft.months}
+                                                                onChange={e => setCourseEdits(prev => ({ ...prev, [c.id]: { ...courseDraft, end: e.target.value } }))}
+                                                                aria-label={`${c.code} の無料の期間が終わる日`}
+                                                                className="rounded-md border border-slate-200 px-1.5 py-1 text-sm disabled:bg-slate-50"
+                                                            />
+                                                        )}
                                                         {courseChanged && (
                                                             <>
-                                                                <label className="flex items-center gap-1 text-xs text-slate-600">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={courseDraft.extension}
-                                                                        onChange={e => setCourseEdits(prev => ({ ...prev, [c.id]: { ...courseDraft, extension: e.target.checked } }))}
-                                                                    />
-                                                                    延長
-                                                                </label>
+                                                                {registered && (
+                                                                    <label className="flex items-center gap-1 text-xs text-slate-600">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={courseDraft.extension}
+                                                                            onChange={e => setCourseEdits(prev => ({ ...prev, [c.id]: { ...courseDraft, extension: e.target.checked } }))}
+                                                                        />
+                                                                        延長
+                                                                    </label>
+                                                                )}
                                                                 <Button size="sm" variant="outline" disabled={savingCourseId === c.id || courseInvalid} onClick={() => saveCourse(c)}>
                                                                     {savingCourseId === c.id ? <Loader2 className="w-4 h-4 animate-spin" /> : '保存'}
                                                                 </Button>
                                                             </>
                                                         )}
                                                     </div>
-                                                    {!courseChanged && c.course_end_date && (
+                                                    {!courseChanged && registered && c.course_end_date && (
                                                         <p className="mt-1 text-xs text-slate-500">
-                                                            {isInCourse(c.course_end_date) ? `受講中・${formatJpDate(c.course_end_date)}まで無料` : `${formatJpDate(c.course_end_date)}に終了`}
+                                                            {isInCourse(c.course_end_date) ? `受講中・${formatJpDate(c.course_end_date)}まで無料` : `${formatJpDate(c.course_end_date)}に無料の期間が終了`}
                                                         </p>
+                                                    )}
+                                                    {!registered && draftMonths && (
+                                                        <p className="mt-1 text-xs text-slate-500">登録した日から{COURSE_FREE_MONTHS[draftMonths]}か月無料</p>
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-4 whitespace-nowrap">

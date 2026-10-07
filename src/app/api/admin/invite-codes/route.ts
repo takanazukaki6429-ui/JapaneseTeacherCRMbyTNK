@@ -9,9 +9,11 @@
  * 紹介の取り分を数えるため（lib/consultant-report.ts）。保管庫に列が無い間（SQL を流す前）も
  * 一覧と相手なしの発行は動くようにし、相手を記録しようとしたときだけ分かる言葉で止める。
  *
- * 2026-10-06・10-07（かずき決定）：
- *   - 種類（一般・受講生・卒業生。lib/audience.ts）。受講生はコース（3か月・6か月）とコースが終わる日も入れる（lib/course.ts）
- *   - 守り（lib/invite-code.ts）：使える期限・まとめて出す・メールアドレスに紐づける・取り消し・終わる日の打ち間違いを止める
+ * 2026-10-06〜10-08（かずき決定）：
+ *   - 種類（一般・受講生・卒業生。lib/audience.ts）。受講生はコース（3か月・6か月）を選ぶ。
+ *     無料の期間は ASTA に登録した日から数える（3か月コース＝2か月・6か月コース＝5か月・lib/course.ts）ので、発行の時に日付は入れない
+ *   - 守り（lib/invite-code.ts）：使える期限・まとめて出す・メールアドレスに紐づける・取り消し・
+ *     登録済みの受講生の終わる日を直す時の打ち間違いを止める
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -21,7 +23,7 @@ import { isAdminEmail } from '@/lib/admin';
 import { logAudit } from '@/lib/audit';
 import { randomInt } from 'crypto';
 import { isMissingConsultantColumn, normalizeConsultant } from '@/lib/consultant-report';
-import { normalizeCourseEndDate, normalizeCourseMonths, type CourseMonths } from '@/lib/course';
+import { COURSE_FREE_MONTHS, normalizeCourseEndDate, normalizeCourseMonths, type CourseMonths } from '@/lib/course';
 import { normalizeAudience, type Audience } from '@/lib/audience';
 import { INVITE_BATCH_MAX, normalizeValidDays, parseEmailList, validateCourseEndDate } from '@/lib/invite-code';
 
@@ -47,26 +49,23 @@ const LIST_COLUMNS = [
 
 const RETURN_COLUMNS = 'id, code, used_at, used_by, created_at, expires_at, revoked_at, email, audience, consultant, course_months, course_end_date';
 
-type CourseInput = { months: CourseMonths; endDate: string } | null;
+/** コース（3か月・6か月）を読む。空なら null（コースなし）。おかしければ error */
+function parseCourseMonths(raw: unknown): { ok: true; months: CourseMonths | null } | { ok: false; error: string } {
+    if (raw === undefined || raw === null || raw === '') return { ok: true, months: null };
+    const months = normalizeCourseMonths(raw);
+    return months ? { ok: true, months } : { ok: false, error: 'コースは 3か月 か 6か月 を選んでください' };
+}
 
-/** コースの入力を確かめる（受講生は両方そろえる・終わる日の打ち間違いを止める） */
-function parseCourse(
-    body: { course_months?: unknown; course_end_date?: unknown } | null,
+/** 登録済みの受講生の、無料の期間が終わる日を読む（打ち間違いを止める）。おかしければ error */
+function parseFreeEndDate(
+    months: CourseMonths,
+    raw: unknown,
     options: { allowExtension?: boolean } = {},
-): { ok: true; course: CourseInput } | { ok: false; error: string } {
-    const rawMonths = body?.course_months;
-    const rawEnd = body?.course_end_date;
-    const monthsGiven = rawMonths !== undefined && rawMonths !== null && rawMonths !== '';
-    const endGiven = rawEnd !== undefined && rawEnd !== null && rawEnd !== '';
-    if (!monthsGiven && !endGiven) return { ok: true, course: null };
-    const months = normalizeCourseMonths(rawMonths);
-    const endDate = normalizeCourseEndDate(rawEnd);
-    if (monthsGiven && !months) return { ok: false, error: 'コースは 3か月 か 6か月 を選んでください' };
-    if (endGiven && !endDate) return { ok: false, error: 'コースが終わる日の書き方が正しくありません' };
-    if (!months || !endDate) return { ok: false, error: 'コースを選んだら、コースが終わる日も入れてください（両方そろえる）' };
+): { ok: true; endDate: string } | { ok: false; error: string } {
+    const endDate = normalizeCourseEndDate(raw);
+    if (!endDate) return { ok: false, error: '登録済みの受講生は、無料の期間が終わる日も入れてください' };
     const invalid = validateCourseEndDate(months, endDate, new Date(), options);
-    if (invalid) return { ok: false, error: invalid };
-    return { ok: true, course: { months, endDate } };
+    return invalid ? { ok: false, error: invalid } : { ok: true, endDate };
 }
 
 async function requireAdmin() {
@@ -138,16 +137,16 @@ export async function POST(req: NextRequest) {
     if (!audience) {
         return NextResponse.json({ error: '種類は「一般」「受講生」「卒業生」から選んでください' }, { status: 400 });
     }
-    const parsedCourse = parseCourse(body as { course_months?: unknown; course_end_date?: unknown });
-    if (!parsedCourse.ok) {
-        return NextResponse.json({ error: parsedCourse.error }, { status: 400 });
+    const parsedMonths = parseCourseMonths(body.course_months);
+    if (!parsedMonths.ok) {
+        return NextResponse.json({ error: parsedMonths.error }, { status: 400 });
     }
-    const course = parsedCourse.course;
-    if (audience === 'course' && !course) {
-        return NextResponse.json({ error: '受講生のコードは、コースとコースが終わる日を入れてください' }, { status: 400 });
+    const courseMonths = parsedMonths.months;
+    if (audience === 'course' && !courseMonths) {
+        return NextResponse.json({ error: '受講生のコードは、コース（3か月・6か月）を選んでください' }, { status: 400 });
     }
-    if (audience !== 'course' && course) {
-        return NextResponse.json({ error: 'コースを入れられるのは、受講生のコードだけです' }, { status: 400 });
+    if (audience !== 'course' && courseMonths) {
+        return NextResponse.json({ error: 'コースを選べるのは、受講生のコードだけです' }, { status: 400 });
     }
 
     const { emails, invalid } = parseEmailList(body.emails);
@@ -165,10 +164,8 @@ export async function POST(req: NextRequest) {
     const admin = createAdminClient();
     const base: Record<string, unknown> = { created_by: user.id, audience, expires_at: expiresAt };
     if (consultant) base.consultant = consultant;
-    if (course) {
-        base.course_months = course.months;
-        base.course_end_date = course.endDate;
-    }
+    // 無料の期間が終わる日は、受講生が登録した時に決まる（api/auth/signup）。コードには入れない
+    if (courseMonths) base.course_months = courseMonths;
 
     const created: Record<string, unknown>[] = [];
     for (let i = 0; i < count; i++) {
@@ -215,7 +212,7 @@ export async function POST(req: NextRequest) {
             valid_days: validDays,
             email_bound: emails.length > 0,
             ...(consultant ? { consultant } : {}),
-            ...(course ? { course_months: course.months, course_end_date: course.endDate } : {}),
+            ...(courseMonths ? { course_months: courseMonths, free_months: COURSE_FREE_MONTHS[courseMonths] } : {}),
         },
         req,
     });
@@ -226,9 +223,10 @@ export async function POST(req: NextRequest) {
 /**
  * 発行済みのコードを直す。本文の中身で、することが決まる：
  *   - { id, consultant }：渡した相手を記録・直す（空にすると記録を消す）
- *   - { id, course_months, course_end_date, allow_extension? }：コースを直す。そのコードで登録済みの先生がいれば、
- *     先生の設定のコースも同じに直し、区分を「受講生」にする（今の本番で先に登録した受講生に、後から入れる時にも使う）。
- *     終わる日の打ち間違いを止める。延長する時は allow_extension
+ *   - { id, course_months }：使っていないコードのコースを直す（無料の期間は、登録した日から数える）
+ *   - { id, course_months, course_end_date, allow_extension? }：登録済みのコードのコースと、無料の期間が終わる日を直す。
+ *     先生の設定も同じに直し、区分を「受講生」にする（今の本番で先に登録した受講生に、後から入れる時にも使う）。
+ *     終わる日の打ち間違いを止める（無料の月数＋1か月以内）。延長する時は allow_extension
  *   - { id, action: 'revoke' }：使っていないコードを取り消す（2026-10-07）
  */
 export async function PATCH(req: NextRequest) {
@@ -284,13 +282,33 @@ export async function PATCH(req: NextRequest) {
     const update: Record<string, unknown> = {};
     const consultant = normalizeConsultant(body?.consultant);
     if (touchConsultant) update.consultant = consultant;
-    let course: CourseInput = null;
+    let course: { months: CourseMonths; endDate: string | null } | null = null;
     if (touchCourse) {
-        const parsed = parseCourse(body as { course_months?: unknown; course_end_date?: unknown }, { allowExtension: body?.allow_extension === true });
-        if (!parsed.ok) {
-            return NextResponse.json({ error: parsed.error }, { status: 400 });
+        const parsedMonths = parseCourseMonths(body?.course_months);
+        if (!parsedMonths.ok) {
+            return NextResponse.json({ error: parsedMonths.error }, { status: 400 });
         }
-        course = parsed.course;
+        // 登録済みかどうかで、入れる物が変わる（登録済みなら、無料の期間が終わる日も要る）
+        const { data: current, error: readError } = await admin.from('invite_codes').select('id, used_by').eq('id', id).maybeSingle();
+        if (readError) {
+            console.error('invite_codes read failed:', readError);
+            return NextResponse.json({ error: '記録に失敗しました' }, { status: 500 });
+        }
+        if (!current) {
+            return NextResponse.json({ error: 'コードが見つかりません' }, { status: 404 });
+        }
+        const registered = !!(current as { used_by?: string | null }).used_by;
+        if (parsedMonths.months) {
+            if (registered) {
+                const parsedEnd = parseFreeEndDate(parsedMonths.months, body?.course_end_date, { allowExtension: body?.allow_extension === true });
+                if (!parsedEnd.ok) {
+                    return NextResponse.json({ error: parsedEnd.error }, { status: 400 });
+                }
+                course = { months: parsedMonths.months, endDate: parsedEnd.endDate };
+            } else {
+                course = { months: parsedMonths.months, endDate: null };
+            }
+        }
         update.course_months = course?.months ?? null;
         update.course_end_date = course?.endDate ?? null;
         if (course) update.audience = 'course';

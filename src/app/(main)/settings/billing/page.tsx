@@ -174,12 +174,12 @@ function BillingContent() {
                     <div className="flex items-start gap-2 p-3 bg-[#f6f2ff] border border-[#d9cff5] rounded-xl text-sm text-[#4a3f73] leading-relaxed">
                         <GraduationCap size={16} className="mt-0.5 flex-shrink-0" />
                         {subscribed ? (
-                            <span>お申込みありがとうございます。料金は、受講期間（{formatJpDate(courseEnd)}まで）が終わった後からかかります。</span>
+                            <span>お申込みありがとうございます。料金は、無料の期間（{formatJpDate(courseEnd)}まで）が終わった後からかかります。</span>
                         ) : (
                             <span>
-                                受講期間中は、<b>{formatJpDate(courseEnd)}</b> まで無料で使えます（カードの登録はいりません）。<br />
-                                そのあとも使う場合は、プランをお申し込みください。今お申込みいただくと、料金は受講期間が終わった後からかかります。
-                                受講期間が終わってから{memberLastDay ? `${formatJpDate(memberLastDay)}まで` : '30日以内'}のお申込みは受講生価格です。受講期間の後に、無料お試しはありません。
+                                受講生の無料の期間中です。<b>{formatJpDate(courseEnd)}</b> まで無料で使えます（カードの登録はいりません）。<br />
+                                そのあとも使う場合は、プランをお申し込みください。今お申込みいただくと、料金は無料の期間が終わった後からかかります。
+                                無料の期間が終わってから{memberLastDay ? `${formatJpDate(memberLastDay)}まで` : '30日以内'}のお申込みは受講生価格です。無料の期間の後に、無料お試しはありません。
                             </span>
                         )}
                     </div>
@@ -188,7 +188,7 @@ function BillingContent() {
                     <div className="flex items-start gap-2 p-3 bg-[#f6f2ff] border border-[#d9cff5] rounded-xl text-sm text-[#4a3f73] leading-relaxed">
                         <GraduationCap size={16} className="mt-0.5 flex-shrink-0" />
                         <span>
-                            受講期間（{formatJpDate(courseEnd)}まで）は終わりました。続けて使うには、プランをお申し込みください（無料お試しはありません）。
+                            無料の期間（{formatJpDate(courseEnd)}まで）は終わりました。続けて使うには、プランをお申し込みください（無料お試しはありません）。
                             {memberDaysLeft !== null && memberLastDay && <><br />{formatJpDate(memberLastDay)}まで（あと{memberDaysLeft}日）のお申込みなら、受講生価格です。</>}
                         </span>
                     </div>
@@ -258,7 +258,7 @@ function BillingContent() {
                     href="/pricing"
                     className="block w-full text-center py-3.5 bg-[#6b5ca5] text-white font-bold rounded-2xl hover:scale-[1.02] transition-transform shadow-[0_4px_24px_rgba(107,92,165,0.25)]"
                 >
-                    {courseOnly ? 'プランを選ぶ（料金は受講期間の後から）' : 'プランに加入する'}
+                    {courseOnly ? 'プランを選ぶ（料金は無料の期間の後から）' : 'プランに加入する'}
                 </a>
             ) : (
                 // 契約中・無料の先生も、ほかのプランを見比べられるように（2026-09-24 かずき指示）

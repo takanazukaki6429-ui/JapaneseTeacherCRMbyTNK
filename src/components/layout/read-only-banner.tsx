@@ -25,7 +25,7 @@ export function ReadOnlyBanner() {
                 <Eye size={16} className="mt-1 flex-shrink-0" />
                 {reason === 'course_finished' ? (
                     <span>
-                        受講期間が終わったため、今は<b>見るだけ</b>になっています。<br />
+                        無料の期間が終わったため、今は<b>見るだけ</b>になっています。<br />
                         {usage.students !== null && usage.lessons !== null
                             ? <>これまでの記録（生徒{usage.students}人・授業の記録{usage.lessons}回）は、このまま残っています。<br /></>
                             : <>これまでの記録は、このまま残っています。<br /></>}

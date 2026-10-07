@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
+    COURSE_FREE_MONTHS,
+    addMonthsYmd,
+    freeEndDateFromRegistration,
     courseBillingStart,
     courseDaysLeft,
     formatJpDate,
@@ -44,6 +47,24 @@ describe('isInCourse・courseDaysLeft（日本時間で、終わる日の当日�
     });
     it('todayJst：UTC の夜は日本時間の翌日', () => {
         expect(todayJst(new Date('2026-10-06T15:30:00Z'))).toBe('2026-10-07');
+    });
+});
+
+describe('無料の期間（登録した日から・2026-10-08 かずき決定・案A）', () => {
+    it('3か月コースは2か月・6か月コースは5か月', () => {
+        expect(COURSE_FREE_MONTHS).toEqual({ 3: 2, 6: 5 });
+    });
+    it('登録した日（日本時間）から数えて、その前の日までを含む', () => {
+        expect(freeEndDateFromRegistration(3, new Date('2026-10-08T03:00:00Z'))).toBe('2026-12-07');
+        expect(freeEndDateFromRegistration(6, new Date('2026-10-08T03:00:00Z'))).toBe('2027-03-07');
+        // 日本時間では翌日（UTC の夜）
+        expect(freeEndDateFromRegistration(3, new Date('2026-10-07T15:30:00Z'))).toBe('2026-12-07');
+        // 月末に登録：足した先の月に同じ日が無ければ末日 → その前の日
+        expect(freeEndDateFromRegistration(3, new Date('2026-12-31T03:00:00Z'))).toBe('2027-02-27');
+    });
+    it('addMonthsYmd', () => {
+        expect(addMonthsYmd('2026-10-31', 1)).toBe('2026-11-30');
+        expect(addMonthsYmd('2026-10-08', 5)).toBe('2027-03-08');
     });
 });
 

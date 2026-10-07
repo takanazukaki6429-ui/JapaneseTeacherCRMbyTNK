@@ -1,4 +1,4 @@
--- 受講生と一般の区分の列を足し、課金の列を先生の権限で書き換えられないようにする（2026-10-07）
+-- 受講生と一般の区分の列を足し、課金の列を先生の権限で書き換えられないようにする（2026-10-07・10-08）
 -- 本番は Supabase Studio で流す（03_japanese-teacher-crm/strategy/sql_2026-10-07_受講生と一般の区分と課金の列を守る.sql。
 -- そちらは「先生の権限で課金の列と区分を直せない・運営の権限なら直せる」の自己テストつき・失敗したら全部取り消す）
 
@@ -27,9 +27,9 @@ begin
   alter table public.user_settings add  constraint user_settings_audience_check check (audience in ('general', 'course', 'alumni'));
 
   comment on column public.invite_codes.course_months   is 'コンサルの受講生に渡すコードのコース（3か月・6か月）。空＝受講生ではない（2026-10-06）';
-  comment on column public.invite_codes.course_end_date is 'コースが終わる日。受講生はこの日まで無料（2026-10-06）';
+  comment on column public.invite_codes.course_end_date is '登録済みの受講生の、無料の期間が終わる日（管理画面で直した時の記録）。新しいコードには入れない＝無料の期間は登録した日から数える（2026-10-08）';
   comment on column public.user_settings.course_months   is '受講中のコース（3か月・6か月）。登録した招待コードから写す（2026-10-06）';
-  comment on column public.user_settings.course_end_date is 'コースが終わる日。この日まで無料でレギュラーと同じ機能（2026-10-06）';
+  comment on column public.user_settings.course_end_date is '受講生の無料の期間が終わる日（登録した日から2か月・5か月）。この日まで無料でレギュラーと同じ機能（2026-10-08）';
   comment on column public.invite_codes.audience   is '区分：general（一般）・course（受講生）・alumni（卒業生）。登録した先生の設定に写す（2026-10-07）';
   comment on column public.invite_codes.email      is 'このメールアドレスでしか登録できない（小文字）。空＝誰でも（2026-10-07）';
   comment on column public.invite_codes.revoked_at is '取り消した日時。取り消したコードは使えない（2026-10-07）';

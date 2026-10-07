@@ -5,7 +5,7 @@ import { checkPasswordStrength } from '@/lib/password-policy';
 import { checkRateLimit, getRequestIdentifier } from '@/lib/rate-limit';
 import { logAudit } from '@/lib/audit';
 import { notifyAdmin } from '@/lib/notify';
-import { formatJpDate, normalizeCourseEndDate, normalizeCourseMonths } from '@/lib/course';
+import { COURSE_FREE_MONTHS, formatJpDate, freeEndDateFromRegistration, normalizeCourseMonths } from '@/lib/course';
 import { AUDIENCE_LABEL, normalizeAudience } from '@/lib/audience';
 import { inviteCodeRejection } from '@/lib/invite-code';
 
@@ -145,10 +145,11 @@ export async function POST(req: NextRequest) {
         }
 
         // 5. 先生の設定に、区分（一般・受講生・卒業生）とコースを写す（先生の設定の行は、登録と同時に保管庫の仕組みで作られている）。
-        //    受講生はコースが終わる日まで無料（lib/course.ts）。どちらの料金で申し込むかは lib/audience.ts
-        const audience = normalizeAudience(codeData.audience ?? null);
-        const courseEndDate = normalizeCourseEndDate(codeData.course_end_date ?? null);
+        //    受講生の無料の期間は、登録した今日から数える（3か月コース＝2か月・6か月コース＝5か月・2026-10-08 かずき決定・lib/course.ts）。
+        //    どちらの料金で申し込むかは lib/audience.ts
         const courseMonths = normalizeCourseMonths(codeData.course_months ?? null);
+        const courseEndDate = courseMonths ? freeEndDateFromRegistration(courseMonths) : null;
+        const audience = normalizeAudience(codeData.audience ?? null) ?? (courseMonths ? 'course' : null);
         const settingsUpdate: Record<string, unknown> = {};
         if (audience) settingsUpdate.audience = audience;
         if (courseEndDate) {
@@ -165,7 +166,7 @@ export async function POST(req: NextRequest) {
                 console.error('Failed to set audience/course:', courseError);
                 courseNote += `\n⚠️ 区分・受講中の設定に失敗しました（${courseError.message}）。管理画面の招待コードで、コースを入れ直してください`;
             } else if (courseEndDate) {
-                courseNote += `\n受講中：${courseMonths ? `${courseMonths}か月コース・` : ''}${formatJpDate(courseEndDate)}まで無料`;
+                courseNote += `\n受講中：${courseMonths}か月コース・無料${COURSE_FREE_MONTHS[courseMonths as 3 | 6]}か月＝${formatJpDate(courseEndDate)}まで`;
             }
         }
 
