@@ -162,7 +162,7 @@ export function useMyUsage(enabled: boolean): MyUsage {
             const [students, lessons] = await Promise.all([
                 supabase.from('students').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
                 supabase.from('lessons').select('id, students!inner(user_id)', { count: 'exact', head: true })
-                    .eq('students.user_id', user.id).neq('status', 'scheduled'),
+                    .eq('students.user_id', user.id).or('status.is.null,status.neq.scheduled'), // 予定だけの授業は数えない（状態が空の記録は数える＝ホームと同じ）
             ]);
             if (alive) setState({ loading: false, students: students.count ?? null, lessons: lessons.count ?? null });
         })().catch(() => { if (alive) setState({ loading: false, students: null, lessons: null }); });
