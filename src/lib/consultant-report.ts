@@ -315,7 +315,7 @@ export function formatConsultantReportText(report: ConsultantReport, asOfLabel: 
         lines.push('');
     }
     lines.push('※ 有料＝契約中（active）。お試し中は含めない。金額は段の月額の合計で、実際の入金額（手数料・日割り・返金）とは違う。');
-    lines.push('※ 受講中＝コンサルの受講生（コースが終わる日まで無料）。紹介の取り分は無い。受講後・未申込み＝受講が終わって、まだ申し込んでいない受講生（声をかける相手）。');
+    lines.push('※ 受講中＝コンサルの受講生（特別優待プランの無料の期間中＝登録した日から2か月・5か月）。紹介の取り分は無い。受講後・未申込み＝無料の期間が終わって、まだ申し込んでいない受講生（声をかける相手）。');
     lines.push('※ 取り分のルールは未決。この知らせは数えるだけ。');
     return lines.join('\n');
 }
