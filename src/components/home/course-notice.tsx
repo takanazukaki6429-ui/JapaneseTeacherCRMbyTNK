@@ -24,11 +24,11 @@ export function CourseNotice() {
             <p className="flex items-start gap-2 leading-relaxed">
                 <GraduationCap size={16} className="mt-1 flex-shrink-0" />
                 <span>
-                    受講生の無料の期間は <b>{formatJpDate(endDate)}</b> まで{daysLeft === 0 ? '（今日まで）' : `（あと${daysLeft}日）`}です。<br />
+                    特別優待プラン（全機能無料）は <b>{formatJpDate(endDate)}</b> まで{daysLeft === 0 ? '（今日まで）' : `（あと${daysLeft}日）`}です。<br />
                     {usage.students !== null && usage.lessons !== null && (
                         <>これまでに、生徒{usage.students}人・授業の記録{usage.lessons}回を ASTA に残しています。受講後も、記録はそのまま使い続けられます。<br /></>
                     )}
-                    無料の期間が終わってから{MEMBER_PRICE_GRACE_DAYS}日以内のお申込みは受講生価格です。今お申込みいただくと、料金は無料の期間が終わった後からかかります。
+                    無料の期間が終わってから{MEMBER_PRICE_GRACE_DAYS}日以内のお申込みはコンサル受講生限定の特別価格です。今お申込みいただくと、料金は無料の期間が終わった後からかかります。
                 </span>
             </p>
             <Link href="/pricing" className="rounded-xl bg-[#6b5ca5] px-4 py-2 text-[13px] font-bold text-white hover:opacity-90">

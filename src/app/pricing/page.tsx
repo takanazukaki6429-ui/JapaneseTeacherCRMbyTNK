@@ -176,14 +176,14 @@ function PricingContent() {
                     <div className="mb-6 px-5 py-3 bg-[#f6f2ff] border border-[#d9cff5] rounded-2xl text-sm text-[#4a3f73] text-center leading-relaxed">
                         {inCourse ? (
                             <>
-                                受講生の無料の期間中です。<b>{formatJpDate(courseEnd)}</b> まで無料で使えます（レギュラーと同じ機能）。<br />
+                                特別優待プランの期間中です。<b>{formatJpDate(courseEnd)}</b>まで全機能を無料で使えます。<br />
                                 今お申込みいただくと、料金は無料の期間が終わった後からかかります（お申込み時に、カードの登録が必要です）。<br />
-                                無料の期間が終わってから{MEMBER_PRICE_GRACE_DAYS}日以内のお申込みは受講生価格です。
+                                無料の期間が終わってから{MEMBER_PRICE_GRACE_DAYS}日以内のお申込みはコンサル受講生限定の特別価格です。
                             </>
                         ) : course.memberPriceDaysLeft !== null && course.memberPriceLastDay ? (
                             <>
                                 無料の期間（{formatJpDate(courseEnd)}まで）が終わりました。<br />
-                                <b>{formatJpDate(course.memberPriceLastDay)}まで（あと{course.memberPriceDaysLeft}日）</b>のお申込みなら、受講生価格で続けられます。<br />
+                                <b>{formatJpDate(course.memberPriceLastDay)}まで（あと{course.memberPriceDaysLeft}日）</b>のお申込みなら、コンサル受講生限定の特別価格で続けられます。<br />
                                 受講中に使っていただいたため、無料お試しはありません（お申込みの日から料金がかかります）。
                             </>
                         ) : (
@@ -196,7 +196,7 @@ function PricingContent() {
                 )}
                 {!courseEnd && !course.loading && course.audience === 'alumni' && (
                     <div className="mb-6 px-5 py-3 bg-[#f6f2ff] border border-[#d9cff5] rounded-2xl text-sm text-[#4a3f73] text-center leading-relaxed">
-                        講座を修了した方は、受講生価格でお申込みいただけます。<br />
+                        講座を修了した方は、コンサル受講生限定の特別価格でお申込みいただけます。<br />
                         無料お試しはありません（お申込みの日から料金がかかります）。
                     </div>
                 )}
@@ -257,7 +257,7 @@ function PricingContent() {
                                     {!ALL_TIER_PRICES_SET
                                         ? '料金が確定しだいお申込みいただけます'
                                         : inCourse && courseEnd
-                                            ? <>{formatJpDate(courseEnd)}まで無料（受講生）<br />→ 無料の期間の後から {tierPriceLabel(tier, priceSet)}/月</>
+                                            ? <>{formatJpDate(courseEnd)}まで無料（特別優待プラン）<br />→ 無料の期間の後から {tierPriceLabel(tier, priceSet)}/月</>
                                             : noTrial
                                                 ? <>お申込みの日から {tierPriceLabel(tier, priceSet)}/月</>
                                                 : <>{TRIAL_DAYS}日間無料<br />→ {TRIAL_DAYS + 1}日目から {tierPriceLabel(tier, priceSet)}/月</>}

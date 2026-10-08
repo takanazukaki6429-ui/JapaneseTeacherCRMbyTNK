@@ -26,7 +26,8 @@ export function normalizeAudience(raw: unknown): Audience | null {
 export const MEMBER_PRICE_GRACE_DAYS = 30;
 
 export type { PriceSet };
-export const PRICE_SET_LABEL: Record<PriceSet, string> = { member: '受講生価格', general: '一般価格' };
+/** 画面に出す名前（受講生価格は、画面では「コンサル受講生限定の特別価格」と呼ぶ＝2026-10-09 かずき） */
+export const PRICE_SET_LABEL: Record<PriceSet, string> = { member: 'コンサル受講生限定の特別価格', general: '一般価格' };
 
 export type AudienceInput = {
     audience?: string | null;

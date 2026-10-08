@@ -25,12 +25,12 @@ export function ReadOnlyBanner() {
                 <Eye size={16} className="mt-1 flex-shrink-0" />
                 {reason === 'course_finished' ? (
                     <span>
-                        無料の期間が終わったため、今は<b>見るだけ</b>になっています。<br />
+                        特別優待プランの期間が終わったため、今は<b>見るだけ</b>になっています。<br />
                         {usage.students !== null && usage.lessons !== null
                             ? <>これまでの記録（生徒{usage.students}人・授業の記録{usage.lessons}回）は、このまま残っています。<br /></>
                             : <>これまでの記録は、このまま残っています。<br /></>}
                         {course.memberPriceDaysLeft !== null && course.memberPriceLastDay && (
-                            <>{formatJpDate(course.memberPriceLastDay)}まで（あと{course.memberPriceDaysLeft}日）のお申込みなら、受講生価格で続けられます。</>
+                            <>{formatJpDate(course.memberPriceLastDay)}まで（あと{course.memberPriceDaysLeft}日）のお申込みなら、コンサル受講生限定の特別価格で続けられます。</>
                         )}
                     </span>
                 ) : (

@@ -122,7 +122,7 @@ function BillingContent() {
     const memberDaysLeft = memberPriceDaysLeft({ audience, courseEndDate: courseEnd });
     // 一般価格が決まった後は、契約した時の料金（受講生価格か一般価格か）がここでは分からないので、金額は出さない（Stripe の窓口で見られる）
     const planLabel = courseOnly
-        ? 'コンサルの受講中（レギュラーと同じ機能）'
+        ? '特別優待プラン（全機能無料）'
         : legacyFreeOnly
             ? '無償プラン（招待）'
             : GENERAL_PRICES_SET
@@ -177,9 +177,9 @@ function BillingContent() {
                             <span>お申込みありがとうございます。料金は、無料の期間（{formatJpDate(courseEnd)}まで）が終わった後からかかります。</span>
                         ) : (
                             <span>
-                                受講生の無料の期間中です。<b>{formatJpDate(courseEnd)}</b> まで無料で使えます（カードの登録はいりません）。<br />
+                                特別優待プランの期間中です。<b>{formatJpDate(courseEnd)}</b>まで全機能を無料で使えます（カードの登録はいりません）。<br />
                                 そのあとも使う場合は、プランをお申し込みください。今お申込みいただくと、料金は無料の期間が終わった後からかかります。
-                                無料の期間が終わってから{memberLastDay ? `${formatJpDate(memberLastDay)}まで` : '30日以内'}のお申込みは受講生価格です。無料の期間の後に、無料お試しはありません。
+                                無料の期間が終わってから{memberLastDay ? `${formatJpDate(memberLastDay)}まで` : '30日以内'}のお申込みはコンサル受講生限定の特別価格です。無料の期間の後に、無料お試しはありません。
                             </span>
                         )}
                     </div>
@@ -189,7 +189,7 @@ function BillingContent() {
                         <GraduationCap size={16} className="mt-0.5 flex-shrink-0" />
                         <span>
                             無料の期間（{formatJpDate(courseEnd)}まで）は終わりました。続けて使うには、プランをお申し込みください（無料お試しはありません）。
-                            {memberDaysLeft !== null && memberLastDay && <><br />{formatJpDate(memberLastDay)}まで（あと{memberDaysLeft}日）のお申込みなら、受講生価格です。</>}
+                            {memberDaysLeft !== null && memberLastDay && <><br />{formatJpDate(memberLastDay)}まで（あと{memberDaysLeft}日）のお申込みなら、コンサル受講生限定の特別価格です。</>}
                         </span>
                     </div>
                 )}
