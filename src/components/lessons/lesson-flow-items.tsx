@@ -19,6 +19,7 @@ const KIND_LABEL: Record<string, { label: string; tone: string }> = {
     asked: { label: '先生の質問', tone: 'bg-[#f4f1fb] text-[#3a3350]' },
     answer: { label: '質問への答え', tone: 'bg-[#efe9ff] text-[#5a4c94]' },
     textbook: { label: '教科書', tone: 'bg-[#eef3fb] text-[#2f4a72]' },
+    travel: { label: '旅行', tone: 'bg-[#fdf6e7] text-[#8a6d1f]' },
 };
 
 export function timeOf(ts: string): string {

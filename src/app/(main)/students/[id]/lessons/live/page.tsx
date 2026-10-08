@@ -8,8 +8,9 @@ import { saveLessonFlow } from '@/lib/lesson-flow';
 import { usePlanAccess, useFeatureAccess } from '@/lib/plan-access';
 import { NEEDS_REGULAR_MESSAGE } from '@/lib/plan-features';
 import {
-    ArrowLeft, Send, Sparkles, Mic, Loader2, Download, ChevronDown, Headphones, Lightbulb, Image as ImageIcon, BookOpen, PencilLine, Repeat2, Home, GraduationCap, Settings, Lock,
+    ArrowLeft, Send, Sparkles, Mic, Loader2, Download, ChevronDown, Headphones, Lightbulb, Image as ImageIcon, BookOpen, PencilLine, Repeat2, Home, GraduationCap, Settings, Lock, Plane, X,
 } from 'lucide-react';
+import { TRAVEL_LEVELS, splitTravelAnswers, travelSceneHeading, travelSceneText } from '@/lib/travel';
 import Link from 'next/link';
 import { GuidePanel } from './guide-panel';
 
@@ -33,6 +34,7 @@ type FlowItem = {
         | 'asked'         // 先生が手で聞いた質問（旧・手動チャット）
         | 'answer'        // その答え
         | 'textbook'      // 教科書のページ（台本のステップを開くと流れに入る）
+        | 'travel'        // 旅行の場面（下の段の「旅行」・左の「旅行」のステップ・2026-10-09）
         | 'student-said'  // 生徒の発話（画面共有の音声→日本語訳）
         | 'notice';       // 運用のお知らせ（上限で停止・音声なし共有 など）
     text?: string;
@@ -212,6 +214,8 @@ export default function LiveLessonPage() {
     // 課が選ばれていなくても、直近の会話から場面を起こせる
     // 教科書タブで選んだ課。ヘッダーのイラスト生成でも使う
     const [selectedLessonId, setSelectedLessonId] = useState('');
+    // 下の段の「旅行」で開く、場面を選ぶ枠（2026-10-09）
+    const [travelPickerOpen, setTravelPickerOpen] = useState(false);
     const handleLessonChange = useCallback((id: string) => setSelectedLessonId(id), []);
     // イラストは案C（2026-08-16 かずき決定）：1ボタンで速い絵を先に出し、
     // 裏で丁寧な絵も作って「差し替える？」と提案する。先生はモードを選ばない。
@@ -1088,6 +1092,9 @@ export default function LiveLessonPage() {
           busy: materialBusy === 'exercises', disabled: materialBusy !== null, onClick: () => makeMaterial('exercises'), tip: improviseLocked ? NEEDS_REGULAR_MESSAGE : MATERIAL_MODES.exercises.hint, locked: improviseLocked },
         { key: 'explain', title: 'やさしく言い換え', hint: improviseLocked ? 'レギュラー以上のプラン' : MATERIAL_MODES.explain.hint, Icon: Repeat2, tile: 'bg-[#dff1ea] text-[#2a6f5a] group-hover:bg-[#2a6f5a]',
           busy: materialBusy === 'explain', disabled: materialBusy !== null, onClick: () => makeMaterial('explain'), tip: improviseLocked ? NEEDS_REGULAR_MESSAGE : MATERIAL_MODES.explain.hint, locked: improviseLocked },
+        // 旅行（2026-10-09 かずき決定・9-2）：場面を選ぶと、フレーズ・使う場面・会話・穴埋めのカードが授業の流れに入る。全員が使える
+        { key: 'travel', title: '旅行', hint: '場面のフレーズ・会話・穴埋め', Icon: Plane, tile: 'bg-[#fdf6e7] text-[#8a6d1f] group-hover:bg-[#8a6d1f]',
+          busy: false, disabled: false, onClick: () => setTravelPickerOpen(o => !o), tip: '旅行の場面を選ぶと、フレーズ・使う場面・会話・穴埋めのカードが授業の流れに入ります' },
     ];
 
     return (
@@ -1265,6 +1272,7 @@ export default function LiveLessonPage() {
                                 imgs: pg.imageUrls,
                             });
                         }}
+                        onTravelOpen={card => addFlow({ kind: 'travel', title: card.title, text: card.text })}
                     />
 
                     {/* 右：授業の流れ（会話とASTAの提案・生成物が時系列で並ぶ） */}
@@ -1400,6 +1408,29 @@ export default function LiveLessonPage() {
                                         </div>
                                     )}
 
+                                    {item.kind === 'travel' && (() => {
+                                        // 穴埋めの答えは押すと開く（画面共有中に生徒へ先に見せないため）
+                                        const { body, answers } = splitTravelAnswers(item.text ?? '');
+                                        return (
+                                            <div className="bg-white border border-[#e4ddf0] rounded-xl p-5 shadow-sm relative overflow-hidden">
+                                                <div className="absolute top-0 right-8 w-6 h-8 bg-[#fdf6e7] border-b border-x border-[#ecd9a8] rounded-b-sm" />
+                                                <div className="flex items-center gap-2 mb-3 pr-12">
+                                                    <Plane size={15} className="text-[#8a6d1f] shrink-0" />
+                                                    <h3 className="text-[17px] font-bold text-[#3a3350]">{item.title}</h3>
+                                                </div>
+                                                <div className="bg-[#fffbf2] p-4 rounded-lg border border-[#f1e6c8]">
+                                                    <p className={`${toolsOut ? 'text-[16px] leading-[26px]' : 'text-[20px] leading-[34px]'} text-[#3a3350] whitespace-pre-wrap`}>{body}</p>
+                                                    {answers && (
+                                                        <details className="mt-3">
+                                                            <summary className="text-[14px] text-[#8a6d1f] cursor-pointer select-none font-bold">答えを見る</summary>
+                                                            <p className={`${toolsOut ? 'text-[16px] leading-[26px]' : 'text-[20px] leading-[34px]'} mt-1 text-[#2a6f5a] whitespace-pre-wrap`}>{answers}</p>
+                                                        </details>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+
                                     {item.kind === 'illust' && (
                                         <div className="bg-white border border-[#e4ddf0] rounded-xl p-5 shadow-sm">
                                             <div className="flex items-center justify-between gap-2 mb-3">
@@ -1483,7 +1514,37 @@ export default function LiveLessonPage() {
                                     {illustError}
                                 </p>
                             )}
-                            <div className="grid grid-cols-4 gap-3">
+                            {travelPickerOpen && (
+                                <div className="rounded-xl border border-[#ecd9a8] bg-[#fffbf2] p-3">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="flex items-center gap-1.5 text-[14px] font-bold text-[#8a6d1f]"><Plane size={14} />旅行の場面を選ぶ</p>
+                                        <button onClick={() => setTravelPickerOpen(false)} title="閉じる" className="p-1 text-[#8a6d1f] hover:bg-[#fdf6e7] rounded-md">
+                                            <X size={16} />
+                                        </button>
+                                    </div>
+                                    {TRAVEL_LEVELS.filter(l => l.scenes.length > 0).map(l => (
+                                        <div key={l.level} className="mb-1 last:mb-0">
+                                            <p className="text-[12px] text-[#6f6884] mb-1">{l.label}（{l.note}）</p>
+                                            <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
+                                                {l.scenes.map(sc => (
+                                                    <button
+                                                        key={sc.id}
+                                                        onClick={() => {
+                                                            addFlow({ kind: 'travel', title: `旅行 ${l.label}　${travelSceneHeading(sc)}`, text: travelSceneText(sc) });
+                                                            setTravelPickerOpen(false);
+                                                        }}
+                                                        className="text-left bg-white border border-[#f1e6c8] hover:border-[#8a6d1f] rounded-lg px-3 py-2 transition-colors"
+                                                    >
+                                                        <span className="block text-[14px] font-bold text-[#3a3350] leading-snug">{sc.title}</span>
+                                                        <span className="block text-[12px] text-[#6f6884] truncate">{sc.subtitle}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            <div className={`grid ${ASK_BUTTONS.length > 4 ? 'grid-cols-5' : 'grid-cols-4'} gap-3`}>
                                 {ASK_BUTTONS.map(b => {
                                     const Icon = b.Icon;
                                     return (

@@ -1,0 +1,107 @@
+/**
+ * 旅行の教材（2026-10-04 MTG・10/9 かずき決定・9-2）
+ *
+ * - 教材の画面に「旅行」のタブ。レベル（3つ）→ 場面 → 4つの部分（フレーズ・使う場面・会話・穴埋め）
+ * - 授業中の画面：下の段の「旅行」のボタン（場面を選ぶと授業の流れに場面のカード）と、
+ *   左の「きょうの進め方」の「教科書｜旅行」の切り替え（場面の4つの部分を手順として並べる）
+ * - よみは教科書と同じ「漢字（かんじ）」の形。英語の訳を付ける
+ * - 全員に見せる（ライト・一般の先生も・2026-10-05 かずき決定）
+ * - 中身はアプリの中のファイル（content/travel/）。保管庫には入れない
+ * ここは型と、並べ方・文にする処理だけ（テスト対象）。
+ */
+import { TRAVEL_LEVEL1 } from '@/content/travel/level1';
+
+export type TravelLine = { ja: string; en: string };
+export type TravelDialogueLine = { speaker: string; ja: string; en: string };
+export type TravelBlank = { q: string; answer: string; en: string };
+
+export type TravelScene = {
+    id: string;
+    /** 場面の名前（ふりがな付き） */
+    title: string;
+    subtitle: string;
+    titleEn: string;
+    /** この場面でできるようになること */
+    goal: TravelLine;
+    phrases: TravelLine[];
+    usage: TravelLine[];
+    dialogue: TravelDialogueLine[];
+    blanks: TravelBlank[];
+};
+
+export type TravelLevel = {
+    level: 1 | 2 | 3;
+    label: string;
+    /** だれ向けか */
+    note: string;
+    scenes: TravelScene[];
+};
+
+export const TRAVEL_LEVELS: TravelLevel[] = [
+    { level: 1, label: 'レベル1', note: '初めて日本へ行く人（N5くらい）', scenes: TRAVEL_LEVEL1 },
+    { level: 2, label: 'レベル2', note: '準備中', scenes: [] },
+    { level: 3, label: 'レベル3', note: '準備中', scenes: [] },
+];
+
+export const TRAVEL_PARTS = [
+    { key: 'phrases', label: 'フレーズ' },
+    { key: 'usage', label: '使う場面' },
+    { key: 'dialogue', label: '会話' },
+    { key: 'blanks', label: '穴埋め' },
+] as const;
+export type TravelPartKey = (typeof TRAVEL_PARTS)[number]['key'];
+
+/** 授業中の画面のカードで、穴埋めの答えを分ける印（この行より後が答え） */
+export const TRAVEL_ANSWER_MARK = '―― 答え ――';
+
+export function travelLevel(level: unknown): TravelLevel {
+    return TRAVEL_LEVELS.find(l => String(l.level) === String(level)) ?? TRAVEL_LEVELS[0];
+}
+
+export function findTravelScene(id: string): { level: TravelLevel; scene: TravelScene } | null {
+    for (const level of TRAVEL_LEVELS) {
+        const scene = level.scenes.find(s => s.id === id);
+        if (scene) return { level, scene };
+    }
+    return null;
+}
+
+const NUM = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩', '⑪', '⑫'];
+const indent = (en: string) => `　 ${en}`;
+
+/** 場面の1つの部分を、授業中の画面のカードに出す文にする（日本語の行の下に英語の行） */
+export function travelPartText(scene: TravelScene, part: TravelPartKey): string {
+    switch (part) {
+        case 'phrases':
+            return scene.phrases.map((p, i) => `${NUM[i] ?? `${i + 1}.`} ${p.ja}\n${indent(p.en)}`).join('\n');
+        case 'usage':
+            return scene.usage.map(u => `・${u.ja}\n${indent(u.en)}`).join('\n');
+        case 'dialogue':
+            return scene.dialogue.map(d => `${d.speaker}：${d.ja}\n${indent(d.en)}`).join('\n');
+        case 'blanks': {
+            const questions = scene.blanks.map((b, i) => `${i + 1}. ${b.q}\n${indent(b.en)}`).join('\n');
+            const answers = scene.blanks.map((b, i) => `${i + 1}. ${b.answer}`).join('\n');
+            return `${questions}\n${TRAVEL_ANSWER_MARK}\n${answers}`;
+        }
+    }
+}
+
+/** 場面の名前（ふりがな付き）とサブの名前をつなげた見出し */
+export function travelSceneHeading(scene: TravelScene): string {
+    return `${scene.title}：${scene.subtitle}`;
+}
+
+/** 場面まるごとを、授業中の画面のカードに出す文にする（4つの部分を順に） */
+export function travelSceneText(scene: TravelScene): string {
+    const goal = `目標：${scene.goal.ja}\n${indent(scene.goal.en)}`;
+    const parts = TRAVEL_PARTS.map(p => `【${p.label}】\n${travelPartText(scene, p.key)}`);
+    // 穴埋めの答えは最後にまとめる（印の行より後）。途中の部分に答えの印が入らないよう、穴埋めは最後に置く
+    return [goal, ...parts].join('\n\n');
+}
+
+/** カードの文を、答えの前と答えに分ける（答えが無ければ answers は null） */
+export function splitTravelAnswers(text: string): { body: string; answers: string | null } {
+    const i = text.indexOf(`\n${TRAVEL_ANSWER_MARK}\n`);
+    if (i < 0) return { body: text, answers: null };
+    return { body: text.slice(0, i), answers: text.slice(i + TRAVEL_ANSWER_MARK.length + 2) };
+}
