@@ -8,10 +8,13 @@
  * - 上：準備データ（あれば）＝最初にやること
  * - 中：今日の課を選ぶ → その課の流れがステップとして並ぶ
  * - ステップを押すと中身がその場で開く（別画面に飛ばない）
+ * - 「教科書｜旅行」の切り替え（2026-10-09 かずき決定・9-2）：旅行では場面を選ぶと、
+ *   場面の4つの部分（フレーズ・使う場面・会話・穴埋め）がステップとして並ぶ。押すと授業の流れに旅行のカードが入る
  */
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { BookOpen, ExternalLink, ChevronDown, StickyNote } from 'lucide-react';
+import { BookOpen, ExternalLink, ChevronDown, StickyNote, Plane } from 'lucide-react';
+import { TRAVEL_LEVELS, TRAVEL_PARTS, splitTravelAnswers, travelLevel, travelPartText, type TravelPartKey } from '@/lib/travel';
 import Link from 'next/link';
 import {
     SECTION_LABELS,
@@ -56,6 +59,8 @@ type Props = {
     onLessonChange: (id: string) => void;
     /** ステップを開いたとき、教科書ページを授業の流れに入れる（共有前提の1画面設計） */
     onStepOpen: (page: { lessonLabel: string; stepTitle: string; body: string; imageUrls: string[] }) => void;
+    /** 旅行の場面の部分を開いたとき、授業の流れに旅行のカードを入れる（2026-10-09） */
+    onTravelOpen?: (card: { title: string; text: string }) => void;
 };
 
 // 生徒向け原文に埋まっているふりがな「漢字（かんじ）」を落とす。
@@ -66,7 +71,13 @@ function stripFurigana(text: string): string {
         .replace(/([一-龥々ヶ]+)\([ぁ-んー]+\)/g, '$1');
 }
 
-export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonChange, onStepOpen }: Props) {
+export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonChange, onStepOpen, onTravelOpen }: Props) {
+    const [mode, setMode] = useState<'textbook' | 'travel'>('textbook');
+    const [travelLevelNo, setTravelLevelNo] = useState(1);
+    const [travelSceneId, setTravelSceneId] = useState('');
+    const [openTravelPart, setOpenTravelPart] = useState<TravelPartKey | null>(null);
+    const travelLv = travelLevel(travelLevelNo);
+    const travelScene = travelLv.scenes.find(sc => sc.id === travelSceneId) ?? null;
     const [level, setLevel] = useState('N5');
     const [peek, setPeek] = useState(false);   // しまった状態で一時的に開く
     const isNarrow = collapsed && !peek;
@@ -145,6 +156,27 @@ export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonC
 
     const SELECT = 'w-full appearance-none bg-white border border-[#e4ddf0] text-[#3a3350] text-[15px] font-medium rounded-lg pl-3 pr-7 py-1.5 focus:border-[#6b5ca5] focus:outline-none';
 
+    const switchMode = (next: 'textbook' | 'travel') => {
+        if (next === mode) return;
+        setMode(next);
+        setOpenStep(null);
+        setOpenTravelPart(null);
+        // 旅行の時は教科書の課の選択を外す（例文・練習問題は教科書の課が前提＝旅行では使わない・2026-10-09）
+        if (next === 'travel' && lessonId) onLessonChange('');
+    };
+
+    // 旅行の場面の部分を開く／閉じる。開いた部分は旅行のカードとして授業の流れにも入る
+    const toggleTravelPart = (key: TravelPartKey) => {
+        const next = openTravelPart === key ? null : key;
+        setOpenTravelPart(next);
+        if (!next || !travelScene) return;
+        const part = TRAVEL_PARTS.find(p => p.key === next);
+        onTravelOpen?.({
+            title: `旅行 ${travelLv.label}　${travelScene.title}：${part?.label ?? ''}`,
+            text: travelPartText(travelScene, next),
+        });
+    };
+
     // 見た目は画面案 ライブ授業_色D書体E.html の左の列（2026-09-11）。
     // 台本が長くてもこの枠の中だけがスクロールする（画面全体を縦に伸ばさない）
     if (isNarrow) {
@@ -168,12 +200,111 @@ export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonC
             <div className="p-4 overflow-y-auto flex-1">
                 <div className="flex items-baseline justify-between mb-1">
                     <h2 className="text-[20px] font-bold text-[#3a3350]">きょうの進め方</h2>
-                    {lessonId && (
+                    {((mode === 'textbook' && lessonId) || (mode === 'travel' && travelScene)) && (
                         <span className="text-[12px] text-[#2a6f5a] bg-[#dff1ea] px-2 py-0.5 rounded border border-[#bfe3d4]">進行中</span>
                     )}
                 </div>
                 <p className="text-[13px] text-[#484550] mb-3">次に何をやるかはここを見る</p>
 
+                {/* 教科書｜旅行 の切り替え（2026-10-09） */}
+                <div className="flex gap-1 bg-white border border-[#e4ddf0] rounded-lg p-0.5 mb-3">
+                    {([['textbook', '教科書', BookOpen], ['travel', '旅行', Plane]] as const).map(([key, label, Icon]) => (
+                        <button
+                            key={key}
+                            onClick={() => switchMode(key)}
+                            className={`flex-1 inline-flex items-center justify-center gap-1.5 py-1 rounded-md text-[14px] transition-colors ${
+                                mode === key ? 'bg-[#6b5ca5] text-white font-bold' : 'text-[#484550] hover:bg-[#efe9f8]'
+                            }`}
+                        >
+                            <Icon size={14} />{label}
+                        </button>
+                    ))}
+                </div>
+
+                {mode === 'travel' ? (
+                    <>
+                        {/* 旅行：レベルと場面の選択 */}
+                        <div className="grid grid-cols-5 gap-2 mb-4">
+                            <div className="col-span-2 relative">
+                                <select
+                                    value={travelLevelNo}
+                                    onChange={e => { setTravelLevelNo(Number(e.target.value)); setTravelSceneId(''); setOpenTravelPart(null); }}
+                                    className={SELECT}
+                                >
+                                    {TRAVEL_LEVELS.map(l => (
+                                        <option key={l.level} value={l.level} disabled={l.scenes.length === 0}>
+                                            {l.label}{l.scenes.length === 0 ? '（準備中）' : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#484550]" />
+                            </div>
+                            <div className="col-span-3 relative flex items-center gap-1">
+                                <div className="relative flex-1 min-w-0">
+                                    <select
+                                        value={travelSceneId}
+                                        onChange={e => { setTravelSceneId(e.target.value); setOpenTravelPart(null); }}
+                                        className={SELECT}
+                                    >
+                                        <option value="">場面を選ぶ…</option>
+                                        {travelLv.scenes.map(sc => (
+                                            <option key={sc.id} value={sc.id}>{stripFurigana(`${sc.title}：${sc.subtitle}`)}</option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#484550]" />
+                                </div>
+                                {travelScene && (
+                                    <Link
+                                        href={`/materials/travel/${travelScene.id}`}
+                                        target="_blank"
+                                        title="旅行の場面を別画面で開く"
+                                        className="p-1.5 text-[#6b5ca5] hover:bg-[#ede8fa] rounded-lg transition-colors shrink-0"
+                                    >
+                                        <ExternalLink size={14} />
+                                    </Link>
+                                )}
+                            </div>
+                        </div>
+                        <div className="w-full h-px bg-[#e4ddf0] mb-3" />
+
+                        {!travelScene && (
+                            <p className="text-[13px] text-[#484550] leading-relaxed py-6 text-center">
+                                場面を選ぶと、フレーズ・使う場面・会話・穴埋めが
+                                <br />ここにステップで並びます
+                            </p>
+                        )}
+                        {travelScene && (
+                            <ol className="space-y-1.5">
+                                {TRAVEL_PARTS.map((part, i) => openTravelPart === part.key ? (
+                                    <li key={part.key} className="rounded-lg bg-[#ede8fa] border border-[#cfc6ea] p-2.5 shadow-sm">
+                                        <button onClick={() => toggleTravelPart(part.key)} className="w-full flex items-center justify-between text-left">
+                                            <span className="flex items-center gap-2 text-[#6b5ca5] font-bold">
+                                                <span className="text-[14px]">{i + 1}.</span>
+                                                <span className="text-[15px]">{part.label}</span>
+                                            </span>
+                                            <span className="text-[12px] bg-[#6b5ca5] text-white px-2 py-0.5 rounded font-medium">現在</span>
+                                        </button>
+                                        {/* 先生が読むので、ふりがなは落とす。穴埋めの答えは出さない（画面共有中は生徒にも見えるため） */}
+                                        <div className="mt-2 text-[15px] leading-relaxed text-[#3a3350] bg-white p-2.5 rounded-md border border-[#e4ddf0] whitespace-pre-wrap max-h-56 overflow-y-auto">
+                                            {stripFurigana(splitTravelAnswers(travelPartText(travelScene, part.key)).body).slice(0, 900)}
+                                        </div>
+                                    </li>
+                                ) : (
+                                    <li key={part.key}>
+                                        <button
+                                            onClick={() => toggleTravelPart(part.key)}
+                                            className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[#484550] hover:bg-[#efe9f8] transition-colors text-left"
+                                        >
+                                            <span className="text-[13px] font-semibold w-5 text-right">{i + 1}.</span>
+                                            <span className="text-[15px]">{part.label}</span>
+                                        </button>
+                                    </li>
+                                ))}
+                            </ol>
+                        )}
+                    </>
+                ) : (
+                <>
                 {/* 課の選択 */}
                 <div className="grid grid-cols-5 gap-2 mb-4">
                     <div className="col-span-2 relative">
@@ -244,6 +375,8 @@ export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonC
                         </li>
                     ))}
                 </ol>
+                </>
+                )}
             </div>
 
             {/* 準備データ：攻略メモなので折りたたみ。開くと画面共有中は生徒にも見える */}
