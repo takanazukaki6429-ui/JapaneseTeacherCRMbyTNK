@@ -15,6 +15,7 @@ import { createClient } from '@/lib/supabase/server';
 import { AddStudentInline } from '@/components/home/add-student-inline';
 import { AskAsta } from '@/components/home/ask-asta';
 import { FullOnly } from '@/components/full-only';
+import { CourseNotice } from '@/components/home/course-notice';
 
 export const revalidate = 0;
 
@@ -150,6 +151,8 @@ export default async function Home() {
                     <p className="text-[12px] leading-[18px] text-[#6b5ca5] font-medium tracking-wide">{today}</p>
                     <h1 className="text-[24px] leading-[36px] font-semibold text-[#3a3350] mt-1">{teacherName}、お疲れさまです</h1>
                 </header>
+                {/* コンサルの受講が終わる7日前から、終わる日と申し込みの案内（2026-10-06） */}
+                <CourseNotice />
                 {/* 上：ASTAに聞く（授業の相談）。2026-09-12 かずき指示で最上段へ */}
                 <FullOnly><AskAsta /></FullOnly>
 

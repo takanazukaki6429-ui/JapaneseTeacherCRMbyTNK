@@ -137,3 +137,74 @@ describe('jstPeriod', () => {
         expect(jstPeriod(new Date('2026-10-01T00:00:00Z')).label).toBe('2026年10月1日 09:00（日本時間）');
     });
 });
+
+// ---- コンサルの受講生（2026-10-06） ----
+const NOW = new Date('2026-11-01T00:00:00Z'); // 日本時間 11/1 9:00（毎月の知らせを送る時刻）
+const student = (user_id: string, course_end_date: string | null, subscription_status = 'inactive'): TeacherSettingsRow =>
+    ({ user_id, display_name: `受講生${user_id}`, subscription_status, plan_tier: 'light', is_free: false, course_end_date });
+
+describe('受講中の数え方', () => {
+    it('コースが終わる日まで（当日を含む）は「受講中」。紹介の有料・お試し中には入れない', () => {
+        const report = buildConsultantReport(
+            [code('あいちゃん', 'a'), code('あいちゃん', 'b'), code('あいちゃん', 'c'), code('あいちゃん', 'd')],
+            [
+                student('a', '2026-11-01'),               // 当日（日本時間 11/1）→ 受講中
+                student('b', '2026-12-31', 'trialing'),   // 先回りして申し込んだ（Stripe ではお試し中）→ 受講中
+                student('c', '2026-10-31'),               // 前日に終わった → 受講後・未申込み
+                student('d', '2026-12-31', 'active'),     // 契約中（有料）が先
+            ],
+            PRICES,
+            NOW,
+        );
+        const s = report.summaries[0];
+        expect(s.course).toBe(2);
+        expect(s.trialing).toBe(0);
+        expect(s.courseFinished).toBe(1);
+        expect(s.none).toBe(0);
+        expect(s.paidTotal).toBe(1);
+        expect(s.teachers.find(t => t.userId === 'b')?.bucket).toBe('course');
+    });
+
+    it('知らせの本文に「受講中 n人」と、受講中の先生の行を書く', () => {
+        const report = buildConsultantReport([code('あいちゃん', 'a')], [student('a', '2026-12-31')], PRICES, NOW);
+        const text = formatConsultantReportText(report, 'x');
+        expect(text).toContain('受講中 1人');
+        expect(text).toContain('受講生a：受講中');
+    });
+});
+
+describe('出したコードの数（2026-10-07）', () => {
+    it('使われていないコードは、期限切れと取り消しを除いて「使われていない有効なコード」に数える', () => {
+        const report = buildConsultantReport(
+            [
+                code('あいちゃん', 'a'),
+                { consultant: 'あいちゃん', used_by: null, used_at: null },                                        // 未使用・期限なし
+                { consultant: 'あいちゃん', used_by: null, used_at: null, expires_at: '2026-11-10T00:00:00Z' },    // 未使用・期限内
+                { consultant: 'あいちゃん', used_by: null, used_at: null, expires_at: '2026-10-20T00:00:00Z' },    // 期限切れ
+                { consultant: 'あいちゃん', used_by: null, used_at: null, revoked_at: '2026-10-25T00:00:00Z' },    // 取り消し済み
+                { consultant: null, used_by: null, used_at: null },                                               // 相手なし → 数えない
+            ],
+            [teacher('a', 'active', 'regular')],
+            PRICES,
+            NOW,
+        );
+        const s = report.summaries[0];
+        expect(s.issued).toBe(5);
+        expect(s.unusedValid).toBe(2);
+        expect(s.registered).toBe(1);
+        expect(report.summaries).toHaveLength(1);
+    });
+
+    it('知らせの本文に、出したコードと使われていない有効なコードの数を書く', () => {
+        const report = buildConsultantReport(
+            [code('あいちゃん', 'a'), { consultant: 'あいちゃん', used_by: null, used_at: null }],
+            [student('a', '2026-10-31')],
+            PRICES,
+            NOW,
+        );
+        const text = formatConsultantReportText(report, 'x');
+        expect(text).toContain('出したコード 2件（使われていない有効なコード 1件）');
+        expect(text).toContain('受講後・未申込み 1人');
+        expect(text).toContain('受講生a：受講後・未申込み');
+    });
+});
