@@ -14,6 +14,7 @@ import { TRAVEL_LEVELS, splitTravelAnswers, travelSceneHeading, travelSceneText 
 import type { PrepSheet } from '@/lib/prep-sheet';
 import Link from 'next/link';
 import { GuidePanel } from './guide-panel';
+import { ScreenHelpButton } from '@/components/manual/screen-help';
 
 // ────────────────────────────────────────────
 // 型定義
@@ -1245,6 +1246,9 @@ export default function LiveLessonPage() {
                                 <span className="w-4 h-4 bg-white rounded-full shadow-sm" />
                             </span>
                         </button>
+
+                        {/* この画面の使い方（2026-10-09・9-4）。全部を読む時は別のタブで開く（画面を離れると授業が止まるため） */}
+                        <ScreenHelpButton chapterId="live" newTab compact />
 
                         <button
                             onClick={finishLesson}

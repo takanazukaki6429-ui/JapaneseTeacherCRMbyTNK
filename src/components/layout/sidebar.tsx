@@ -2,14 +2,15 @@
 
 /**
  * 左のナビ（画面案 2026-09-11：色＝E・書体＝E、ホーム＝Eの配置）
- * 上：文字の「ASTA」／中：ホーム・生徒・教材・設定の4つ／下：先生の名前とログアウト
+ * 上：文字の「ASTA」／中：ホーム・生徒・教材・設定・使い方の5つ／下：先生の名前とログアウト
+ * 「使い方」はアプリの中のマニュアル（2026-10-09 かずき決定・9-4）
  */
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
-import { Home, GraduationCap, BookOpen, Settings, LogOut, Menu, KeyRound, LayoutDashboard, CircleUserRound } from 'lucide-react';
+import { Home, GraduationCap, BookOpen, Settings, LogOut, Menu, KeyRound, LayoutDashboard, CircleUserRound, CircleHelp } from 'lucide-react';
 import { isAdminEmail } from '@/lib/admin';
 
 const navItems = [
@@ -17,6 +18,7 @@ const navItems = [
     { name: '生徒', href: '/students', icon: GraduationCap },
     { name: '教材', href: '/materials', icon: BookOpen },
     { name: '設定', href: '/settings', icon: Settings },
+    { name: '使い方', href: '/manual', icon: CircleHelp },
 ];
 
 const itemClass = (active: boolean) => cn(

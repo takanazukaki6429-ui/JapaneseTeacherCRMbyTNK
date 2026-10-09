@@ -129,12 +129,14 @@ export async function middleware(request: NextRequest) {
     // 解約した先生・支払いが止まった先生・受講が終わって申し込んでいない受講生（2026-10-07 案2）は「見るだけ」（2026-09-25 かずき決定・案B）：
     //   ホーム・生徒の一覧・生徒の1枚（過去の記録）・学習計画・設定は見られる。新しい記録・ライブ授業・準備・AI は使えない
     // 一度も申し込んでいない先生（inactive）は、料金の画面へ案内する。
-    // 案内しない画面：公開の画面（料金・規約・ログインなど）・登録の途中・プランの画面・API（APIは各処理が自分で判定する）
+    // 案内しない画面：公開の画面（料金・規約・ログインなど）・登録の途中・プランの画面・使い方（マニュアル）・API（APIは各処理が自分で判定する）
+    //   使い方（/manual）は読むだけの画面なので、見るだけの先生・申し込む前の先生も開ける（2026-10-09・9-4）
     // 判定は利用者ごとに5分だけ覚える（毎回保管庫に聞かない。解約・再開を5分以内に反映する・2026-09-25 1時間→5分）
     const isSubscriptionExempt =
         isPublicRoute ||
         request.nextUrl.pathname.startsWith('/onboarding') ||
         request.nextUrl.pathname.startsWith('/settings/billing') ||
+        request.nextUrl.pathname.startsWith('/manual') ||
         request.nextUrl.pathname.startsWith('/api/');
 
     if (user && !isSubscriptionExempt && request.method === 'GET') {
