@@ -1,14 +1,17 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { generatePrepSheet, loadPrepSheet, prepStamp, type PrepSheet, type PrepSource } from '@/lib/prep-sheet';
+import {
+    buildPrepSource, fetchTalks, generatePrepSheet, loadPrepSheet, missingFreeTalk, prepStamp,
+    recentLessonsQuery, talkSince, type FreeTalk, type PrepSheet,
+} from '@/lib/prep-sheet';
 import { useFeatureAccess } from '@/lib/plan-access';
 import { PaidLock } from '@/components/paid-lock';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
     ArrowLeft, Sparkles, Loader2, BookOpen, Brain, ArrowRight,
-    CheckCircle2, PenLine, MessageSquare, LayoutGrid, ChevronDown, ChevronUp
+    CheckCircle2, PenLine, MessageSquare, LayoutGrid, ChevronDown, ChevronUp, MessagesSquare
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { showAppError } from '@/lib/error-handler';
@@ -64,7 +67,9 @@ export default function LessonPreparePage() {
 
     // データ
     const [loading, setLoading] = useState(true);
-    const [lastLesson, setLastLesson] = useState<Lesson | null>(null);
+    // 直近の授業の記録（予定ではない・今より前・新しい順に5回）。先頭が前回。フリートークの材料にも使う（2026-10-09）
+    const [recentLessons, setRecentLessons] = useState<Lesson[]>([]);
+    const lastLesson = recentLessons[0] ?? null;
     const [student, setStudent] = useState<Student | null>(null);
 
     // 準備プラン（既存機能）
@@ -90,15 +95,11 @@ export default function LessonPreparePage() {
                         .select('*')
                         .eq('id', studentId)
                         .single(),
-                    supabase
-                        .from('lessons')
-                        .select('*')
-                        .eq('student_id', studentId)
-                        .order('date', { ascending: false })
-                        .limit(1),
+                    // 前回の記録は、予定（まだ先の授業）を除いた一番新しい記録（生徒の1枚と同じ決め方）
+                    recentLessonsQuery(supabase, studentId, '*'),
                 ]);
                 if (stu) setStudent(stu as Student);
-                if (lessons && lessons.length > 0) setLastLesson(lessons[0]);
+                if (lessons) setRecentLessons(lessons as unknown as Lesson[]);
             } catch (err) {
                 console.error('Error fetching data:', err);
             } finally {
@@ -109,26 +110,17 @@ export default function LessonPreparePage() {
     }, [studentId]);
 
     /* ── 授業前の1枚（2026-09-17：自動で作る・共通部品 lib/prep-sheet.ts） ── */
-    const prepSource = useCallback((): PrepSource | null => {
-        if (!student) return null;
-        return {
-            studentName: student.name,
-            jlptLevel: student.jlpt_level,
-            textbook: student.textbook,
-            lastDate: lastLesson?.date ?? null,
-            topics: lastLesson?.topics ?? null,
-            mistakes: lastLesson?.mistakes ?? null,
-            homework: lastLesson?.homework ?? null,
-            nextGoal: lastLesson?.next_goal ?? null,
-        };
-    }, [student, lastLesson]);
+    // フリートークのネタはレギュラー以上（2026-10-05 かずき決定）。使える先生だけ、授業中の会話も読んで一緒に作る
+    const freeTalkAccess = useFeatureAccess('free_talk');
+    const freeTalkAllowed = freeTalkAccess.decision.allowed;
 
     const handleGeneratePlan = useCallback(async () => {
-        const src = prepSource();
-        if (!src || !studentId) return;
+        if (!student || !studentId) return;
         setGenerating(true);
         try {
-            const sheet = await generatePrepSheet(studentId, prepStamp(src.lastDate), src);
+            const talks = freeTalkAllowed ? await fetchTalks(createClient(), studentId, talkSince(recentLessons)) : [];
+            const src = buildPrepSource(student, recentLessons, talks);
+            const sheet = await generatePrepSheet(studentId, prepStamp(src.lastDate), src, 'prep_plan', { freeTalk: freeTalkAllowed });
             setPrepContent(sheet);
         } catch (err) {
             console.error('Plan generation error:', err);
@@ -136,7 +128,7 @@ export default function LessonPreparePage() {
         } finally {
             setGenerating(false);
         }
-    }, [prepSource, studentId]);
+    }, [student, recentLessons, studentId, freeTalkAllowed]);
 
     // 開いた時点でできている状態にする：保存済みがあれば読み、無ければ自動で作る（自動は1回だけ）
     // 開いた時点で自動で作るのは有料の機能（2026-09-24 案A）。無料の先生は、保存済みを読むだけ（ボタンで作るのは今までどおり）
@@ -146,20 +138,21 @@ export default function LessonPreparePage() {
     const prepMaterial = useFeatureAccess('prep_material');
     const autoAllowed = prepAuto.decision.allowed;
     const autoTried = useRef(false);
+    // フリートークを使える先生で、保存済みの1枚にフリートークが無い（この機能より前に作った）ときは、1回だけ作り直す
     useEffect(() => {
-        if (!studentId || !student || autoTried.current || prepAuto.loading) return;
+        if (!studentId || !student || autoTried.current || prepAuto.loading || freeTalkAccess.loading) return;
         autoTried.current = true;
         const run = async () => {
-            const src = prepSource();
-            if (!src) return;
-            const cached = loadPrepSheet(studentId, prepStamp(src.lastDate));
-            if (cached) { setPrepContent(cached); return; }
-            if (!src.lastDate) return;   // 授業記録がまだ無いときは作らない
+            const lastDate = recentLessons[0]?.date ?? null;
+            const cached = loadPrepSheet(studentId, prepStamp(lastDate));
+            if (cached) setPrepContent(cached);
+            if (cached && !missingFreeTalk(cached, freeTalkAllowed)) return;
+            if (!lastDate) return;       // 授業記録がまだ無いときは作らない
             if (!autoAllowed) return;    // 無料の先生・ライトの先生は自動では作らない
             await handleGeneratePlan();
         };
         run();
-    }, [studentId, student, prepSource, handleGeneratePlan, prepAuto.loading, autoAllowed]);
+    }, [studentId, student, recentLessons, handleGeneratePlan, prepAuto.loading, autoAllowed, freeTalkAccess.loading, freeTalkAllowed]);
 
     /* ── 教材生成（新機能） ──────────────────────── */
     const handleGenerateMaterial = async () => {
@@ -383,7 +376,7 @@ ${typeInstructions[selectedType]}
                         <div className="flex items-center gap-2">
                             <Sparkles size={16} className="text-[#6b5ca5]" />
                             <span className="font-bold text-sm text-[#3a3350]">準備プランを作成</span>
-                            <span className="text-xs text-[#484550]/60">復習クイズ・導入トーク</span>
+                            <span className="text-xs text-[#484550]/60">復習クイズ・導入トーク{freeTalkAllowed ? '・フリートークのネタ' : ''}</span>
                         </div>
                         {prepExpanded ? <ChevronUp size={16} className="text-[#484550]" /> : <ChevronDown size={16} className="text-[#484550]" />}
                     </button>
@@ -405,6 +398,12 @@ ${typeInstructions[selectedType]}
                                 </div>
                             ) : (
                                 <div className="space-y-4 pt-4">
+                                    {/* 保存済みの1枚を出したまま、フリートークのネタを足して作り直している間 */}
+                                    {generating && (
+                                        <p className="flex items-center gap-1.5 text-xs text-[#6b5ca5]">
+                                            <Loader2 size={12} className="animate-spin" /> ASTAがフリートークのネタを足して、作り直しています…
+                                        </p>
+                                    )}
                                     {/* 復習クイズ */}
                                     <div>
                                         <h3 className="text-xs font-bold text-[#484550] uppercase tracking-wider mb-3 border-l-2 border-[#6b5ca5] pl-2">
@@ -429,6 +428,9 @@ ${typeInstructions[selectedType]}
                                             {prepContent.intro_topic}
                                         </div>
                                     </div>
+
+                                    {/* フリートークのネタ（2026-10-09 かずき決定・9-3）。フリートーク無しで作った1枚には出さない */}
+                                    {prepContent.free_talk && <FreeTalkList items={prepContent.free_talk} />}
 
                                     {/* アドバイス */}
                                     <div className="bg-[#f0ebf8] p-4 rounded-xl">
@@ -577,6 +579,36 @@ ${typeInstructions[selectedType]}
                     <ArrowRight size={16} />
                 </button>
             </div>
+        </div>
+    );
+}
+
+/* ── フリートークのネタ（2026-10-09 かずき決定：3つ・最初の質問・続けて聞く質問・使う文法・どの日のどの話から） ── */
+function FreeTalkList({ items }: { items: FreeTalk[] }) {
+    return (
+        <div>
+            <h3 className="text-xs font-bold text-[#484550] uppercase tracking-wider mb-3 border-l-2 border-[#6b5ca5] pl-2 flex items-center gap-1.5">
+                <MessagesSquare size={13} className="text-[#6b5ca5]" /> フリートークのネタ
+            </h3>
+            {items.length === 0 ? (
+                <p className="text-sm text-[#484550]">授業の記録・会話がまだ少ないため、ネタを作れませんでした。記録が増えると作れます。</p>
+            ) : (
+                <ol className="space-y-2">
+                    {items.map((t, i) => (
+                        <li key={i} className="bg-[#efe9ff]/40 p-3.5 rounded-xl text-sm text-[#3a3350] space-y-1.5">
+                            <p className="font-bold">{i + 1}. {t.topic || 'ネタ'}</p>
+                            <p><span className="text-xs font-bold text-[#6b5ca5] mr-1.5">最初の質問</span>{t.question}</p>
+                            {t.follow_up && <p><span className="text-xs font-bold text-[#6b5ca5] mr-1.5">続けて聞く</span>{t.follow_up}</p>}
+                            <p className="text-xs text-[#484550]">
+                                <span className="font-bold mr-1.5">答えで使う文法</span>{t.grammar || '記録に文法が見当たらないため、指定なし'}
+                            </p>
+                            {t.basis && (
+                                <p className="text-xs text-[#484550]/80"><span className="font-bold mr-1.5">もとにした話</span>{t.basis}</p>
+                            )}
+                        </li>
+                    ))}
+                </ol>
+            )}
         </div>
     );
 }

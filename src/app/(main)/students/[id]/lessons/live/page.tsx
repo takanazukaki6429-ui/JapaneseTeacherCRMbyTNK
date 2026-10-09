@@ -11,14 +11,15 @@ import {
     ArrowLeft, Send, Sparkles, Mic, Loader2, Download, ChevronDown, Headphones, Lightbulb, Image as ImageIcon, BookOpen, PencilLine, Repeat2, Home, GraduationCap, Settings, Lock, Plane, X,
 } from 'lucide-react';
 import { TRAVEL_LEVELS, splitTravelAnswers, travelSceneHeading, travelSceneText } from '@/lib/travel';
+import type { PrepSheet } from '@/lib/prep-sheet';
 import Link from 'next/link';
 import { GuidePanel } from './guide-panel';
 
 // ────────────────────────────────────────────
 // 型定義
 // ────────────────────────────────────────────
-type KeyPoint = { question: string; answer: string };
-type PrepContent = { review_quiz: KeyPoint[]; intro_topic: string; advice: string };
+// 授業前の1枚（lib/prep-sheet.ts）。フリートークのネタ（2026-10-09）も入っている
+type PrepContent = PrepSheet;
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 type AutoSuggestion = { id: number; text: string; timestamp: Date };
 
