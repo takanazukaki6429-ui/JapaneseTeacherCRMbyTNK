@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { canUseFeature, decideFeature, featureForAiType, featureTier, type GatedFeature } from '../plan-features';
 
-const ALL: GatedFeature[] = ['prep_sheet', 'prep_manual', 'prep_material', 'improvise', 'ask', 'shared_materials'];
+const ALL: GatedFeature[] = ['prep_sheet', 'prep_manual', 'prep_material', 'free_talk', 'improvise', 'ask', 'shared_materials'];
 const EXISTING: GatedFeature[] = ['prep_manual', 'prep_material', 'improvise', 'ask', 'shared_materials'];   // 今の本番にある機能
 
 const LEGACY = { isFree: true, status: 'inactive', tier: 'light' };               // 既存の無料の先生（申し込んでいない）
@@ -31,7 +31,7 @@ describe('featureTier', () => {
 });
 
 describe('ライトでは使えない（2026-10-04）', () => {
-    it('ライトの新規の先生は6つとも使えず、理由はレギュラー以上への変更', () => {
+    it('ライトの新規の先生は7つとも使えず、理由はレギュラー以上への変更', () => {
         for (const f of ALL) {
             expect(decideFeature(f, LIGHT)).toEqual({ allowed: false, reason: 'needs_regular' });
         }
@@ -51,6 +51,11 @@ describe('既存の無料の先生（9/24 の約束・10/4 かずき確認）', 
     });
     it('開いた時に自動で作る授業前の1枚（10月からの有料の機能）は、申し込むまで使えない', () => {
         expect(decideFeature('prep_sheet', LEGACY)).toEqual({ allowed: false, reason: 'needs_plan' });
+    });
+    it('フリートークのネタ（10月からの機能・レギュラー以上）は、申し込むまで使えない。ライトでも使えない', () => {
+        expect(decideFeature('free_talk', LEGACY)).toEqual({ allowed: false, reason: 'needs_plan' });
+        expect(decideFeature('free_talk', LEGACY_LIGHT)).toEqual({ allowed: false, reason: 'needs_regular' });
+        expect(canUseFeature('free_talk', LEGACY_REGULAR)).toBe(true);
     });
     it('ライトを申し込んでも、今の本番にある機能は残る。自動の授業前の1枚はライトなので使えない', () => {
         for (const f of EXISTING) expect(canUseFeature(f, LEGACY_LIGHT)).toBe(true);

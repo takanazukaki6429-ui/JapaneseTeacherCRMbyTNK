@@ -10,11 +10,13 @@
  * - ステップを押すと中身がその場で開く（別画面に飛ばない）
  * - 「教科書｜旅行」の切り替え（2026-10-09 かずき決定・9-2）：旅行では場面を選ぶと、
  *   場面の4つの部分（フレーズ・使う場面・会話・穴埋め）がステップとして並ぶ。押すと授業の流れに旅行のカードが入る
+ * - 「授業前のメモ」にフリートークのネタ（2026-10-09 かずき決定・9-3）：最初の質問と、続けて聞く質問
  */
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { BookOpen, ExternalLink, ChevronDown, StickyNote, Plane } from 'lucide-react';
 import { TRAVEL_LEVELS, TRAVEL_PARTS, splitTravelAnswers, travelLevel, travelPartText, type TravelPartKey } from '@/lib/travel';
+import type { PrepSheet } from '@/lib/prep-sheet';
 import Link from 'next/link';
 import {
     SECTION_LABELS,
@@ -38,8 +40,7 @@ type Section = {
     images: string[] | null;
 };
 
-type KeyPoint = { question: string; answer: string };
-type PrepContent = { review_quiz: KeyPoint[]; intro_topic: string; advice: string };
+type PrepContent = PrepSheet;
 
 const LEVELS = ['N5', 'N4', 'N3', 'N2'];
 
@@ -398,6 +399,20 @@ export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonC
                             ))}
                             {prepContent.intro_topic && (
                                 <p><span className="font-bold text-[#6b5ca5]">導入：</span>{prepContent.intro_topic.slice(0, 80)}</p>
+                            )}
+                            {prepContent.free_talk && prepContent.free_talk.length > 0 && (
+                                <div>
+                                    <p className="font-bold text-[#6b5ca5]">フリートーク：</p>
+                                    <ol className="mt-0.5 space-y-1.5">
+                                        {prepContent.free_talk.map((t, i) => (
+                                            <li key={i}>
+                                                <p>{i + 1}. {t.question}</p>
+                                                {t.follow_up && <p className="text-[#484550] pl-3">→ {t.follow_up}</p>}
+                                                {t.grammar && <p className="text-[12px] text-[#6f6884] pl-3">文法：{t.grammar}</p>}
+                                            </li>
+                                        ))}
+                                    </ol>
+                                </div>
                             )}
                         </div>
                     </details>
