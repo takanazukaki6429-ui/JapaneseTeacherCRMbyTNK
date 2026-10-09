@@ -12,7 +12,7 @@ import { Student } from '@/types/student';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { generateMilestones, getLevelDescription } from '@/lib/roadmap/generators';
-import { JLPT_TO_SCORE, parseCurrentPhase, roadmapInputFromStudent, roadmapLocaleForNationality } from '@/lib/roadmap/from-student';
+import { JLPT_TO_SCORE, parseCurrentPhase, parsePurposeIds, roadmapInputFromStudent, roadmapLocaleForNationality } from '@/lib/roadmap/from-student';
 import { locales, type Locale } from '@/app/(main)/roadmap/i18n';
 import { ja } from '@/app/(main)/roadmap/ja';
 import { toast } from 'sonner';
@@ -77,7 +77,8 @@ export default function StudentRoadmapPage() {
     const [editCurrent, setEditCurrent] = useState('N5');
     const [editTarget, setEditTarget] = useState(50);
     const [editMonths, setEditMonths] = useState(6);
-    const [editPurpose, setEditPurpose] = useState('');
+    // 目的は2つ以上選べる（体験レッスンと同じ・2026-10-09）。保存は「travel,work」の形
+    const [editPurposes, setEditPurposes] = useState<string[]>([]);
     const [editSaving, setEditSaving] = useState(false);
     const [editError, setEditError] = useState('');
 
@@ -87,7 +88,7 @@ export default function StudentRoadmapPage() {
         setEditCurrent(student.jlpt_level && JLPT_TO_SCORE[student.jlpt_level] ? student.jlpt_level : 'N5');
         setEditTarget(phase.targetLevel ?? 50);
         setEditMonths(phase.periodMonths ?? 6);
-        setEditPurpose((student as Student & { purposes?: string | null }).purposes ?? '');
+        setEditPurposes(parsePurposeIds((student as Student & { purposes?: string | null }).purposes));
         setEditError('');
         setEditOpen(v => !v);
     };
@@ -96,7 +97,7 @@ export default function StudentRoadmapPage() {
         const cur = JLPT_TO_SCORE[editCurrent];
         if (!cur || editTarget <= cur) { setEditError('目標は、今のレベルより上にしてください'); return; }
         setEditSaving(true); setEditError('');
-        const update = { jlpt_level: editCurrent, current_phase: `目標Lv.${editTarget} / ${editMonths}ヶ月`, purposes: editPurpose || null };
+        const update = { jlpt_level: editCurrent, current_phase: `目標Lv.${editTarget} / ${editMonths}ヶ月`, purposes: editPurposes.length > 0 ? editPurposes.join(',') : null };
         const { error } = await supabase.from('students').update(update as never).eq('id', studentId);
         setEditSaving(false);
         if (error) { setEditError('保存できませんでした。時間をおいてもう一度お試しください'); return; }
@@ -137,7 +138,7 @@ export default function StudentRoadmapPage() {
             <Loader2 className="animate-spin text-[#6b5ca5]" size={32} />
         </div>
     );
-    if (!student) return <div>Student not found</div>;
+    if (!student) return <div className="p-8 text-sm text-[#484550]">生徒が見つかりません。生徒の一覧から開き直してください。</div>;
 
     const hasRoadmap = !!(currentScore && targetLevel && periodMonths && milestones.length > 0);
 
@@ -230,13 +231,25 @@ export default function StudentRoadmapPage() {
                                     {Array.from(new Set([editMonths, 1, 2, 3, 4, 5, 6, 9, 12, 18, 24])).sort((a, b) => a - b).map(m => <option key={m} value={m}>{m}か月</option>)}
                                 </select>
                             </label>
-                            <label className="space-y-1">
-                                <span className="text-xs font-bold text-[#484550]">日本語を学ぶ目的</span>
-                                <select value={editPurpose} onChange={e => setEditPurpose(e.target.value)} className="w-full text-sm border border-[#d6cfe2] rounded-lg px-2 py-2 bg-white text-[#3a3350]">
-                                    <option value="">選ばない</option>
-                                    {(Object.entries(ja.purposes) as [string, { label: string }][]).map(([key, p]) => <option key={key} value={key}>{p.label}</option>)}
-                                </select>
-                            </label>
+                            <div className="space-y-1 col-span-2">
+                                <span className="text-xs font-bold text-[#484550]">日本語を学ぶ目的（いくつでも選べます）</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {(Object.entries(ja.purposes) as [string, { label: string }][]).map(([key, p]) => {
+                                        const on = editPurposes.includes(key);
+                                        return (
+                                            <button
+                                                key={key}
+                                                type="button"
+                                                aria-pressed={on}
+                                                onClick={() => setEditPurposes(prev => (on ? prev.filter(k => k !== key) : [...prev, key]))}
+                                                className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${on ? 'bg-[#6b5ca5] text-white border-[#6b5ca5]' : 'bg-white text-[#3a3350] border-[#d6cfe2] hover:bg-[#f0ebf8]'}`}
+                                            >
+                                                {p.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         </div>
                         {editError && <p className="text-xs text-red-600">{editError}</p>}
                         <div className="flex justify-end gap-2">

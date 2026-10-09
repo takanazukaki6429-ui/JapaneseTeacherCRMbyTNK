@@ -292,12 +292,12 @@ export function RoadmapResult({ t, currentLevel, targetLevel, periodMonths, sele
                         </div>
 
                         {milestone.aiPrompt && (
-                            <div className="mt-3 p-3 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-100 shadow-sm hover:shadow-md transition-all cursor-pointer" onClick={() => { navigator.clipboard.writeText(milestone.aiPrompt); alert('Prompt copied!'); }}>
+                            <div className="mt-3 p-3 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-100 shadow-sm hover:shadow-md transition-all cursor-pointer" onClick={() => { navigator.clipboard.writeText(milestone.aiPrompt); alert(t.promptCopied); }}>
                                 <div className="flex justify-between items-start mb-1">
                                     <p className="text-xs font-bold text-purple-700 flex gap-1.5 items-center">
                                         <Sparkles className="w-3.5 h-3.5 fill-purple-700" /> {t.aiPromptLabel}
                                     </p>
-                                    <p className="text-[10px] text-purple-500 bg-purple-100/50 px-1.5 py-0.5 rounded">Click to Copy</p>
+                                    <p className="text-[10px] text-purple-500 bg-purple-100/50 px-1.5 py-0.5 rounded">{t.clickToCopy}</p>
                                 </div>
                                 <p className="text-sm text-purple-900 leading-relaxed italic">
                                     &quot;{milestone.aiPrompt}&quot;

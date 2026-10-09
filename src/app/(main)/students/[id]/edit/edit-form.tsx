@@ -20,10 +20,10 @@ export function EditStudentForm({ student }: EditStudentFormProps) {
     const [formData, setFormData] = useState({
         name: student.name ?? '',
         nationality: student.nationality ?? '',
-        jlpt_level: student.jlpt_level ?? '',
+        // 「なし」（英語の None が保存されていた）は選べなくした（2026-10-09）。前に入った None は「未設定」として出し、保存で空に直す
+        jlpt_level: student.jlpt_level && student.jlpt_level !== 'None' ? student.jlpt_level : '',
         goal_text: student.goal_text ?? '',
         textbook: student.textbook ?? '',
-        current_phase: student.current_phase ?? '',
         memo: student.memo ?? '',
     });
 
@@ -45,7 +45,6 @@ export function EditStudentForm({ student }: EditStudentFormProps) {
                     jlpt_level: formData.jlpt_level || null,
                     goal_text: formData.goal_text || null,
                     textbook: formData.textbook || null,
-                    current_phase: formData.current_phase || null,
                     memo: formData.memo || null,
                 })
                 .eq('id', student.id);
@@ -128,7 +127,6 @@ export function EditStudentForm({ student }: EditStudentFormProps) {
                                 <option value="N3">N3</option>
                                 <option value="N4">N4</option>
                                 <option value="N5">N5</option>
-                                <option value="None">なし</option>
                             </select>
                         </div>
                     </div>
@@ -148,35 +146,23 @@ export function EditStudentForm({ student }: EditStudentFormProps) {
                         />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label htmlFor="textbook" className="block text-xs font-bold text-[#484550] uppercase tracking-wider mb-1.5">
-                                使用教材
-                            </label>
-                            <input
-                                type="text"
-                                id="textbook"
-                                name="textbook"
-                                value={formData.textbook}
-                                onChange={handleChange}
-                                className="w-full px-3 py-2 border border-[#d6cfe2] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6b5ca5] focus:border-transparent text-sm"
-                                placeholder="みんなの日本語"
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="current_phase" className="block text-xs font-bold text-[#484550] uppercase tracking-wider mb-1.5">
-                                現在の進度
-                            </label>
-                            <input
-                                type="text"
-                                id="current_phase"
-                                name="current_phase"
-                                value={formData.current_phase}
-                                onChange={handleChange}
-                                className="w-full px-3 py-2 border border-[#d6cfe2] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6b5ca5] focus:border-transparent text-sm"
-                                placeholder="第5課"
-                            />
-                        </div>
+                    {/* 「現在の進度」の欄は外した（2026-10-09 かずき決定）。学習計画を保存している欄と同じで、
+                        「第5課」などと書くと学習計画・ロードマップ・生徒に渡したリンクが消えていたため。
+                        学習計画は、学習計画の画面の「目標・期間・目的を直す」で直す */}
+                    <div>
+                        <label htmlFor="textbook" className="block text-xs font-bold text-[#484550] uppercase tracking-wider mb-1.5">
+                            使用教材
+                        </label>
+                        <input
+                            type="text"
+                            id="textbook"
+                            name="textbook"
+                            value={formData.textbook}
+                            onChange={handleChange}
+                            className="w-full px-3 py-2 border border-[#d6cfe2] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6b5ca5] focus:border-transparent text-sm"
+                            placeholder="みんなの日本語 第5課"
+                        />
+                        <p className="mt-1 text-[11px] text-[#484550]/70">今の課もここに書けます。学習計画（目標・期間・目的）は、学習計画の画面の「目標・期間・目的を直す」で直します。</p>
                     </div>
 
                     <div>

@@ -92,6 +92,8 @@ export const th: Translations = {
     "recommendedLessons": "บทเรียนที่แนะนำ",
     "textbooksLabel": "หนังสือเรียนที่แนะนำ",
     "aiPromptLabel": "AI Roleplay Prompt",
+    "clickToCopy": "แตะเพื่อคัดลอก",
+    "promptCopied": "คัดลอกแล้ว",
     "lessonsPerMonth": "/เดือน",
     "roadmapComplete": "🎉 แผนที่เส้นทางส่วนตัวของคุณพร้อมแล้ว!",
     "ctaDescription": "ด้วยแผนนี้ คุณจะสามารถบรรลุเป้าหมายได้อย่างแน่นอน",

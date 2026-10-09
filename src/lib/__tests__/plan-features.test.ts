@@ -76,7 +76,7 @@ describe('契約していない・解約した先生', () => {
 });
 
 describe('featureForAiType', () => {
-    it('ASTAに聞く（ホーム・生徒の1枚・授業中・AIツール）は ask', () => {
+    it('ASTAに聞く（ホーム・生徒の1枚・授業中。free_chat は消した AIツールの頼み方）は ask', () => {
         for (const t of ['home_ask', 'student_ask', 'live_answer', 'free_chat']) expect(featureForAiType(t)).toBe('ask');
     });
     it('授業前の1枚と今日の教材', () => {

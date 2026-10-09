@@ -92,6 +92,8 @@ export const id: Translations = {
     "recommendedLessons": "Pelajaran yang direkomendasikan",
     "textbooksLabel": "Buku Teks yang Direkomendasikan",
     "aiPromptLabel": "Prompt Roleplay AI",
+    "clickToCopy": "Ketuk untuk menyalin",
+    "promptCopied": "Tersalin!",
     "lessonsPerMonth": "/bulan",
     "roadmapComplete": "🎉 Peta Jalan Pribadi Anda Sudah Siap!",
     "ctaDescription": "Dengan rencana ini, Anda pasti bisa mencapai tujuan Anda.",

@@ -53,6 +53,8 @@ export const fr: Translations = {
     textbooksLabel: 'Manuels recommandés',
     aiPromptLabel: 'Prompt IA',
 
+    clickToCopy: 'Cliquez pour copier',
+    promptCopied: 'Copié !',
     lessonsPerMonth: '/mois',
     roadmapComplete: '🎉 Votre Feuille de Route est Prête !',
     ctaDescription: 'Avec ce plan, vous atteindrez certainement votre objectif.',

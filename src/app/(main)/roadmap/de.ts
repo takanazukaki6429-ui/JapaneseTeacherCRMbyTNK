@@ -92,6 +92,8 @@ export const de: Translations = {
     "recommendedLessons": "Empfohlene Lektionen",
     "textbooksLabel": "Empfohlene Lehrbücher",
     "aiPromptLabel": "KI-Rollenspiel-Prompt",
+    "clickToCopy": "Zum Kopieren tippen",
+    "promptCopied": "Kopiert!",
     "lessonsPerMonth": "/Monat",
     "roadmapComplete": "🎉 Deine persönliche Roadmap ist fertig!",
     "ctaDescription": "Mit diesem Plan kannst du dein Ziel definitiv erreichen.",

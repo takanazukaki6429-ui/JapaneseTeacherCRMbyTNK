@@ -1,5 +1,6 @@
 /**
- * v1.0 工程表 4.10: MFA（二要素認証）
+ * v1.0 工程表 4.10: MFA（二段階認証）
+ * 画面の呼び名は「二段階認証」にそろえる（ログインのコードの画面・マニュアルと同じ・2026-10-09）
  *
  * Supabase Auth の TOTP（認証アプリ）ベースMFA。
  * settings ページに埋め込む。
@@ -85,7 +86,7 @@ export function MfaSection() {
 
     const unenroll = async () => {
         if (!factorId) return;
-        if (!confirm('二要素認証を解除しますか？セキュリティが低下します。')) return;
+        if (!confirm('二段階認証を解除しますか？ログインの守りが弱くなります。')) return;
         setBusy(true);
         try {
             await supabase.auth.mfa.unenroll({ factorId });
@@ -105,7 +106,7 @@ export function MfaSection() {
                 <div>
                     <p className="text-sm font-semibold text-[#3a3350] flex items-center gap-1.5">
                         <ShieldCheck size={14} className={enrolled ? 'text-[#1a7f37]' : 'text-[#484550]'} />
-                        二要素認証（MFA）
+                        二段階認証
                         {enrolled && <span className="text-[10px] bg-[#f0fdf4] text-[#1a7f37] px-2 py-0.5 rounded-full font-bold">有効</span>}
                     </p>
                     <p className="text-xs text-[#484550] mt-0.5">認証アプリ（Google Authenticator等）で保護</p>

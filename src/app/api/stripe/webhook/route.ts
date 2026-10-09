@@ -3,6 +3,7 @@ import { getStripe, tierFromPriceId } from '@/lib/stripe';
 import { PACK_MINUTES, PACK_VALID_DAYS, isPlanTier } from '@/lib/pricing';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAudit } from '@/lib/audit';
+import { isDeletedAccountCustomer } from '@/lib/account-deletion';
 import Stripe from 'stripe';
 
 export const dynamic = 'force-dynamic';
@@ -137,6 +138,19 @@ export async function POST(req: NextRequest) {
         }
 
         if (updatedRows === 0) {
+            // アカウントを削除した先生の通知（削除の時に契約を止めた後に届く）は、行が無いのが正しい（2026-10-09）。
+            // 客に付けた「削除済み」の印で見分けて、失敗扱いにしない（Stripe に送り直しを続けさせない）
+            if (customerId) {
+                try {
+                    const customer = await getStripe().customers.retrieve(customerId);
+                    if (isDeletedAccountCustomer(customer as { deleted?: boolean; metadata?: Record<string, string> })) {
+                        console.log(`Webhook for deleted account: customer=${customerId} event=${event.type}`);
+                        return NextResponse.json({ received: true });
+                    }
+                } catch (err) {
+                    console.error('[webhook] customer retrieve failed:', err instanceof Error ? err.message : err);
+                }
+            }
             // stripe_customer_id に対応する user_settings が無い＝異常。
             // 500を返してStripe側にリトライさせ、ダッシュボードにも失敗として残す
             await logAudit({

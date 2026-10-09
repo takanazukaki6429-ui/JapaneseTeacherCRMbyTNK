@@ -13,8 +13,8 @@ import {
 import { Student } from '@/types/student';
 import { type Milestone } from '@/lib/roadmap/types';
 import { nationalityToLangName } from '@/lib/nationality';
-import { JLPT_TO_SCORE } from '@/lib/roadmap/from-student';
-import { PURPOSE_ICONS, JLPT_LEVELS } from '@/lib/roadmap/constants';
+import { JLPT_TO_SCORE, parsePurposeIds } from '@/lib/roadmap/from-student';
+import { JLPT_LEVELS } from '@/lib/roadmap/constants';
 import { ja } from '@/app/(main)/roadmap/ja';
 
 /** 0〜100の目盛りをN5〜N1にする（メモなしで作ったときの保存用） */
@@ -284,7 +284,7 @@ export default function InitialHearingPage() {
         // 初期値：生徒に入っているレベル（無ければN5）・目的（無ければ「その他」）・期間6か月
         const level = (student?.jlpt_level ?? 'N5') as HearingResult['estimated_jlpt_level'];
         const saved = (student as { purposes?: string | null } | null)?.purposes;
-        const purposeId = saved && saved in PURPOSE_ICONS ? saved : 'other';
+        const purposeId = parsePurposeIds(saved)[0] ?? 'other';   // 2つ以上入っている時は最初の1つ（2026-10-09）
         setResult({
             estimated_jlpt_level: level,
             estimated_level_score: JLPT_TO_SCORE[level] ?? 15,
@@ -488,7 +488,7 @@ ${conversationNotes}`.trim();
             </div>
         );
     }
-    if (!student) return <div>Student not found</div>;
+    if (!student) return <div className="p-8 text-sm text-[#484550]">生徒が見つかりません。生徒の一覧から開き直してください。</div>;
 
     const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
 

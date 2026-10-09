@@ -53,6 +53,8 @@ export const pt: Translations = {
     textbooksLabel: 'Livros Didáticos',
     aiPromptLabel: 'Prompt de IA',
 
+    clickToCopy: 'Toque para copiar',
+    promptCopied: 'Copiado!',
     lessonsPerMonth: '/mês',
     roadmapComplete: '🎉 Seu Roteiro Personalizado está Pronto!',
     ctaDescription: 'Com este plano, você com certeza alcançará sua meta.',

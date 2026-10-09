@@ -17,6 +17,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { todayJst } from '@/lib/course';
 import { ja } from '@/app/(main)/roadmap/ja';
+import { parsePurposeIds } from '@/lib/roadmap/from-student';
 
 export type PrepQuiz = { question: string; answer: string };
 
@@ -214,10 +215,13 @@ type LessonRowLike = LessonLike & {
     next_goal?: string | null;
 };
 
-/** 興味（体験レッスンで選んだ目的）の名前。「その他」と読めない物は null */
-function interestLabel(purpose: string | null | undefined): string | null {
-    if (!purpose || purpose === 'other') return null;
-    return (ja.purposes as Record<string, { label: string } | undefined>)[purpose]?.label ?? null;
+/** 興味（体験レッスンで選んだ目的・2つ以上の時は「・」でつなぐ）の名前。「その他」と読めない物は除き、残らなければ null */
+function interestLabel(purposes: string | null | undefined): string | null {
+    const labels = parsePurposeIds(purposes)
+        .filter(id => id !== 'other')
+        .map(id => (ja.purposes as Record<string, { label: string } | undefined>)[id]?.label)
+        .filter((l): l is string => !!l);
+    return labels.length > 0 ? labels.join('・') : null;
 }
 
 /** 生徒と授業の記録（予定が混ざっていてよい）から、1枚の材料を作る。前回の記録は今までどおり、一番新しい記録 */

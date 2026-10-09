@@ -112,7 +112,7 @@ export default function NewStudentPage() {
                         className="w-full px-4 py-3 border border-[#d6cfe2] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6b5ca5] focus:border-transparent text-sm"
                         placeholder="アメリカ"
                     />
-                    <p className="text-[11px] text-[#484550]/60 mt-1">レベル・学習目的・教材は次の画面でAIが自動判定します</p>
+                    <p className="text-[11px] text-[#484550]/60 mt-1">レベル・学習目的は次の画面でAIが判定します（使用教材は、登録の後に生徒の情報を直す画面で入れます）</p>
                 </div>
 
                 <div className="pt-2">

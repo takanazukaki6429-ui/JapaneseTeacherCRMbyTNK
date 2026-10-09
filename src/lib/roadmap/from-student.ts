@@ -6,7 +6,8 @@
  *
  * - 今のレベル：jlpt_level（N5〜N1）を 0〜100 の目盛りに置き換える
  * - 目標と期間：体験レッスンの保存時に current_phase へ書かれる「目標Lv.70」「6ヶ月」を読む
- * - 目的：purposes（9択のうち1つ）。9択以外の値は使わない
+ * - 目的：purposes（9択。体験レッスンで2つ以上選ぶと「travel,work」の形で入る）。9択以外の値は使わない
+ *   （2026-10-09：前は1つの時しか読まず、2つ以上選ぶとロードマップと生徒に渡すリンクで目的が消えていた）
  */
 import { PURPOSE_ICONS } from './constants';
 import type { PurposeId } from './types';
@@ -40,16 +41,20 @@ type StudentLike = {
     purposes?: string | null;
 };
 
+/** purposes の文（「travel」「travel,work」）から、9択の目的を取り出す（重なり・9択以外は落とす） */
+export function parsePurposeIds(raw: string | null | undefined): PurposeId[] {
+    if (!raw) return [];
+    const ids = raw.split(/[,、\s]+/).map(s => s.trim()).filter(s => s in PURPOSE_ICONS);
+    return [...new Set(ids)] as PurposeId[];
+}
+
 /** ロードマップを作れるだけの材料がそろっていなければ null */
 export function roadmapInputFromStudent(student: StudentLike | null | undefined): RoadmapInput | null {
     if (!student) return null;
     const currentLevel = student.jlpt_level ? JLPT_TO_SCORE[student.jlpt_level] : undefined;
     const { targetLevel, periodMonths } = parseCurrentPhase(student.current_phase);
     if (!currentLevel || !targetLevel || !periodMonths) return null;
-    const purposeIds = student.purposes && student.purposes in PURPOSE_ICONS
-        ? [student.purposes as PurposeId]
-        : [];
-    return { currentLevel, targetLevel, periodMonths, purposeIds };
+    return { currentLevel, targetLevel, periodMonths, purposeIds: parsePurposeIds(student.purposes) };
 }
 
 /**

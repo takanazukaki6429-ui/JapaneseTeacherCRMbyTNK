@@ -6,6 +6,9 @@ import { createClient } from '@/lib/supabase/client';
 import { User, Database, Loader2, Download, Eye, EyeOff, AlertTriangle, Trash2, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { MfaSection } from '@/components/settings/mfa-section';
+import { checkPasswordStrength } from '@/lib/password-policy';
+import { todayJst } from '@/lib/course';
+import { DISPLAY_NAME_EVENT, DISPLAY_NAME_MAX, normalizeDisplayName } from '@/lib/display-name';
 
 function toCSV(rows: Record<string, unknown>[]): string {
     if (!rows.length) return '';
@@ -37,6 +40,13 @@ export default function SettingsPage() {
     useEffect(() => {
         setMfaRequired(new URLSearchParams(window.location.search).get('mfa') === 'required');
     }, []);
+
+    // 表示名（2026-10-09 かずき決定：最初の登録画面の「後から設定画面でいつでも変更できます」のとおりにする）
+    const [displayName, setDisplayName] = useState('');
+    const [nameOpen, setNameOpen] = useState(false);
+    const [nameDraft, setNameDraft] = useState('');
+    const [nameSaving, setNameSaving] = useState(false);
+    const [nameError, setNameError] = useState('');
 
     // パスワード変更
     const [pwOpen, setPwOpen] = useState(false);
@@ -74,13 +84,44 @@ export default function SettingsPage() {
     };
 
     useEffect(() => {
-        supabase.auth.getUser().finally(() => setLoading(false));
-    }, [supabase.auth]);
+        const load = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data } = await supabase.from('user_settings').select('display_name').eq('user_id', user.id).maybeSingle();
+                setDisplayName((data?.display_name as string | null) ?? '');
+            }
+        };
+        load().finally(() => setLoading(false));
+    }, [supabase]);
+
+    const handleNameSave = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setNameError('');
+        const name = normalizeDisplayName(nameDraft);
+        if (!name) { setNameError(`表示名を1〜${DISPLAY_NAME_MAX}文字で入れてください`); return; }
+        setNameSaving(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('ログインし直してから、もう一度お試しください');
+            const { error } = await supabase.from('user_settings').update({ display_name: name }).eq('user_id', user.id);
+            if (error) throw error;
+            setDisplayName(name);
+            setNameOpen(false);
+            // 左の並びの先生の名前も、その場で変える
+            window.dispatchEvent(new CustomEvent(DISPLAY_NAME_EVENT, { detail: name }));
+        } catch (err) {
+            setNameError(err instanceof Error ? err.message : '表示名を保存できませんでした');
+        } finally {
+            setNameSaving(false);
+        }
+    };
 
     const handlePasswordChange = async (e: React.FormEvent) => {
         e.preventDefault();
         setPwError('');
-        if (pwNew.length < 8) { setPwError('新しいパスワードは8文字以上にしてください'); return; }
+        // 登録・再設定の時と同じ決まり（8文字以上・英大文字・英小文字・数字・記号のうち3種類以上 など）で確かめる（2026-10-09）
+        const strength = checkPasswordStrength(pwNew);
+        if (!strength.valid) { setPwError(strength.errors[0] ?? 'このパスワードは使えません'); return; }
         if (pwNew !== pwConfirm) { setPwError('新しいパスワードが一致しません'); return; }
         setPwLoading(true);
         try {
@@ -106,7 +147,7 @@ export default function SettingsPage() {
                 supabase.from('lessons').select('id, student_id, date, topics, vocabulary, mistakes, understanding_level, homework, next_goal, content, status, created_at').order('date', { ascending: false }),
             ]);
 
-            const date = new Date().toISOString().slice(0, 10);
+            const date = todayJst();   // ファイル名の日付は日本時間（世界標準時だと朝9時より前は前日になっていた）
             if (students?.length) downloadCSV(toCSV(students as Record<string, unknown>[]), `asta_students_${date}.csv`);
             if (lessons?.length) downloadCSV(toCSV(lessons as Record<string, unknown>[]), `asta_lessons_${date}.csv`);
         } catch (e) {
@@ -155,11 +196,37 @@ export default function SettingsPage() {
             {mfaRequired && (
                 <div className="flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                     <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-                    <p>管理者の画面を使うには、二段階認証が必要です。下の「二要素認証（MFA）」を有効にしてから、もう一度開いてください。</p>
+                    <p>管理者の画面を使うには、二段階認証が必要です。下の「二段階認証」を有効にしてから、もう一度開いてください。</p>
                 </div>
             )}
 
             <SectionCard icon={<User size={16} className="text-[#6b5ca5]" />} title="アカウント設定">
+                <RowItem label="表示名" desc={displayName ? `${displayName}（ホームの見出しと左の並びに出ます）` : 'ホームの見出しと左の並びに出ます'}
+                    action={<button onClick={() => { setNameDraft(displayName); setNameError(''); setNameOpen(true); }} className="text-xs bg-[#f0ebf8] text-[#484550] px-3 py-1.5 rounded-lg hover:bg-[#efe9ff] hover:text-[#6b5ca5] transition-colors">変更</button>} />
+                {nameOpen && (
+                    <div className="my-3 bg-[#f0ebf8] rounded-2xl p-5">
+                        <form onSubmit={handleNameSave} className="space-y-3">
+                            <input
+                                type="text"
+                                value={nameDraft}
+                                onChange={e => setNameDraft(e.target.value)}
+                                maxLength={DISPLAY_NAME_MAX}
+                                placeholder="例: 田中 太郎"
+                                aria-label="表示名"
+                                className="w-full text-sm px-3 py-2.5 rounded-xl border border-[#ccbeff]/40 focus:outline-none focus:ring-2 focus:ring-[#ccbeff] bg-white"
+                                required
+                            />
+                            {nameError && <p className="text-xs text-[#ba1a1a]">{nameError}</p>}
+                            <div className="flex gap-2 pt-1">
+                                <button type="button" onClick={() => setNameOpen(false)} className="text-xs px-4 py-2 rounded-xl bg-white text-[#484550] border border-[#ccbeff]/30 hover:bg-[#efe9ff] transition-colors">キャンセル</button>
+                                <button type="submit" disabled={nameSaving} className="text-xs px-4 py-2 rounded-xl bg-[#6b5ca5] text-white font-bold hover:scale-[1.02] transition-transform disabled:opacity-50 flex items-center gap-1.5">
+                                    {nameSaving && <Loader2 size={12} className="animate-spin" />}
+                                    {nameSaving ? '保存中...' : '保存する'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                )}
                 <MfaSection />
                 <RowItem label="パスワード変更" desc="ログインパスワードの更新"
                     action={<button onClick={() => { setPwOpen(true); setPwError(''); setPwSuccess(false); }} className="text-xs bg-[#f0ebf8] text-[#484550] px-3 py-1.5 rounded-lg hover:bg-[#efe9ff] hover:text-[#6b5ca5] transition-colors">変更</button>} />
@@ -170,7 +237,7 @@ export default function SettingsPage() {
                             <div className="relative">
                                 <input
                                     type={showPw ? 'text' : 'password'}
-                                    placeholder="新しいパスワード（8文字以上）"
+                                    placeholder="新しいパスワード（8文字以上・3種類以上の文字）"
                                     value={pwNew}
                                     onChange={e => setPwNew(e.target.value)}
                                     className="w-full text-sm px-3 py-2.5 pr-10 rounded-xl border border-[#ccbeff]/40 focus:outline-none focus:ring-2 focus:ring-[#ccbeff] bg-white"
@@ -232,7 +299,7 @@ export default function SettingsPage() {
             <SectionCard icon={<AlertTriangle size={16} className="text-[#ba1a1a]" />} title="危険な操作">
                 <RowItem
                     label="アカウントを削除"
-                    desc="すべての生徒情報・レッスン記録・教材データが削除されます。元に戻せません"
+                    desc="すべての生徒情報・レッスン記録・教材データが削除されます。元に戻せません。契約中・お試し中の契約も、その場で止まります"
                     action={
                         <button
                             onClick={() => { setDeleteOpen(true); setDeleteError(''); setDeleteConfirm(''); }}
@@ -256,6 +323,9 @@ export default function SettingsPage() {
                             <li>作成した教材・AI生成データ</li>
                             <li>個人プロフィール・設定情報</li>
                         </ul>
+                        <p className="text-xs text-[#ba1a1a]/80 mb-3 leading-relaxed">
+                            契約中・無料お試し中の時は、Stripe の契約もその場で止まります（残りの日数の返金はありません）。
+                        </p>
                         <p className="text-xs text-[#484550] mb-2">
                             続行するには下の入力欄に <code className="bg-white px-1.5 py-0.5 rounded text-[#ba1a1a] font-bold">DELETE</code> と入力してください
                         </p>

@@ -69,7 +69,7 @@ const PATH_TO_CHAPTER: [RegExp, string | null][] = [
     [/^\/settings\/billing(\/|$)/, 'plans'],
     [/^\/settings(\/|$)/, 'settings'],
     [/^\/$/, 'home'],
-    // 授業の一覧（/lessons）と AIツール（/ai-tools）は、画面からの入口が無いので章を持たない（null＝マニュアルの最初を開く）
+    // 授業の一覧（/lessons）と AIツール（/ai-tools）は消した（2026-10-09・開くとホームへ移る）
 ];
 
 /** 今の画面の章（無ければ null＝マニュアルの最初を開く） */

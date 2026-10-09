@@ -179,7 +179,8 @@ export default async function StudentDetailPage({ params }: Props) {
                                 <ShareButton studentId={student.id} />
                                 <div className="mt-3 flex items-center justify-between text-sm">
                                     <Link prefetch href={`/students/${student.id}/roadmap`} className="text-[#6b5ca5] font-semibold hover:underline flex items-center gap-1"><Map size={14} /> ロードマップを見る</Link>
-                                    <Link prefetch href={`/students/${student.id}/initial-hearing`} className="text-[#484550] hover:text-[#6b5ca5] hover:underline">体験レッスンを見る</Link>
+                                    {/* 開くのは新しくメモを入れる画面なので「やり直す」と書く（前は「見る」で、結果が出ると思われた・2026-10-09） */}
+                                    <Link prefetch href={`/students/${student.id}/initial-hearing`} className="text-[#484550] hover:text-[#6b5ca5] hover:underline">体験レッスンをやり直す</Link>
                                 </div>
                             </>
                         ) : (

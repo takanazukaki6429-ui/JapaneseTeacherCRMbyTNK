@@ -60,6 +60,8 @@ export const zh: Translations = {
     textbooksLabel: '推荐教材',
     aiPromptLabel: 'AI角色扮演提示',
 
+    clickToCopy: '点击复制',
+    promptCopied: '已复制',
     lessonsPerMonth: '次/月',
 
     roadmapComplete: '🎉 您的专属路线图已完成！',

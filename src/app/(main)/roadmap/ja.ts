@@ -79,6 +79,8 @@ export const ja = {
     textbooksLabel: 'おすすめ教材',
     aiPromptLabel: 'AIプロンプト',
 
+    clickToCopy: 'タップでコピー',
+    promptCopied: 'コピーしました',
     lessonsPerMonth: '回/月',
 
     // CTA

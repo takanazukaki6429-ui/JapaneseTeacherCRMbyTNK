@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import { Home, GraduationCap, BookOpen, Settings, LogOut, Menu, KeyRound, LayoutDashboard, CircleUserRound, CircleHelp } from 'lucide-react';
 import { isAdminEmail } from '@/lib/admin';
+import { DISPLAY_NAME_EVENT } from '@/lib/display-name';
 
 const navItems = [
     { name: 'ホーム', href: '/', icon: Home },
@@ -45,6 +46,16 @@ export function Sidebar() {
         };
         fetchUser();
     }, [supabase]);
+
+    // 設定の画面で表示名を変えた時は、その場で名前を変える（2026-10-09）
+    React.useEffect(() => {
+        const onChange = (e: Event) => {
+            const name = (e as CustomEvent<string>).detail;
+            if (typeof name === 'string' && name) setDisplayName(name);
+        };
+        window.addEventListener(DISPLAY_NAME_EVENT, onChange);
+        return () => window.removeEventListener(DISPLAY_NAME_EVENT, onChange);
+    }, []);
 
     const handleLogout = async () => {
         await supabase.auth.signOut();

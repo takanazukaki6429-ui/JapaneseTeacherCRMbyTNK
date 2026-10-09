@@ -73,6 +73,8 @@ export const en: Translations = {
     textbooksLabel: 'Recommended Textbooks',
     aiPromptLabel: 'AI Roleplay Prompt',
 
+    clickToCopy: 'Click to copy',
+    promptCopied: 'Copied!',
     lessonsPerMonth: '/month',
 
     roadmapComplete: '🎉 Your Personal Roadmap is Ready!',

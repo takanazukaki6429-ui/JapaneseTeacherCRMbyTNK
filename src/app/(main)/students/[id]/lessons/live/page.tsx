@@ -1007,7 +1007,7 @@ export default function LiveLessonPage() {
 
     const makeMaterial = async (mode: keyof typeof MATERIAL_MODES) => {
         if (improviseLocked) {
-            setIllustError(`${NEEDS_REGULAR_MESSAGE}（授業が終わった後に、設定のプランの画面から変えられます）`);
+            setIllustError(`${NEEDS_REGULAR_MESSAGE}（授業が終わった後に、設定の「プランとお支払い」から変えられます）`);
             return;
         }
         if (!selectedLessonId) {
@@ -1576,7 +1576,7 @@ export default function LiveLessonPage() {
                                 聞きたくなったらここで聞ける（2026-08-20 チャットタブを統合） */}
                             {askLocked ? (
                                 <p className={`${toolsOut ? 'flex' : 'hidden'} items-center gap-1.5 text-[13px] text-[#6f6884]`}>
-                                    <Lock size={13} className="shrink-0" />ASTAに聞くは、レギュラー・プロのプランで使えます（授業が終わった後に、設定のプランの画面から変えられます）
+                                    <Lock size={13} className="shrink-0" />ASTAに聞くは、レギュラー・プロのプランで使えます（授業が終わった後に、設定の「プランとお支払い」から変えられます）
                                 </p>
                             ) : (
                             <form onSubmit={handleSendMessage} className={`${toolsOut ? 'flex' : 'hidden'} items-center gap-2`}>

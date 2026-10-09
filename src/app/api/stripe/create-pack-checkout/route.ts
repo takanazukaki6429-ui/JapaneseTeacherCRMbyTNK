@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
         const supabase = await createClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         if (!user || authError) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json({ error: 'ログインしてから、もう一度お試しください。' }, { status: 401 });
         }
         const priceId = getStripePackPriceId();
         if (!priceId || PACK_PRICE_JPY === null) {
@@ -63,6 +63,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ url: session.url });
     } catch (error) {
         console.error('Stripe pack checkout error:', error);
-        return NextResponse.json({ error: 'Failed to create pack checkout session' }, { status: 500 });
+        return NextResponse.json({ error: '追加パックの支払いの画面を開けませんでした。時間をおいて、もう一度お試しください。' }, { status: 500 });
     }
 }

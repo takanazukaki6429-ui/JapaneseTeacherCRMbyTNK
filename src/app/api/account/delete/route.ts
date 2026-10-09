@@ -11,7 +11,8 @@
  * 削除に関する重要事項:
  *   - 監査ログ（audit_logs.actor_user_id）は SET NULL なので削除されない（法的記録維持）
  *   - 削除完了まで非同期にならない（即時削除を保証）
- *   - Stripe Subscriptionは別途キャンセル必要（本実装では active なら 400）
+ *   - Stripe の契約は、削除の前にその場で止める（2026-10-09 かずき決定・lib/account-deletion.ts）。
+ *     止められなかった時は削除をやめる（契約だけが残り、消した先生に課金されるのを防ぐ）
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -19,6 +20,27 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, getRequestIdentifier } from '@/lib/rate-limit';
+import { getStripe } from '@/lib/stripe';
+import { DELETED_ACCOUNT_METADATA_KEY, isAlreadyStopped, subscriptionToCancel } from '@/lib/account-deletion';
+
+/** 契約をその場で止める。もう止まっている時も 'stopped'。止められなかった時だけ 'failed' */
+async function stopSubscription(subscriptionId: string): Promise<'stopped' | 'failed'> {
+    const stripe = getStripe();
+    try {
+        await stripe.subscriptions.cancel(subscriptionId);
+        return 'stopped';
+    } catch (err) {
+        // もう止まっている・Stripe に無い時は、止める物が無いので先へ進める
+        try {
+            const sub = await stripe.subscriptions.retrieve(subscriptionId);
+            if (isAlreadyStopped(sub.status)) return 'stopped';
+        } catch (e) {
+            if ((e as { code?: string })?.code === 'resource_missing') return 'stopped';
+        }
+        console.error('[account-delete] 契約を止められませんでした', err instanceof Error ? err.message : err);
+        return 'failed';
+    }
+}
 
 export async function POST(req: NextRequest) {
     // 強めのレート制限（アカウント削除は誤操作対策）
@@ -49,21 +71,37 @@ export async function POST(req: NextRequest) {
         req,
     });
 
-    // 有効なサブスクがある場合はキャンセル誘導
-    try {
-        const { data: settings } = await supabase
-            .from('user_settings')
-            .select('subscription_status, stripe_subscription_id, is_free')
-            .eq('user_id', userId)
-            .single();
+    // 契約がまだ動いていれば、消す前に Stripe の契約をその場で止める（2026-10-09 かずき決定）。
+    // お試し中も止める（止めないと8日目に、消した先生のカードに課金される）。契約中の先生は残りの日数の返金なし（規約 第6条）
+    const { data: billing } = await supabase
+        .from('user_settings')
+        .select('subscription_status, stripe_subscription_id, stripe_customer_id')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-        if (settings?.subscription_status === 'active' && !settings.is_free) {
-            return NextResponse.json({
-                error: 'アクティブなサブスクリプションがあります。先に「プラン」ページから解約してください。'
-            }, { status: 400 });
+    const subscriptionId = subscriptionToCancel(billing);
+    if (subscriptionId && (await stopSubscription(subscriptionId)) === 'failed') {
+        await logAudit({
+            action: 'account.deleted',
+            actorUserId: userId,
+            actorEmail: userEmail,
+            outcome: 'failure',
+            metadata: { reason: 'stripe subscription cancel failed', subscriptionId },
+            req,
+        });
+        return NextResponse.json({
+            error: '契約を止められなかったため、アカウントの削除をやめました。時間をおいて、もう一度お試しください。'
+        }, { status: 502 });
+    }
+
+    // 消した後に届く Stripe の通知を、通知の受け口が失敗扱いにしないよう、客に「削除済み」の印を付ける（失敗しても削除は続ける）
+    const customerId = (billing as { stripe_customer_id?: string | null } | null)?.stripe_customer_id;
+    if (customerId) {
+        try {
+            await getStripe().customers.update(customerId, { metadata: { [DELETED_ACCOUNT_METADATA_KEY]: new Date().toISOString() } });
+        } catch (err) {
+            console.error('[account-delete] 客の印を付けられませんでした', err instanceof Error ? err.message : err);
         }
-    } catch {
-        // user_settings がなくても削除は続行
     }
 
     // 紐付くテーブルを順に削除。RLSに阻まれないよう管理者権限接続で行う
