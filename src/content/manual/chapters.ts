@@ -136,6 +136,12 @@ export const MANUAL_CHAPTERS: ManualChapter[] = [
                 ],
             },
             {
+                heading: 'お知らせ',
+                blocks: [
+                    { type: 'text', text: 'ASTA を新しくした時などは、ホームの一番上にお知らせの帯が出ます。「閉じる」を押すと消えます（閉じたことは、使っているパソコンに覚えます）。' },
+                ],
+            },
+            {
                 heading: 'コンサルの受講生の方へ',
                 blocks: [
                     { type: 'text', text: `特別優待プラン（全機能無料）の終わる日まで${COURSE_NOTICE_DAYS}日を切ると、ホームの上に案内が出ます。「プランを選ぶ」から申し込めます（くわしくは「料金とプラン」）。` },

@@ -125,6 +125,12 @@ const EMPTY_COURSE_STATUS: Omit<CourseStatus, 'loading'> = {
 };
 
 /** 受講の状態と、どちらの料金か（2026-10-06・10-07）。料金の画面・プランの画面・ホームの案内で使う */
+/** 既存の無料の先生（無料の印 is_free がある先生）か。読み込み中は loading=true（2026-10-10・本番へ入れた時のお知らせに使う） */
+export function useIsFreeTeacher(): { loading: boolean; isFree: boolean } {
+    const { loading, value } = useSettings(row => !!row?.is_free, false);
+    return { loading, isFree: value };
+}
+
 export function useCourseStatus(): CourseStatus {
     const { loading, value } = useSettings<Omit<CourseStatus, 'loading'>>(row => {
         if (!row) return EMPTY_COURSE_STATUS;
