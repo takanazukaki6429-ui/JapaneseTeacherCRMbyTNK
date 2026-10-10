@@ -9,6 +9,7 @@ export async function GET() {
     const supabase = await createClient();
     const { data: { user }, error } = await supabase.auth.getUser();
     if (!user || error) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const quota = await getTranslationQuota(supabase, user.id);
-    return NextResponse.json(quota);
+    // パックの行と丸める前の数は、計算のための物なので画面には返さない（2026-10-11）
+    const q = await getTranslationQuota(supabase, user.id);
+    return NextResponse.json({ tier: q.tier, capMin: q.capMin, planCapMin: q.planCapMin, packMin: q.packMin, usedMin: q.usedMin, remainingMin: q.remainingMin });
 }

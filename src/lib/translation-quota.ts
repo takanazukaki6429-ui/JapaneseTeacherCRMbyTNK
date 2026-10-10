@@ -13,6 +13,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { PLAN_TIERS, TRIAL_TRANSLATION_MINUTES, FREE_LEGACY_TRANSLATION_MINUTES, type PlanTier } from '@/lib/pricing';
 import { loadAccessSettings } from '@/lib/access-settings';
 import { isInCourse } from '@/lib/course';
+import { packMinForMonth, type PackRow } from '@/lib/translation-pack';
 
 /** この日時より後の transcribe の行は token_usage＝ミリ秒（前はバイト数） */
 export const USAGE_MS_SINCE = '2026-09-23T00:00:00+09:00';
@@ -23,10 +24,16 @@ export type TranslationQuota = {
     capMin: number;
     /** プランの上限だけ（分） */
     planCapMin: number;
-    /** 有効な追加パックの合計（分） */
+    /** 今月の上限に足す追加パックの分（分）＝パックの残り＋今月すでにパックから使った分（2026-10-11） */
     packMin: number;
     usedMin: number;
+    /** 今月の利用（ミリ秒・丸める前） */
+    usedMs: number;
     remainingMin: number;
+    /** 期限内の追加パック（使った分の割り当てに使う） */
+    packs: PackRow[];
+    /** パックの使った分を記録できる保管庫か（used_ms の列がある） */
+    packTracking: boolean;
 };
 
 /** 日本時間の今月1日 0:00 を UTC の ISO 文字列で返す */
@@ -69,25 +76,48 @@ export async function getTranslationQuota(supabase: SupabaseClient, userId: stri
     }
 
     const since = monthStartJst() > USAGE_MS_SINCE ? monthStartJst() : USAGE_MS_SINCE;
-    const [{ data: rows }, packs] = await Promise.all([
+    const [{ data: rows }, packResult] = await Promise.all([
         supabase
             .from('ai_usage_log')
             .select('token_usage')
             .eq('user_id', userId)
             .eq('prompt_type', 'transcribe')
             .gte('created_at', since),
-        // 追加パック（1回買い・90日で失効）。表がまだ無い保管庫では 0 扱い
-        supabase
-            .from('translation_packs')
-            .select('minutes')
-            .eq('user_id', userId)
-            .gt('expires_at', new Date().toISOString()),
+        loadValidPacks(supabase, userId),
     ]);
-    const packMin = packs.error ? 0 : (packs.data ?? []).reduce((s, r) => s + (Number(r.minutes) || 0), 0);
     // 負の値は数えない：先生の権限でも自分の利用記録の行は足せるため、負の行で上限を増やせないようにする（2026-10-06）
     const usedMs = (rows ?? []).reduce((s, r) => s + Math.max(0, Number(r.token_usage) || 0), 0);
     const usedMin = Math.round(usedMs / 60000 * 10) / 10;
     const planCapMin = capMin;
+    // 追加パック（2026-10-11）：使った分を記録できる保管庫では「残り＋今月パックから使った分」。
+    // 使った分の列がまだ無い保管庫（SQL を流す前）では、前と同じく期限内の分数をそのまま足す
+    const packMin = packResult.tracking
+        ? Math.round(packMinForMonth(planCapMin, usedMs, packResult.packs) * 10) / 10
+        : packResult.packs.reduce((s, p) => s + (Number(p.minutes) || 0), 0);
     capMin = planCapMin + packMin;
-    return { tier, capMin, planCapMin, packMin, usedMin, remainingMin: Math.max(0, Math.round((capMin - usedMin) * 10) / 10) };
+    return {
+        tier, capMin, planCapMin, packMin, usedMin, usedMs,
+        remainingMin: Math.max(0, Math.round((capMin - usedMin) * 10) / 10),
+        packs: packResult.packs, packTracking: packResult.tracking,
+    };
+}
+
+/**
+ * 期限内の追加パックを読む。使った分の列（used_ms・2026-10-11 の SQL で足す）が無い保管庫では、列を減らして読み直す。
+ * 表がまだ無い保管庫では 0 件
+ */
+async function loadValidPacks(supabase: SupabaseClient, userId: string): Promise<{ packs: PackRow[]; tracking: boolean }> {
+    const nowIso = new Date().toISOString();
+    const withUsed = await supabase
+        .from('translation_packs')
+        .select('id, minutes, expires_at, used_ms')
+        .eq('user_id', userId)
+        .gt('expires_at', nowIso);
+    if (!withUsed.error) return { packs: (withUsed.data ?? []) as PackRow[], tracking: true };
+    const plain = await supabase
+        .from('translation_packs')
+        .select('id, minutes, expires_at')
+        .eq('user_id', userId)
+        .gt('expires_at', nowIso);
+    return { packs: plain.error ? [] : ((plain.data ?? []) as PackRow[]), tracking: false };
 }

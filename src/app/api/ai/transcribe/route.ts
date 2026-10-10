@@ -6,6 +6,8 @@ import { canUseApp, READ_ONLY_MESSAGE } from '@/lib/plan-access-server';
 import { notifyAdmin } from '@/lib/notify';
 import { getTranslationQuota } from '@/lib/translation-quota';
 import { buildGeminiSttPrompt, isJapaneseSpeech, parseSttLines } from '@/lib/stt-lines';
+import { allocatePackUsage } from '@/lib/translation-pack';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 // 生徒の声の日本語訳は 3.1 Flash-Lite（2026-09-22 かずき決定「一番原価を抑える組み合わせ」）。
 // Google の翻訳は $20/100万文字（月50万文字までは ASTA 全体で無料）で1文¥0.2、Lite は1文¥0.006。
@@ -343,6 +345,22 @@ export async function POST(req: NextRequest) {
         if (!result) result = await transcribeWithGoogle(audioBuffer, studentLanguage, context);
         // 使った物まで記録に残す（gemini-3.5-flash-lite / google-stt / google-stt+gemini-3.1-flash-lite / google-stt+google-translate）
         logUsage(result.engine);
+        // 追加パック：プランの上限を超えて使った分を、期限の早いパックの「使った分」に足す（2026-10-11 かずき決定）。
+        // 先生の権限ではパックの行を書き換えられないので、管理者の権限で書く。失敗しても翻訳は止めない
+        if (quota.packTracking && quota.packs.length) {
+            const updates = allocatePackUsage(quota.planCapMin, quota.usedMs, durationMs, quota.packs);
+            if (updates.length) {
+                try {
+                    const admin = createAdminClient();
+                    for (const u of updates) {
+                        const { error: packError } = await admin.from('translation_packs').update({ used_ms: u.used_ms }).eq('id', u.id).eq('user_id', user.id);
+                        if (packError) console.error('[transcribe] pack usage update failed:', packError.message);
+                    }
+                } catch (err) {
+                    console.error('[transcribe] pack usage update failed:', err instanceof Error ? err.message : err);
+                }
+            }
+        }
         // 残り分数も返す（画面側が残りわずかの案内に使う）
         const remainingMin = Math.max(0, Math.round((quota.capMin - quota.usedMin - durationMs / 60000) * 10) / 10);
         return NextResponse.json({ ...result, remainingMin, capMin: quota.capMin });
