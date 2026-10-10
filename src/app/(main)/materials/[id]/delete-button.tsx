@@ -11,7 +11,7 @@ export function DeleteMaterialButton({ id }: { id: string }) {
     const [loading, setLoading] = useState(false);
 
     const handleDelete = async () => {
-        if (!confirm('本当にこの資産を削除しますか？')) {
+        if (!confirm('本当にこのテキストを削除しますか？')) {
             return;
         }
 

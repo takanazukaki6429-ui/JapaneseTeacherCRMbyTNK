@@ -8,10 +8,11 @@ import { MaterialsTabBar } from './tab-bar';
 import { getFeatureDecision } from '@/lib/plan-access-server';
 import { PaidLock } from '@/components/paid-lock';
 import type { FeatureDecision } from '@/lib/plan-features';
+import { filterMaterials, normalizeQuery } from '@/lib/material-search';
 
 export const revalidate = 0;
 
-/** みんなの教材を見られるか（ライトでは自分の教材だけ・2026-10-04 かずき決定・lib/plan-features.ts） */
+/** みんなのテキストを見られるか（ライトでは自分のテキストだけ・2026-10-04 かずき決定・lib/plan-features.ts） */
 async function getCommunityDecision(): Promise<FeatureDecision> {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -43,19 +44,22 @@ async function getPublicMaterials() {
     return data as Material[];
 }
 
-type Props = { searchParams: Promise<{ tab?: string }> };
+type Props = { searchParams: Promise<{ tab?: string; q?: string }> };
 
 export default async function MaterialsPage({ searchParams }: Props) {
-    const { tab = 'mine' } = await searchParams;
+    const { tab = 'mine', q: rawQuery } = await searchParams;
+    const query = normalizeQuery(rawQuery);
     const isCommunity = tab === 'community';
     const community = await getCommunityDecision();
     const communityLocked = !community.allowed;
-    const materials = isCommunity ? (communityLocked ? [] : await getPublicMaterials()) : await getMyMaterials();
+    const all = isCommunity ? (communityLocked ? [] : await getPublicMaterials()) : await getMyMaterials();
+    // 検索（2026-10-09）：タイトル・タグ・内容で絞り込む。前は検索欄に入れても何も起きなかった
+    const materials = filterMaterials(all, query);
 
     return (
         <div className="space-y-5">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold tracking-tight text-[#3a3350]">教材</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-[#3a3350]">テキスト</h1>
                 <Link
                     href="/materials/new"
                     className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#6b5ca5] text-white text-sm font-bold rounded-full hover:scale-[1.02] transition-transform shadow-[0_4px_20px_rgba(107,92,165,0.25)]"
@@ -67,30 +71,46 @@ export default async function MaterialsPage({ searchParams }: Props) {
 
             <MaterialsTabBar currentTab={tab} communityLocked={communityLocked} />
 
-            {/* Search */}
-            <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)]">
-                <Search size={18} className="text-[#484550] flex-shrink-0" />
-                <input
-                    type="text"
-                    placeholder="タイトルやタグで検索..."
-                    className="flex-1 bg-transparent outline-none text-sm text-[#3a3350] placeholder:text-[#484550]"
-                />
-            </div>
+            {/* 検索：入れて Enter で絞り込む（今のタブのまま） */}
+            {!(isCommunity && communityLocked) && (
+                <form method="get" action="/materials" className="flex items-center gap-3 bg-white px-4 py-3 rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)]">
+                    <Search size={18} className="text-[#484550] flex-shrink-0" />
+                    <input type="hidden" name="tab" value={isCommunity ? 'community' : 'mine'} />
+                    <input
+                        type="search"
+                        name="q"
+                        defaultValue={query}
+                        placeholder="タイトル・タグ・内容で検索（入れて Enter）"
+                        aria-label="テキストを検索"
+                        className="flex-1 bg-transparent outline-none text-sm text-[#3a3350] placeholder:text-[#484550]"
+                    />
+                    {query && (
+                        <Link href={`/materials?tab=${isCommunity ? 'community' : 'mine'}`} className="text-xs text-[#6b5ca5] hover:underline whitespace-nowrap">
+                            検索をやめる
+                        </Link>
+                    )}
+                </form>
+            )}
+            {query && !(isCommunity && communityLocked) && (
+                <p className="text-xs text-[#484550]">「{query}」に合うテキスト：{materials.length}件（全部で{all.length}件）</p>
+            )}
 
             {isCommunity && !community.allowed ? (
-                <PaidLock feature="みんなの教材" needsRegular={community.reason === 'needs_regular'} />
+                <PaidLock feature="みんなのテキスト" needsRegular={community.reason === 'needs_regular'} />
             ) : materials.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border-2 border-dashed border-[#d6cfe2]/40 text-center">
                     <div className="text-4xl mb-4">📚</div>
                     <h3 className="text-base font-bold text-[#3a3350] mb-1">
-                        {isCommunity ? 'まだ公開教材がありません' : '教材がありません'}
+                        {query ? '合うテキストがありません' : isCommunity ? 'まだ公開テキストがありません' : 'テキストがありません'}
                     </h3>
                     <p className="text-sm text-[#484550] mb-4 max-w-xs">
-                        {isCommunity
-                            ? '教材作成時に「全ユーザーに公開」をオンにすると、ここに表示されます。'
-                            : 'プロンプトや教材を保存して資産として蓄積しましょう。'}
+                        {query
+                            ? '言葉を変えるか、「検索をやめる」で全部を表示してください。'
+                            : isCommunity
+                                ? 'テキスト作成時に「全ユーザーに公開」をオンにすると、ここに表示されます。'
+                                : 'プロンプトやテキストを保存しておくと、授業で何度も使えます。'}
                     </p>
-                    {!isCommunity && (
+                    {!isCommunity && !query && (
                         <Link href="/materials/new" className="inline-flex items-center gap-2 px-4 py-2 bg-[#efe9ff] text-[#6b5ca5] text-sm font-bold rounded-xl hover:bg-[#e7deff] transition-colors">
                             新規作成する
                         </Link>

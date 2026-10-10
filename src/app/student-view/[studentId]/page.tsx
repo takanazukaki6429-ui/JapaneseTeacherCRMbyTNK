@@ -7,7 +7,7 @@
  * 生徒が早く目標達成するために、常に見えているべきもの：
  *  1. いま学んでいる教科書のページ（先生が台本のステップを押すと自動でめくれる）
  *  2. 先生の話した日本語の吹き出し＋母語訳
- *     （ネイティブの話し方そのものが教材になる・訳は答え合わせ＝かずき提案）
+ *     （ネイティブの話し方そのものがテキストになる・訳は答え合わせ＝かずき提案）
  *  3. 先生が「生徒に見せる」を押した絵・例文・練習問題（差し込みで大きく）
  *
  * この画面はログイン無しで開くため、教科書の中身は認証済みの先生側から届く。
@@ -23,7 +23,7 @@ type Shown =
     | { kind: 'image'; img: string; timestamp: number }
     | { kind: 'text'; title?: string; body: string; timestamp: number };
 
-/** AIや教材の記号（** や # など）を落として素直な文にする */
+/** AIやテキストの記号（** や # など）を落として素直な文にする */
 function readable(md: string): string {
     return md
         .replace(/\*\*(.+?)\*\*/g, '$1')
@@ -104,7 +104,7 @@ export default function StudentViewPage() {
                     <div className="h-full flex items-start justify-center">
                         {/* 生成画像は data URL のため next/image ではなく素の img */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={shown.img} alt="先生が見せている教材"
+                        <img src={shown.img} alt="先生が見せているテキスト"
                             className="max-w-full max-h-full rounded-2xl shadow-[0_8px_40px_rgba(107,92,165,0.18)]" />
                     </div>
                 )}

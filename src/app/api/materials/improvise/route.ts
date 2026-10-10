@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic';
  */
 
 // 先生が授業中に押す前提の機能なので、1コマで数回〜十数回を想定して1時間60回。
-// 教材生成など他の用途（20回/時）とは別枠にして、押し負けないようにする。
+// テキスト生成など他の用途（20回/時）とは別枠にして、押し負けないようにする。
 const HOURLY_LIMIT = 60;
 
 type Mode = 'exercises' | 'examples' | 'explain';

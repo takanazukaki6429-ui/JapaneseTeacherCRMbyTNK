@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Material } from '@/types/material';
 import { formatDate } from '@/lib/utils';
-import { ArrowLeft, Zap, FileText } from 'lucide-react';
+import { ArrowLeft, Zap, FileText, Globe } from 'lucide-react';
 import { PublicToggleButton } from './public-toggle';
 import { DeleteMaterialButton } from './delete-button';
 import { getFeatureDecision } from '@/lib/plan-access-server';
@@ -12,13 +12,16 @@ import type { FeatureDecision } from '@/lib/plan-features';
 
 export const revalidate = 0;
 
-/** ほかの先生の教材（みんなの教材）を開けるか。ライトでは自分の教材だけ（2026-10-04 かずき決定・lib/plan-features.ts） */
-async function getViewerDecision(authorId: string | null | undefined): Promise<FeatureDecision> {
+/**
+ * ほかの先生のテキスト（みんなのテキスト）を開けるか。ライトでは自分のテキストだけ（2026-10-04 かずき決定・lib/plan-features.ts）。
+ * 自分のテキストか（isOwner）も返す：公開の切り替えと削除は、作った本人にだけ出す（2026-10-09。前はほかの先生のテキストにも出て、押しても変わらなかった）
+ */
+async function getViewerDecision(authorId: string | null | undefined): Promise<{ decision: FeatureDecision; isOwner: boolean }> {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { allowed: false, reason: 'needs_plan' };
-    if (authorId && authorId === user.id) return { allowed: true };
-    return getFeatureDecision(supabase, user.id, 'shared_materials');
+    if (!user) return { decision: { allowed: false, reason: 'needs_plan' }, isOwner: false };
+    if (authorId && authorId === user.id) return { decision: { allowed: true }, isOwner: true };
+    return { decision: await getFeatureDecision(supabase, user.id, 'shared_materials'), isOwner: false };
 }
 
 async function getMaterial(id: string) {
@@ -34,15 +37,15 @@ export default async function MaterialDetailPage({ params }: Props) {
     const { id } = await params;
     const material = await getMaterial(id);
     if (!material) notFound();
-    const viewer = await getViewerDecision((material as { author_id?: string | null }).author_id);
+    const { decision: viewer, isOwner } = await getViewerDecision((material as { author_id?: string | null }).author_id);
     if (!viewer.allowed) {
         return (
             <div className="max-w-3xl mx-auto space-y-5">
                 <Link href="/materials" className="inline-flex items-center gap-1.5 text-sm text-[#484550] hover:text-[#3a3350] transition-colors">
                     <ArrowLeft size={16} />
-                    教材一覧
+                    テキスト一覧
                 </Link>
-                <PaidLock feature="みんなの教材" needsRegular={viewer.reason === 'needs_regular'} />
+                <PaidLock feature="みんなのテキスト" needsRegular={viewer.reason === 'needs_regular'} />
             </div>
         );
     }
@@ -57,13 +60,19 @@ export default async function MaterialDetailPage({ params }: Props) {
                         className="inline-flex items-center gap-1.5 text-sm text-[#484550] hover:text-[#3a3350] transition-colors"
                     >
                         <ArrowLeft size={16} />
-                        教材一覧
+                        テキスト一覧
                     </Link>
                 </div>
-                <div className="flex items-center gap-2">
-                    <PublicToggleButton id={material.id} isPublic={material.is_public} />
-                    <DeleteMaterialButton id={material.id} />
-                </div>
+                {isOwner ? (
+                    <div className="flex items-center gap-2">
+                        <PublicToggleButton id={material.id} isPublic={material.is_public} />
+                        <DeleteMaterialButton id={material.id} />
+                    </div>
+                ) : (
+                    <span className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold bg-[#efe9ff] text-[#6b5ca5] rounded-full">
+                        <Globe size={12} /> ほかの先生が公開したテキスト
+                    </span>
+                )}
             </div>
 
             {/* Title card */}
@@ -89,7 +98,7 @@ export default async function MaterialDetailPage({ params }: Props) {
                                 #{tag}
                             </span>
                         ))}
-                        <span className="ml-auto text-[10px] font-mono text-[#484550] uppercase">{material.type}</span>
+                        <span className="ml-auto text-[10px] text-[#484550]">{material.type === 'prompt' ? 'プロンプト' : '生成コンテンツ'}</span>
                     </div>
                 )}
                 <div className="p-6">

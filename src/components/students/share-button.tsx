@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Lock, Send } from 'lucide-react';
 import { usePlanAccess } from '@/lib/plan-access';
 
-/** 生徒の1枚の「生徒に渡す」（学習計画のリンク）。有料の機能（2026-09-24 案A）。無料の先生には料金の画面へ案内する */
+/** 生徒情報の「生徒に渡す」（学習計画のリンク）。有料の機能（2026-09-24 案A）。無料の先生には料金の画面へ案内する */
 export function ShareButton({ studentId }: { studentId: string }) {
     const access = usePlanAccess();
     const base = 'mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[15px] font-bold shadow-sm transition-colors';

@@ -92,6 +92,8 @@ export const vi: Translations = {
     "recommendedLessons": "Bài học đề xuất",
     "textbooksLabel": "Sách giáo trình đề xuất",
     "aiPromptLabel": "Gợi ý nhập vai AI",
+    "clickToCopy": "Chạm để sao chép",
+    "promptCopied": "Đã sao chép",
     "lessonsPerMonth": "/tháng",
     "roadmapComplete": "🎉 Lộ trình cá nhân của bạn đã sẵn sàng!",
     "ctaDescription": "Với kế hoạch này, bạn chắc chắn có thể đạt được mục tiêu của mình.",

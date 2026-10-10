@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
         const supabase = await createClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         if (!user || authError) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json({ error: 'ログインしてから、もう一度お申し込みください。' }, { status: 401 });
         }
 
         let tier: PlanTier = 'regular';
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
 
         // 既にアクティブなサブスクがある場合はスキップ（段の変更は Stripe のポータルで行う）
         if (settings?.subscription_status === 'active' || settings?.subscription_status === 'trialing') {
-            return NextResponse.json({ error: 'Already subscribed' }, { status: 400 });
+            return NextResponse.json({ error: 'すでに契約中です。プランの変更は、設定の「プランとお支払い」の「Stripeの窓口を開く」から行えます。' }, { status: 400 });
         }
 
         const origin = req.headers.get('origin') ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
     } catch (error) {
         console.error('Stripe checkout error:', error);
         return NextResponse.json(
-            { error: 'Failed to create checkout session' },
+            { error: 'お申し込みの画面を開けませんでした。時間をおいて、もう一度お試しください。' },
             { status: 500 }
         );
     }

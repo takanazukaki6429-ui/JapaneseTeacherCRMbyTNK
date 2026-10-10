@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { User, Globe, BookOpen, Lock, Plane } from 'lucide-react';
 
-/** communityLocked：ライトでは みんなの教材 を見られない（2026-10-04 かずき決定）。タブは出したまま鍵を付ける */
+/** communityLocked：ライトでは みんなのテキスト を見られない（2026-10-04 かずき決定）。タブは出したまま鍵を付ける */
 type Props = { currentTab: string; communityLocked?: boolean };
 
 export function MaterialsTabBar({ currentTab, communityLocked = false }: Props) {
@@ -39,7 +39,7 @@ export function MaterialsTabBar({ currentTab, communityLocked = false }: Props) 
                         : 'text-[#484550] hover:text-[#3a3350] hover:bg-[#f0ebf8]'
                 }`}
             >
-                <User size={14} />自分の教材
+                <User size={14} />自分のテキスト
             </button>
             <button
                 onClick={() => router.push('/materials?tab=community')}
@@ -49,7 +49,7 @@ export function MaterialsTabBar({ currentTab, communityLocked = false }: Props) 
                         : 'text-[#484550] hover:text-[#3a3350] hover:bg-[#f0ebf8]'
                 }`}
             >
-                {communityLocked ? <Lock size={14} /> : <Globe size={14} />}みんなの教材
+                {communityLocked ? <Lock size={14} /> : <Globe size={14} />}みんなのテキスト
             </button>
         </div>
     );

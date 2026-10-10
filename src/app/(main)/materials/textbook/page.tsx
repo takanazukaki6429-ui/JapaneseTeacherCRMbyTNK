@@ -5,7 +5,7 @@ import { MaterialsTabBar } from '../tab-bar';
 import { LevelTabs } from './level-tabs';
 import { getFeatureDecision } from '@/lib/plan-access-server';
 
-/** みんなの教材のタブに鍵を付けるか（ライト・2026-10-04 かずき決定） */
+/** みんなのテキストのタブに鍵を付けるか（ライト・2026-10-04 かずき決定） */
 async function isCommunityLocked(): Promise<boolean> {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -52,7 +52,7 @@ export default async function TextbookPage({ searchParams }: Props) {
     return (
         <div className="space-y-5">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold tracking-tight text-[#3a3350]">教材</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-[#3a3350]">テキスト</h1>
             </div>
 
             <MaterialsTabBar currentTab="textbook" communityLocked={communityLocked} />
@@ -63,7 +63,7 @@ export default async function TextbookPage({ searchParams }: Props) {
                     <h2 className="text-sm font-bold text-[#3a3350]">教科書</h2>
                 </div>
                 <p className="text-xs text-[#484550] leading-relaxed">
-                    あいちゃん監修のマスター教材です。授業中にそのまま開いて使えます。
+                    あいちゃん監修のマスターテキストです。授業中にそのまま開いて使えます。
                 </p>
             </div>
 

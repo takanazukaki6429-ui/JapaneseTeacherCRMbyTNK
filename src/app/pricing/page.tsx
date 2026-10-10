@@ -10,6 +10,7 @@ import {
     type PlanTier,
 } from '@/lib/pricing';
 import { useCourseStatus } from '@/lib/plan-access';
+import { createClient } from '@/lib/supabase/client';
 import { formatJpDate } from '@/lib/course';
 import { MEMBER_PRICE_GRACE_DAYS, PRICE_SET_LABEL } from '@/lib/audience';
 
@@ -19,7 +20,7 @@ export const dynamic = 'force-dynamic';
 /**
  * 料金の画面（2026-09-24 かずき「料金ページをASTAに入れて」）。
  * 構成は ChatGPT の料金ページと同じ：見出し → プランのカード3枚 → 40人超の問い合わせ → 比べる表 → よくある質問 → 注釈。
- * 3段の差は翻訳モードの月の分数（案B・2026-09-23）と、ライトで使えない機能（授業前の1枚・例文と練習問題と言い換え・ASTAに聞く・みんなの教材＝2026-10-04 かずき決定・lib/plan-features.ts）。
+ * 3段の差は翻訳モードの月の分数（案B・2026-09-23）と、ライトで使えない機能（授業前の1枚・例文と練習問題と言い換え・ASTAに聞く・みんなのテキスト＝2026-10-04 かずき決定・lib/plan-features.ts）。
  * お試し7日間はレギュラーと同じ機能。金額は環境変数（lib/pricing.ts）。
  * コンサルの受講生（2026-10-06）：ログインしている受講生には、お試しの代わりに「受講生の無料の期間・料金はその後から」／
  * 「無料の期間が終わった・お試しなし」を出す（create-checkout-session と同じ決め方）
@@ -29,8 +30,8 @@ export const dynamic = 'force-dynamic';
  */
 
 const CARD_FEATURES: Record<PlanTier, string[]> = {
-    light: ['生徒の管理・授業の記録', '体験レッスンの判定・学習計画', 'ライブ授業のヒント・先生の言葉の訳', '記録の自動下書き・自分の教材'],
-    regular: ['ライトの全部', '授業前の1枚・例文・練習問題', 'ASTAに聞く・みんなの教材', '翻訳モードがライトの2倍'],
+    light: ['生徒の管理・授業の記録', '体験レッスンの判定・学習計画', 'ライブ授業のヒント・先生の言葉の訳', '記録の自動下書き・自分のテキスト'],
+    regular: ['ライトの全部', '授業前の1枚・例文・練習問題', 'ASTAに聞く・みんなのテキスト', '翻訳モードがライトの2倍'],
     pro: ['レギュラーの全部', '翻訳モードがライトの4倍', '授業1回あたりがいちばん安い'],
 };
 const CARD_WHO: Record<PlanTier, string> = {
@@ -71,12 +72,12 @@ function buildGroups(): Group[] {
             { name: '例文・練習問題・言い換え', sub: '会話に合わせて作成（1時間60回）', cells: regularUp },
             { name: 'ASTAに聞く', sub: '授業の相談にいつでも回答', cells: regularUp },
         ] },
-        { title: '教材', rows: [
-            { name: '自分の教材・みんなの教材', sub: '作った教材を保存・共有', cells: [OK, '自分の教材だけ', OK, OK] },
+        { title: 'テキスト', rows: [
+            { name: '自分のテキスト・みんなのテキスト', sub: '作ったテキストを保存・共有', cells: [OK, '自分のテキストだけ', OK, OK] },
         ] },
         { title: '上限とお支払い', rows: [
             { name: '翻訳モードが上限に達したら', cells: { span: '翻訳モードだけ止まります（毎月1日にリセット）。\nヒント・例文・記録はそのまま使えます' } },
-            { name: '追加パック', sub: `翻訳＋${PACK_MINUTES}分（${PACK_VALID_DAYS}日間有効）`, cells: [NO, pack, pack, pack] },
+            { name: '追加パック', sub: `翻訳＋${PACK_MINUTES}分（${PACK_VALID_DAYS}日間有効）`, cells: [pack, pack, pack, pack] },   // お試し中も買える（create-pack-checkout）
             { name: 'プランの変更', cells: { span: 'いつでも変更できます。\n上げた分の差額は日割りになります。\n無料お試し中に変えても、お試しは続きます' } },
             { name: 'お支払い', cells: { span: 'クレジットカード・毎月自動更新・日割りの返金なし' } },
         ] },
@@ -86,13 +87,13 @@ function buildGroups(): Group[] {
 const FAQ: { q: string; a: string }[] = [
     { q: '翻訳モードの「分」はどう数えますか？', a: '翻訳モードをオンにしている間の、\n生徒が話している時間だけを数えます。\n生徒が黙っている間は数えません。\n例：60分の授業で、\n生徒が20分話したら20分です。' },
     { q: '上限に達したらどうなりますか？', a: `翻訳モードだけが止まります。\n授業はそのまま続けられます。\nほかの機能も、そのまま使えます。\n残り30分になると、お知らせします。\n上限は毎月1日にリセットされます。\n急ぐときは、\n追加パック（＋${PACK_MINUTES}分）を買い足せます。` },
-    { q: 'ライトとレギュラーの違いは？', a: 'ライトでは、授業前の1枚・\n例文と練習問題と言い換え・\nASTAに聞く・みんなの教材を\n使えません（自分の教材は使えます）。\n翻訳モードの分数も、\nレギュラーの半分です。\nプランは、いつでも変えられます。' },
+    { q: 'ライトとレギュラーの違いは？', a: 'ライトでは、授業前の1枚・\n例文と練習問題と言い換え・\nASTAに聞く・みんなのテキストを\n使えません（自分のテキストは使えます）。\n翻訳モードの分数も、\nレギュラーの半分です。\nプランは、いつでも変えられます。' },
     { q: 'プランの目安の「生徒◯人」を超えたら？', a: '生徒の登録に上限はありません。\n目安は「毎回60分つけっぱなし」でも\n足りる人数です。\n実際は、生徒が話す時間だけを数えます。\nそのため目安より多い生徒でも、\n上限に届くことはほとんどありません。' },
     { q: `${TRIAL_DAYS}日間の無料お試しで何ができますか？`, a: `レギュラーと同じ機能を、すべて使えます。\n翻訳モードは${TRIAL_DAYS}日間で${TRIAL_TRANSLATION_MINUTES}分まで。\n（30分の授業なら6回分）\nお申込み時に、カードの登録が必要です。\n${TRIAL_DAYS + 1}日目に、最初の課金が始まります。\n${TRIAL_DAYS}日以内に解約すれば、\n料金はかかりません。\n無料お試しは、はじめての方が対象です。` },
-    { q: 'プランの変更・解約はどこでできますか？', a: '設定の「プラン」でいつでもできます。\n上のプランに変えると、\nその日から使えます。\n差額は日割りになります。\n解約した後も、\nその課金期間の末日までは使えます。' },
+    { q: 'プランの変更・解約はどこでできますか？', a: '設定の「プランとお支払い」で\nいつでもできます。\n上のプランに変えると、\nその日から使えます。\n差額は日割りになります。\n解約した後も、\nその課金期間の末日までは使えます。' },
     { q: 'Zoom のアプリを使っていますが、翻訳モードは使えますか？', a: '翻訳モードは、\nChrome のタブの音声を聞く仕組みです。\nZoom や Google Meet は、\nChrome のブラウザで開いてください。\nZoom のパソコン用アプリでは、\n生徒の声を拾えません。\nPreply はブラウザなので、\nそのまま使えます。' },
     { q: 'プロより多く使いたい・画像生成を使いたい', a: '「個別に相談する」ボタンから、\n生徒の人数・週の授業数・使いたい機能を\nお送りください。\n内容を確認して、メールでご連絡します。' },
-    { q: '領収書はもらえますか？', a: 'はい。\nお支払いのたびに、\n領収書がメールで届きます。\n設定の「プラン」からも、\n過去の領収書を表示・保存できます。\n経費の記録に、\nそのままお使いいただけます。\n※ 適格請求書（インボイス）の\n登録番号は記載されません。' },
+    { q: '領収書はもらえますか？', a: 'はい。\nお支払いのたびに、\n領収書がメールで届きます。\n設定の「プランとお支払い」からも、\n過去の領収書を表示・保存できます。\n経費の記録に、\nそのままお使いいただけます。\n※ 適格請求書（インボイス）の\n登録番号は記載されません。' },
 ];
 
 /**
@@ -121,6 +122,11 @@ function PricingContent() {
     // 無料お試しを出すか：受講生（受講中・受講後）と卒業生には出さない（create-checkout-session と同じ決め方）
     const noTrial = !course.loading && (!!courseEnd || course.audience === 'alumni');
     const showTrial = !noTrial;
+
+    const signOut = async () => {
+        await createClient().auth.signOut();
+        window.location.href = '/login';
+    };
 
     const handleCheckout = async (tier: PlanTier) => {
         setLoading(tier);
@@ -154,7 +160,8 @@ function PricingContent() {
                     <p className="text-xs font-black tracking-[0.2em] text-[#6b5ca5] mb-2">日本語教師のためのASTA</p>
                     <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-3">料金プラン</h1>
                     <p className="text-[#6f6884] max-w-[36em] mx-auto">
-                        機能は3つとも同じです。<br />違いは「翻訳モード」を月に使える時間。<br />翻訳モードは、生徒の声をその場で日本語にします。<br />生徒の数に上限はありません。
+                        {/* 2026-10-09 かずき決定：ライトの制限（10/4 決定）と合うように直した（前は「機能は3つとも同じです」） */}
+                        使える機能の一部と、<br />翻訳モードを月に使える時間が違います。<br />ライトでは、授業前の1枚・例文と練習問題と言い換え・<br />ASTAに聞く・みんなのテキストは使えません。<br />生徒の数に上限はありません。
                     </p>
                     <div className="flex justify-center gap-2.5 flex-wrap mt-5">
                         {showTrial && <span className="inline-flex items-center gap-2 bg-[#dff1ea] text-[#2a6f5a] font-bold text-[13px] px-3.5 py-1.5 rounded-full">✓ どのプランも最初の{TRIAL_DAYS}日間は無料</span>}
@@ -207,7 +214,7 @@ function PricingContent() {
                 {lapsed && (
                     <div className="mb-6 px-5 py-3 bg-[#fdf6e7] border border-[#ecd9a8] rounded-2xl text-sm text-[#8a6d1f] text-center leading-relaxed">
                         プランが有効ではないため、この画面は使えません。<br />
-                        これまでの記録は、生徒の1枚から見られます。<br />
+                        これまでの記録は、生徒情報から見られます。<br />
                         続きから使うには、下のプランからお申込みください。
                     </div>
                 )}
@@ -327,10 +334,18 @@ function PricingContent() {
                     </div>
                 </section>
 
-                <p className="mt-8 text-center text-xs text-[#484550]/50">
-                    すでにアカウントをお持ちの方は
-                    <a href="/login" className="text-[#6b5ca5] underline ml-1">ログイン</a>
-                </p>
+                {/* ログインしている先生には、ここから出る道（ログアウト）を出す（2026-10-09：申し込む前の先生は、ほかの画面へ移れないため） */}
+                {!course.loading && course.signedIn ? (
+                    <p className="mt-8 text-center text-xs text-[#484550]/70">
+                        別のアカウントで使う時や、今は申し込まない時は
+                        <button type="button" onClick={signOut} className="text-[#6b5ca5] underline ml-1">ログアウト</button>
+                    </p>
+                ) : (
+                    <p className="mt-8 text-center text-xs text-[#484550]/50">
+                        すでにアカウントをお持ちの方は
+                        <a href="/login" className="text-[#6b5ca5] underline ml-1">ログイン</a>
+                    </p>
+                )}
             </div>
         </div>
     );

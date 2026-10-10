@@ -1,11 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Lightbulb } from 'lucide-react';
 import { SectionNav } from '../../textbook/[id]/section-nav';
 import { TRAVEL_PARTS, findTravelScene } from '@/lib/travel';
 
 /**
- * 旅行の場面（2026-10-09 かずき決定・9-2）。目標と4つの部分（フレーズ・使う場面・会話・穴埋め）。
+ * 旅行の場面（2026-10-09 かずき決定・9-2／10-10 充実）。目標と5つの部分（フレーズ・使う場面・会話・文化のひとこと・穴埋め）。
  * よみは教科書と同じ「漢字（かんじ）」の形、英語の訳は小さく下に。穴埋めの答えは押すと開く
  */
 
@@ -69,19 +69,33 @@ export default async function TravelScenePage({ params }: Props) {
                 </ul>
             </section>
 
-            <section id="part-dialogue" className={CARD}>
+            <section id="part-dialogues" className={CARD}>
                 <h2 className={HEADING}>会話</h2>
-                <div className="space-y-3">
-                    {scene.dialogue.map((d, i) => (
-                        <div key={i} className="flex gap-3">
-                            <span className="text-[12px] font-bold text-[#55488a] bg-[#f0ebf8] rounded-lg px-2 py-1 h-fit shrink-0 min-w-[5.5rem] text-center">{d.speaker}</span>
-                            <div>
-                                <p className="text-[16px] text-[#3a3350] leading-relaxed">{d.ja}</p>
-                                <p className="text-[13px] text-[#6f6884]">{d.en}</p>
+                <div className="space-y-6">
+                    {scene.dialogues.map((d, di) => (
+                        <div key={di}>
+                            <p className="text-[14px] font-bold text-[#3a3350]">会話{di + 1}：{d.title.ja}</p>
+                            <p className="text-[12px] text-[#6f6884] mb-3">{d.title.en}</p>
+                            <div className="space-y-3">
+                                {d.lines.map((l, i) => (
+                                    <div key={i} className="flex gap-3">
+                                        <span className="text-[12px] font-bold text-[#55488a] bg-[#f0ebf8] rounded-lg px-2 py-1 h-fit shrink-0 min-w-[5.5rem] text-center">{l.speaker}</span>
+                                        <div>
+                                            <p className="text-[16px] text-[#3a3350] leading-relaxed">{l.ja}</p>
+                                            <p className="text-[13px] text-[#6f6884]">{l.en}</p>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     ))}
                 </div>
+            </section>
+
+            <section id="part-culture" className={CARD}>
+                <h2 className={`${HEADING} flex items-center gap-1.5`}><Lightbulb size={14} /> 文化のひとこと</h2>
+                <p className="text-[15px] text-[#3a3350] leading-relaxed">{scene.culture.ja}</p>
+                <p className="mt-1 text-[13px] text-[#6f6884] leading-relaxed">{scene.culture.en}</p>
             </section>
 
             <section id="part-blanks" className={CARD}>

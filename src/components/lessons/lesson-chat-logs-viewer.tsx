@@ -46,7 +46,7 @@ export function LessonChatLogsViewer({ lessonId }: { lessonId: string | null }) 
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 mt-6">
             <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
                 <MessageCircle size={20} className="text-teal-600" />
-                Liveレッスン中のチャット履歴
+                授業中にASTAに聞いた質問と答え
             </h2>
             <div className="space-y-4 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
                 {logs.map((log) => (
@@ -64,7 +64,7 @@ export function LessonChatLogsViewer({ lessonId }: { lessonId: string | null }) 
                                 ) : (
                                     <>
                                         <Sparkles size={12} />
-                                        <span className="text-xs">AI Assistant</span>
+                                        <span className="text-xs">ASTA</span>
                                     </>
                                 )}
                             </div>

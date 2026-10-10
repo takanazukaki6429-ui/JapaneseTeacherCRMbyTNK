@@ -1,11 +1,11 @@
 /**
- * 生徒の1枚（2026-09-13 かずき決定：案C＝Dの配置を土台に、Eの良い所を足す）
+ * 生徒情報（2026-09-13 かずき決定：案C＝Dの配置を土台に、Eの良い所を足す）
  *
- * - 配置：画面案 生徒の1枚_Dの配置_色E書体E（左に学習の現在地・これまでの記録、右に学習計画・ASTAに聞く・授業の予定・使った教材）
+ * - 配置：画面案 生徒情報_Dの配置_色E書体E（左に学習の現在地・これまでの記録、右に学習計画・ASTAに聞く・授業の予定・使ったテキスト）
  * - Eの良い所：前回のつまずきをピンクで目立たせる／学習計画の「生徒に渡す」を大きいボタンに
- * - 今あった機能は全部残す（編集・削除・授業前の準備・ライブ授業・記録・ロードマップ・体験レッスン・AIの分析・メモ・授業の予定・この生徒の教材）
+ * - 今あった機能は全部残す（編集・削除・授業前の準備・ライブ授業・記録・ロードマップ・体験レッスン・AIの分析・メモ・授業の予定・この生徒のテキスト）
  * - データの事実（2026-09-13 本番で確認）：「今の課」を入れる欄は無い。
- *   使用教材＝textbook（105人中17人）／学習計画＝current_phase（「目標Lv.65 / 3ヶ月」の形）／目的＝goal_text／
+ *   使用テキスト＝textbook（105人中17人）／学習計画＝current_phase（「目標Lv.65 / 3ヶ月」の形）／目的＝goal_text／
  *   前回の内容とつまずき＝直近の授業記録の topics（165件中160件）と mistakes（131件）
  * - 「本日の授業指針」は、授業前の1枚の自動作成ができるまでは、前回のつまずきから決まった形の文で出す（つまずきが無ければ出さない）
  */
@@ -137,7 +137,7 @@ export default async function StudentDetailPage({ params }: Props) {
                             </FullOnly>
                         </div>
                         <div className="grid grid-cols-2 gap-y-5 gap-x-6">
-                            <Field label="使用教材">{student.textbook || '未設定'}</Field>
+                            <Field label="使用テキスト">{student.textbook || '未設定'}</Field>
                             <Field label="前回の内容">{last ? (last.topics?.trim() || '記録なし') : 'まだ授業の記録がありません'}</Field>
                             <Field label="学習の目的" wide>
                                 {goal ? <span className="inline-block text-sm font-semibold bg-[#dff1ea] text-[#2a6f5a] px-2.5 py-0.5 rounded-full">{goal}</span> : '未設定'}
@@ -164,7 +164,7 @@ export default async function StudentDetailPage({ params }: Props) {
                     <AIProfileAnalyzer student={student} />
                 </div>
 
-                {/* 右：学習計画・ASTAに聞く・授業の予定・使った教材 */}
+                {/* 右：学習計画・ASTAに聞く・授業の予定・使ったテキスト */}
                 <div className="lg:col-span-4 flex flex-col gap-6">
                     <section className={card}>
                         <div className="flex items-center justify-between pb-3 border-b border-[#efe9f8] mb-4">
@@ -179,7 +179,8 @@ export default async function StudentDetailPage({ params }: Props) {
                                 <ShareButton studentId={student.id} />
                                 <div className="mt-3 flex items-center justify-between text-sm">
                                     <Link prefetch href={`/students/${student.id}/roadmap`} className="text-[#6b5ca5] font-semibold hover:underline flex items-center gap-1"><Map size={14} /> ロードマップを見る</Link>
-                                    <Link prefetch href={`/students/${student.id}/initial-hearing`} className="text-[#484550] hover:text-[#6b5ca5] hover:underline">体験レッスンを見る</Link>
+                                    {/* 開くのは新しくメモを入れる画面なので「やり直す」と書く（前は「見る」で、結果が出ると思われた・2026-10-09） */}
+                                    <Link prefetch href={`/students/${student.id}/initial-hearing`} className="text-[#484550] hover:text-[#6b5ca5] hover:underline">体験レッスンをやり直す</Link>
                                 </div>
                             </>
                         ) : (

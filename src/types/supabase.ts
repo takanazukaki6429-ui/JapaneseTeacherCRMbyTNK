@@ -67,7 +67,7 @@ export interface Database {
                     topics: string | null            // 授業トピック
                     vocabulary: string | null        // 語彙
                     mistakes: string | null          // 間違い・課題
-                    materials: string | null         // 使用教材
+                    materials: string | null         // 使用テキスト
                     status: string | null            // ステータス
                     understanding_level: number | null
                     homework: string | null

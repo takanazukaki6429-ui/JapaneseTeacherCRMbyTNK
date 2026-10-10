@@ -2,7 +2,7 @@
  * 授業前の1枚（2026-09-17 かずき決定：自動で作る）
  *
  * ASTAが、前回の授業記録から「今日の指針・復習クイズ・導入の話題・気をつけること」を作る。
- * - 作る・保存する・読み出すをここ1か所にまとめ、生徒の1枚（帯）と授業前の準備の画面が同じ物を使う
+ * - 作る・保存する・読み出すをここ1か所にまとめ、生徒情報（帯）と授業前の準備の画面が同じ物を使う
  * - 保存はこの端末の中（localStorage）。最新の授業記録の日付ごとに分けて持つので、新しい記録が入れば作り直される
  * - ライブ授業の「授業前のメモ」は、これまでどおり prep_content_<生徒> を読むので、その名前でも保存する
  *
@@ -17,6 +17,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { todayJst } from '@/lib/course';
 import { ja } from '@/app/(main)/roadmap/ja';
+import { parsePurposeIds } from '@/lib/roadmap/from-student';
 
 export type PrepQuiz = { question: string; answer: string };
 
@@ -35,7 +36,7 @@ export type FreeTalk = {
 };
 
 export type PrepSheet = {
-    /** 生徒の1枚の帯に出す一文（今日どう進めるか） */
+    /** 生徒情報の帯に出す一文（今日どう進めるか） */
     guide?: string;
     review_quiz: PrepQuiz[];
     intro_topic: string;
@@ -123,7 +124,7 @@ export function missingFreeTalk(sheet: PrepSheet, freeTalkAllowed: boolean): boo
 
 type LessonLike = { date: string; status?: string | null };
 
-/** 記録として扱う授業（予定ではなく、今より前）を新しい順に。生徒の1枚・ホームと同じ決め方 */
+/** 記録として扱う授業（予定ではなく、今より前）を新しい順に。生徒情報・ホームと同じ決め方 */
 export function pastLessons<T extends LessonLike>(rows: T[], now: Date = new Date()): T[] {
     const t = now.getTime();
     return rows
@@ -214,10 +215,13 @@ type LessonRowLike = LessonLike & {
     next_goal?: string | null;
 };
 
-/** 興味（体験レッスンで選んだ目的）の名前。「その他」と読めない物は null */
-function interestLabel(purpose: string | null | undefined): string | null {
-    if (!purpose || purpose === 'other') return null;
-    return (ja.purposes as Record<string, { label: string } | undefined>)[purpose]?.label ?? null;
+/** 興味（体験レッスンで選んだ目的・2つ以上の時は「・」でつなぐ）の名前。「その他」と読めない物は除き、残らなければ null */
+function interestLabel(purposes: string | null | undefined): string | null {
+    const labels = parsePurposeIds(purposes)
+        .filter(id => id !== 'other')
+        .map(id => (ja.purposes as Record<string, { label: string } | undefined>)[id]?.label)
+        .filter((l): l is string => !!l);
+    return labels.length > 0 ? labels.join('・') : null;
 }
 
 /** 生徒と授業の記録（予定が混ざっていてよい）から、1枚の材料を作る。前回の記録は今までどおり、一番新しい記録 */
@@ -247,7 +251,7 @@ export function buildPrepSource(student: StudentLike, lessons: LessonRowLike[], 
     };
 }
 
-/** 予定ではない、今より前の記録を新しい順に5回分読む条件（生徒の1枚・ホームと同じ決め方） */
+/** 予定ではない、今より前の記録を新しい順に5回分読む条件（生徒情報・ホームと同じ決め方） */
 export function recentLessonsQuery(supabase: SupabaseClient, studentId: string, columns: string) {
     return supabase
         .from('lessons')
@@ -273,7 +277,7 @@ export async function fetchTalks(supabase: SupabaseClient, studentId: string, si
     return talksFromFlows(data as FlowRowLike[]);
 }
 
-/** 生徒の1枚の帯から作る時に、材料をまとめて読む。読めなければ null（呼ぶ側は今までの材料で作る） */
+/** 生徒情報の帯から作る時に、材料をまとめて読む。読めなければ null（呼ぶ側は今までの材料で作る） */
 export async function loadPrepSource(
     supabase: SupabaseClient,
     studentId: string,

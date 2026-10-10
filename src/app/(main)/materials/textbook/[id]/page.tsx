@@ -15,6 +15,9 @@ export const revalidate = 0;
 
 type Props = { params: Promise<{ id: string }> };
 
+/** 先生用の部分（最初は閉じておく） */
+const TEACHER_ONLY = new Set<string>(['answers', 'teacher_notes']);
+
 export default async function TextbookLessonPage({ params }: Props) {
     const { id } = await params;
     const supabase = await createClient();
@@ -78,18 +81,34 @@ export default async function TextbookLessonPage({ params }: Props) {
                     />
 
                     <div className="space-y-4">
-                        {sections.map(section => (
-                            <section
-                                key={section.section_order}
-                                id={`sec-${section.section_order}`}
-                                className="bg-white px-5 py-4 rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] scroll-mt-4"
-                            >
-                                <h2 className="text-sm font-bold text-[#6b5ca5] mb-3 pb-2 border-b border-[#f0ebf8]">
-                                    {SECTION_LABELS[section.section_type] ?? section.section_type}
-                                </h2>
-                                <LessonContent contentMd={section.content_md} imageBaseUrl={imageBaseUrl} />
-                            </section>
-                        ))}
+                        {sections.map(section => {
+                            const label = SECTION_LABELS[section.section_type] ?? section.section_type;
+                            // 解答例・教師用メモは、最初は閉じておく（画面共有で生徒に見えないように・2026-10-09）
+                            const teacherOnly = TEACHER_ONLY.has(section.section_type);
+                            return (
+                                <section
+                                    key={section.section_order}
+                                    id={`sec-${section.section_order}`}
+                                    className="bg-white px-5 py-4 rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] scroll-mt-4"
+                                >
+                                    {teacherOnly ? (
+                                        <details>
+                                            <summary className="text-sm font-bold text-[#6b5ca5] cursor-pointer select-none">
+                                                {label}<span className="ml-2 text-[11px] font-normal text-[#6f6884]">（先生用・押すと開きます。画面共有中は生徒にも見えます）</span>
+                                            </summary>
+                                            <div className="mt-3 pt-3 border-t border-[#f0ebf8]">
+                                                <LessonContent contentMd={section.content_md} imageBaseUrl={imageBaseUrl} />
+                                            </div>
+                                        </details>
+                                    ) : (
+                                        <>
+                                            <h2 className="text-sm font-bold text-[#6b5ca5] mb-3 pb-2 border-b border-[#f0ebf8]">{label}</h2>
+                                            <LessonContent contentMd={section.content_md} imageBaseUrl={imageBaseUrl} />
+                                        </>
+                                    )}
+                                </section>
+                            );
+                        })}
                     </div>
                 </>
             )}

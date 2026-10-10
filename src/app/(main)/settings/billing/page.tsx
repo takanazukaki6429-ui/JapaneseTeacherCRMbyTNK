@@ -49,6 +49,7 @@ function BillingContent() {
     const [quota, setQuota] = useState<Quota | null>(null);
     const [loading, setLoading] = useState(true);
     const [portalLoading, setPortalLoading] = useState(false);
+    const [portalError, setPortalError] = useState('');
     const [packLoading, setPackLoading] = useState(false);
     const [packError, setPackError] = useState('');
 
@@ -72,12 +73,18 @@ function BillingContent() {
 
     const handlePortal = async () => {
         setPortalLoading(true);
+        setPortalError('');
         try {
             const res = await fetch('/api/stripe/customer-portal', { method: 'POST' });
             const data = await res.json();
-            if (data.url) window.location.href = data.url;
+            if (data.url) {
+                window.location.href = data.url;
+                return;
+            }
+            // 開けなかった時は、理由を画面に出す（前は何も出なかった・2026-10-09）
+            setPortalError(data.error || 'お支払いの窓口を開けませんでした。時間をおいて、もう一度お試しください。');
         } catch {
-            alert('エラーが発生しました');
+            setPortalError('通信に失敗しました。時間をおいて、もう一度お試しください。');
         } finally {
             setPortalLoading(false);
         }
@@ -108,6 +115,8 @@ function BillingContent() {
     const status = info?.subscription_status ?? 'inactive';
     const statusInfo = STATUS_LABEL[status] ?? STATUS_LABEL['inactive'];
     const subscribed = status === 'active' || status === 'trialing';
+    // 支払いが止まっている時も契約は残っている（カードを変えれば再開できる）ので、Stripe の窓口を開けるようにする
+    const paymentStopped = status === 'past_due' || status === 'unpaid';
     // コンサルの受講中（コースが終わる日まで無料・2026-10-06）
     const courseEnd = normalizeCourseEndDate(info?.course_end_date ?? null);
     const inCourse = isInCourse(courseEnd);
@@ -121,11 +130,14 @@ function BillingContent() {
     const memberLastDay = memberPriceLastDay({ audience, courseEndDate: courseEnd });
     const memberDaysLeft = memberPriceDaysLeft({ audience, courseEndDate: courseEnd });
     // 一般価格が決まった後は、契約した時の料金（受講生価格か一般価格か）がここでは分からないので、金額は出さない（Stripe の窓口で見られる）
+    // 契約していない先生には、プランの名前と金額を出さない（前は「ライトプラン …/月」と出ていた・2026-10-09）
     const planLabel = courseOnly
         ? '特別優待プラン（全機能無料）'
         : legacyFreeOnly
             ? '無償プラン（招待）'
-            : GENERAL_PRICES_SET
+            : !subscribed && !paymentStopped
+                ? 'プランはありません'
+                : GENERAL_PRICES_SET
                 ? `${PLAN_TIERS[tier].label}プラン`
                 : `${PLAN_TIERS[tier].label}プラン ${tierPriceLabel(tier)}/月`;
     // 受講中に先回りして申し込んだ先生は、Stripe ではお試し中。料金は受講の後から（「無料お試し中」とは出さない）
@@ -138,7 +150,7 @@ function BillingContent() {
 
     return (
         <div className="max-w-lg mx-auto space-y-6">
-            <h1 className="text-2xl font-bold text-[#3a3350]">プラン・お支払い</h1>
+            <h1 className="text-2xl font-bold text-[#3a3350]">プランとお支払い</h1>
 
             {success && (
                 <div className="flex items-center gap-3 px-5 py-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-sm text-emerald-700">
@@ -236,11 +248,12 @@ function BillingContent() {
             )}
 
             {/* Stripe Customer Portal（プランの変更・キャンセル・カード変更） */}
-            {info?.stripe_customer_id && subscribed && (
+            {info?.stripe_customer_id && (subscribed || paymentStopped) && (
                 <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] p-6">
                     <p className="text-sm font-bold text-[#3a3350] mb-1">プランの変更・支払い情報の管理</p>
                     <p className="text-xs text-[#484550] mb-4">
-                        プランの変更（ライト⇄レギュラー⇄プロ）・カードの変更・解約はStripeの窓口で行えます。
+                        プランの変更（ライト⇄レギュラー⇄プロ）・カードの変更・解約・領収書はStripeの窓口で行えます。
+                        {paymentStopped && <><br /><b>お支払いが止まっています。</b>窓口でカードを変えると、元どおり使えます。</>}
                     </p>
                     <button
                         onClick={handlePortal}
@@ -250,6 +263,7 @@ function BillingContent() {
                         {portalLoading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
                         Stripeの窓口を開く
                     </button>
+                    {portalError && <p className="mt-2 text-xs text-red-600">{portalError}</p>}
                 </div>
             )}
 

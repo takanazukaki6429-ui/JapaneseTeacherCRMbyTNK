@@ -1,7 +1,7 @@
 /**
- * v1.0 工程表 3.2/3.3: マスター教材の投入フォーマット型
+ * v1.0 工程表 3.2/3.3: マスターテキストの投入フォーマット型
  *
- * あいちゃんGenspark教材 → AI構造化 → この形 → master_materials系テーブルへ投入
+ * あいちゃんGensparkテキスト → AI構造化 → この形 → master_materials系テーブルへ投入
  */
 
 export type JlptLevel = 'N5' | 'N4' | 'N3' | 'N2' | 'N1';
@@ -93,7 +93,7 @@ export type MaterialSection = {
     example_sentences?: ExampleSentence[];
 };
 
-/** 1課ぶんの構造化教材（投入の単位） */
+/** 1課ぶんの構造化テキスト（投入の単位） */
 export type StructuredMaterial = {
     jlpt_level: JlptLevel;
     lesson_number: number;

@@ -108,7 +108,7 @@ export const PACK_SENTENCE: string = PACK_PRICE_JPY === null
     : `追加パック（翻訳モード ${PACK_MINUTES}分・${PACK_VALID_DAYS}日間有効）1回 ${PACK_PRICE_LABEL}（消費税込み）`;
 
 /** ライトで使えない機能の一文（2026-10-04 かずき決定）。規約・特商法の料金の文に入れる */
-export const LIGHT_LIMIT_SENTENCE = '授業前の1枚・例文と練習問題と言い換えの作成・ASTAに聞く・みんなの教材は使えません';
+export const LIGHT_LIMIT_SENTENCE = '授業前の1枚・例文と練習問題と言い換えの作成・ASTAに聞く・みんなのテキストは使えません';
 
 const tierSentence = (set: PriceSet) =>
     PLAN_TIER_KEYS.map(t => `${PLAN_TIERS[t].label}プラン 月額 ${tierPriceLabel(t, set)}（翻訳モード ${PLAN_TIERS[t].translationMinutes.toLocaleString('ja-JP')}分/月まで${t === 'light' ? `。${LIGHT_LIMIT_SENTENCE}` : ''}）`).join('／');

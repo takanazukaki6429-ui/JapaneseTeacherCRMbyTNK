@@ -1,5 +1,5 @@
 /**
- * マスター教材の本文表示
+ * マスターテキストの本文表示
  *
  * 投入時のMarkdownは実物docxから機械生成したもので、使われている書式は
  * 見出し・箇条書き・表・画像の4つに限られる（2026-07-26 全94課の実測）。
@@ -73,7 +73,7 @@ export function LessonContent({ contentMd, imageBaseUrl }: Props) {
                 ? imageBaseUrl + img[1].replace('/images/', '/')
                 : img[1];
             blocks.push(
-                // 教材画像は縦横比がまちまちなので、next/image ではなく素の img で自然な高さに任せる
+                // テキスト画像は縦横比がまちまちなので、next/image ではなく素の img で自然な高さに任せる
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                     key={`i${i}`}

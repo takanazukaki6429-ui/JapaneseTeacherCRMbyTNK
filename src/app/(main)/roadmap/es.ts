@@ -53,6 +53,8 @@ export const es: Translations = {
     textbooksLabel: 'Libros de texto',
     aiPromptLabel: 'Prompt de IA',
 
+    clickToCopy: 'Toca para copiar',
+    promptCopied: '¡Copiado!',
     lessonsPerMonth: '/mes',
     roadmapComplete: '🎉 ¡Tu Hoja de Ruta está Lista!',
     ctaDescription: 'Con este plan, definitivamente alcanzarás tu meta.',

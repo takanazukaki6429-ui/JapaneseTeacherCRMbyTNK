@@ -3,7 +3,7 @@
 /**
  * 授業の流れの中身を並べる部分（見出しの出し方・絵の出し方）
  *
- * 記録の画面（1授業ぶん）と、生徒の1枚（過去の授業の一覧）の両方から使う。
+ * 記録の画面（1授業ぶん）と、生徒情報（過去の授業の一覧）の両方から使う。
  * 同じ見え方にするため、並べる処理はここ1か所にまとめる。
  */
 import type { SavedFlowItem } from '@/lib/lesson-flow';
@@ -15,7 +15,7 @@ const KIND_LABEL: Record<string, { label: string; tone: string }> = {
     suggest: { label: 'ASTAの提案', tone: 'bg-[#fdf6e7] text-[#8a6d1f]' },
     'translate-help': { label: 'ことばの補助', tone: 'bg-[#fdf6e7] text-[#8a6d1f]' },
     illust: { label: '絵', tone: 'bg-[#fbeef5] text-[#8a3f68]' },
-    material: { label: '作った教材', tone: 'bg-[#efe9ff] text-[#5a4c94]' },
+    material: { label: '作ったテキスト', tone: 'bg-[#efe9ff] text-[#5a4c94]' },
     asked: { label: '先生の質問', tone: 'bg-[#f4f1fb] text-[#3a3350]' },
     answer: { label: '質問への答え', tone: 'bg-[#efe9ff] text-[#5a4c94]' },
     textbook: { label: '教科書', tone: 'bg-[#eef3fb] text-[#2f4a72]' },

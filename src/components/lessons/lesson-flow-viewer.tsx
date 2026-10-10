@@ -9,7 +9,7 @@
  *
  * 置き場所は2つ：
  *   - LessonFlowViewer      … 授業の記録の画面（その授業の1回ぶん）
- *   - StudentLessonFlows    … 生徒の1枚（過去の授業の一覧・2026-09-20 かずき指示で追加）
+ *   - StudentLessonFlows    … 生徒情報（過去の授業の一覧・2026-09-20 かずき指示で追加）
  */
 import { useEffect, useState } from 'react';
 import { usePlanAccess } from '@/lib/plan-access';
@@ -25,12 +25,12 @@ function pathsOf(rows: LessonFlowRow[]): string[] {
         .filter((p): p is string => !!p);
 }
 
-/** 何が入っているかの一言（「絵2枚・作った教材3件」など） */
+/** 何が入っているかの一言（「絵2枚・作ったテキスト3件」など） */
 function summaryOf(row: LessonFlowRow): string {
     const parts: string[] = [`${row.items.length}件`];
     if (row.image_count > 0) parts.push(`絵${row.image_count}枚`);
     const materials = row.items.filter(i => i.kind === 'material').length;
-    if (materials > 0) parts.push(`作った教材${materials}件`);
+    if (materials > 0) parts.push(`作ったテキスト${materials}件`);
     return parts.join('・');
 }
 
@@ -98,7 +98,7 @@ export function LessonFlowViewer({ studentId, lessonId }: { studentId: string; l
 }
 
 // ────────────────────────────────────────────
-// ② 生徒の1枚：過去の授業の中身を見る（一覧）
+// ② 生徒情報：過去の授業の中身を見る（一覧）
 // ────────────────────────────────────────────
 export function StudentLessonFlows({ studentId }: { studentId: string }) {
     // 過去の授業の中身の見返しは有料の機能（2026-09-24 案A）

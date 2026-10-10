@@ -53,6 +53,8 @@ export const ko: Translations = {
     textbooksLabel: '추천 교재',
     aiPromptLabel: 'AI 프롬프트',
 
+    clickToCopy: '탭하여 복사',
+    promptCopied: '복사했습니다',
     lessonsPerMonth: '회/월',
     roadmapComplete: '🎉 맞춤 로드맵 완성!',
     ctaDescription: '이 플랜이라면 확실히 목표 달성 가능합니다.',
