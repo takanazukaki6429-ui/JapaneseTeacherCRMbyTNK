@@ -31,7 +31,7 @@ type GeneratedMaterial = {
     cards?: Flashcard[];        // フラッシュカードの場合のみ
 };
 
-/* ── 教材種別マスタ ──────────────────────────────── */
+/* ── テキスト種別マスタ ──────────────────────────────── */
 const MATERIAL_TYPES: Record<
     MaterialContentType,
     { label: string; icon: React.ReactNode; desc: string; tag: string }
@@ -77,7 +77,7 @@ export default function LessonPreparePage() {
     const [prepContent, setPrepContent] = useState<PrepContent | null>(null);
     const [prepExpanded, setPrepExpanded] = useState(true);
 
-    // 教材生成（新機能）
+    // テキスト生成（新機能）
     const [selectedType, setSelectedType] = useState<MaterialContentType>('fill_in_blank');
     const [shareToCommunity, setShareToCommuntiy] = useState(false);
     const [generatingMaterial, setGeneratingMaterial] = useState(false);
@@ -95,7 +95,7 @@ export default function LessonPreparePage() {
                         .select('*')
                         .eq('id', studentId)
                         .single(),
-                    // 前回の記録は、予定（まだ先の授業）を除いた一番新しい記録（生徒の1枚と同じ決め方）
+                    // 前回の記録は、予定（まだ先の授業）を除いた一番新しい記録（生徒情報と同じ決め方）
                     recentLessonsQuery(supabase, studentId, '*'),
                 ]);
                 if (stu) setStudent(stu as Student);
@@ -132,7 +132,7 @@ export default function LessonPreparePage() {
 
     // 開いた時点でできている状態にする：保存済みがあれば読み、無ければ自動で作る（自動は1回だけ）
     // 開いた時点で自動で作るのは有料の機能（2026-09-24 案A）。無料の先生は、保存済みを読むだけ（ボタンで作るのは今までどおり）
-    // ライトでは授業前の1枚（自動・ボタン）と今日の教材を使えない（2026-10-04 かずき決定・lib/plan-features.ts）
+    // ライトでは授業前の1枚（自動・ボタン）と今日のテキストを使えない（2026-10-04 かずき決定・lib/plan-features.ts）
     const prepAuto = useFeatureAccess('prep_sheet');
     const prepManual = useFeatureAccess('prep_manual');
     const prepMaterial = useFeatureAccess('prep_material');
@@ -154,7 +154,7 @@ export default function LessonPreparePage() {
         run();
     }, [studentId, student, recentLessons, handleGeneratePlan, prepAuto.loading, autoAllowed, freeTalkAccess.loading, freeTalkAllowed]);
 
-    /* ── 教材生成（新機能） ──────────────────────── */
+    /* ── テキスト生成（新機能） ──────────────────────── */
     const handleGenerateMaterial = async () => {
         setGeneratingMaterial(true);
         setGeneratedMaterial(null);
@@ -235,7 +235,7 @@ ${typeInstructions[selectedType]}
             const res = await fetch('/api/ai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt, type: 'prep_material' }),   // 授業前：今日の教材（利用実態を画面ごとに数えるため）
+                body: JSON.stringify({ prompt, type: 'prep_material' }),   // 授業前：今日のテキスト（利用実態を画面ごとに数えるため）
             });
             if (!res.ok) throw new Error('AI request failed');
             const data = await res.json();
@@ -247,7 +247,7 @@ ${typeInstructions[selectedType]}
             await autoSaveMaterial(result);
         } catch (err) {
             console.error('Material generation error:', err);
-            toast.error('教材の生成に失敗しました。もう一度お試しください。');
+            toast.error('テキストの生成に失敗しました。もう一度お試しください。');
         } finally {
             setGeneratingMaterial(false);
         }
@@ -287,10 +287,10 @@ ${typeInstructions[selectedType]}
                 }
             }
             setMaterialSaved(true);
-            toast.success('教材として保存しました！');
+            toast.success('テキストとして保存しました！');
         } catch (err) {
             console.error('Auto-save error:', err);
-            showAppError(err, '教材の保存に失敗しました');
+            showAppError(err, 'テキストの保存に失敗しました');
         }
     };
 
@@ -324,7 +324,7 @@ ${typeInstructions[selectedType]}
             </div>
             <div>
                 <h1 className="text-2xl font-bold tracking-tight text-[#3a3350]">レッスン準備</h1>
-                <p className="text-sm text-[#484550] mt-0.5">AIが最適な授業プランと専用教材を提案します</p>
+                <p className="text-sm text-[#484550] mt-0.5">AIが最適な授業プランと専用テキストを提案します</p>
             </div>
 
             {/* ── 前回の記録 ── */}
@@ -444,15 +444,15 @@ ${typeInstructions[selectedType]}
                 </div>
             )}
 
-            {/* ── 教材生成（新機能）────────────────── */}
+            {/* ── テキスト生成（新機能）────────────────── */}
             <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] p-5 space-y-4">
                 <div>
                     <h2 className="font-bold text-sm text-[#3a3350] flex items-center gap-2">
                         <BookOpen size={16} className="text-[#6b5ca5]" />
-                        今日の教材を生成
+                        今日のテキストを生成
                     </h2>
                     <p className="text-xs text-[#484550]/70 mt-0.5">
-                        {student?.name}さんのレベル・目標・つまずきをもとにAIが専用教材を作成します
+                        {student?.name}さんのレベル・目標・つまずきをもとにAIが専用テキストを作成します
                     </p>
                 </div>
 
@@ -486,7 +486,7 @@ ${typeInstructions[selectedType]}
                     <div className="flex items-center justify-between px-1">
                         <div>
                             <p className="text-xs font-semibold text-[#3a3350]">コミュニティに共有する</p>
-                            <p className="text-[10px] text-[#484550]/70">他の先生も閲覧できる公開教材として保存します</p>
+                            <p className="text-[10px] text-[#484550]/70">他の先生も閲覧できる公開テキストとして保存します</p>
                         </div>
                         <button
                             type="button"
@@ -500,7 +500,7 @@ ${typeInstructions[selectedType]}
 
                 {/* 生成ボタン（ライトでは使えない・2026-10-04 かずき決定） */}
                 {!generatedMaterial && !prepMaterial.loading && !prepMaterial.decision.allowed && (
-                    <PaidLock feature="今日の教材を作る" needsRegular={prepMaterial.decision.reason === 'needs_regular'} />
+                    <PaidLock feature="今日のテキストを作る" needsRegular={prepMaterial.decision.reason === 'needs_regular'} />
                 )}
                 {!generatedMaterial && (prepMaterial.loading || prepMaterial.decision.allowed) && (
                     <button
@@ -530,7 +530,7 @@ ${typeInstructions[selectedType]}
                             {materialSaved && (
                                 <span className="inline-flex items-center gap-1 text-xs font-bold text-[#386a20] bg-[#c3efad]/40 px-2.5 py-1 rounded-full">
                                     <CheckCircle2 size={12} />
-                                    教材として保存済み
+                                    テキストとして保存済み
                                 </span>
                             )}
                         </div>

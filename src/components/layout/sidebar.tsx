@@ -2,7 +2,7 @@
 
 /**
  * 左のナビ（画面案 2026-09-11：色＝E・書体＝E、ホーム＝Eの配置）
- * 上：文字の「ASTA」／中：ホーム・生徒・教材・設定・使い方の5つ／下：先生の名前とログアウト
+ * 上：文字の「ASTA」／中：ホーム・生徒・テキスト・設定・使い方の5つ／下：先生の名前とログアウト
  * 「使い方」はアプリの中のマニュアル（2026-10-09 かずき決定・9-4）
  */
 import React from 'react';
@@ -17,7 +17,7 @@ import { DISPLAY_NAME_EVENT } from '@/lib/display-name';
 const navItems = [
     { name: 'ホーム', href: '/', icon: Home },
     { name: '生徒', href: '/students', icon: GraduationCap },
-    { name: '教材', href: '/materials', icon: BookOpen },
+    { name: 'テキスト', href: '/materials', icon: BookOpen },
     { name: '設定', href: '/settings', icon: Settings },
     { name: '使い方', href: '/manual', icon: CircleHelp },
 ];

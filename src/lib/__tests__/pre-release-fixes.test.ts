@@ -43,7 +43,7 @@ describe('表示名（設定の画面で変える）', () => {
     });
 });
 
-describe('教材の検索', () => {
+describe('テキストの検索', () => {
     const items = [
         { title: 'N4動詞活用クイズ', tags: ['N4', '文法'], content: '問題1' },
         { title: '敬語ロールプレイ', tags: ['会話'], content: 'お客様' },

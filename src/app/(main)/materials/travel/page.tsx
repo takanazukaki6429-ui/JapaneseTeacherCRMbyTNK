@@ -6,11 +6,11 @@ import { MaterialsTabBar } from '../tab-bar';
 import { TRAVEL_LEVELS, travelLevel } from '@/lib/travel';
 
 /**
- * 旅行の教材の一覧（2026-10-09 かずき決定・9-2）。レベル → 場面のカード。
+ * 旅行のテキストの一覧（2026-10-09 かずき決定・9-2）。レベル → 場面のカード。
  * 全員に見せる（ライト・一般の先生も）。中身は content/travel/（保管庫は使わない）
  */
 
-/** みんなの教材のタブに鍵を付けるか（ライト・2026-10-04 かずき決定）。教科書の画面と同じ */
+/** みんなのテキストのタブに鍵を付けるか（ライト・2026-10-04 かずき決定）。教科書の画面と同じ */
 async function isCommunityLocked(): Promise<boolean> {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -28,7 +28,7 @@ export default async function TravelPage({ searchParams }: Props) {
     return (
         <div className="space-y-5">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold tracking-tight text-[#3a3350]">教材</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-[#3a3350]">テキスト</h1>
             </div>
 
             <MaterialsTabBar currentTab="travel" communityLocked={communityLocked} />

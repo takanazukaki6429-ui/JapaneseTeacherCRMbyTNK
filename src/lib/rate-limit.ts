@@ -119,7 +119,7 @@ export function getRequestIdentifier(req: Request): string {
 export const RATE_LIMIT_PRESETS = {
     /** 認証関連（signup/login）: 5回/分 */
     AUTH:     { limit: 5,  windowMs: 60_000 },
-    /** AI生成系（教材・翻訳・フィードバック）: 30回/分 */
+    /** AI生成系（テキスト・翻訳・フィードバック）: 30回/分 */
     AI:       { limit: 30, windowMs: 60_000 },
     /** 通常API: 60回/分 */
     GENERAL:  { limit: 60, windowMs: 60_000 },

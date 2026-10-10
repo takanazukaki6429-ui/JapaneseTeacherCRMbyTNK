@@ -52,7 +52,7 @@ export function AIProfileAnalyzer({ student }: AIProfileAnalyzerProps) {
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#efe9ff] text-[#6b5ca5] font-bold text-sm rounded-full hover:bg-[#dff1ea] hover:-translate-y-0.5 transition-all"
             >
                 <Sparkles size={15} />
-                教材・指導方針を提案
+                テキスト・指導方針を提案
             </button>
 
             {isOpen && (
@@ -62,7 +62,7 @@ export function AIProfileAnalyzer({ student }: AIProfileAnalyzerProps) {
                         <div className="px-5 py-4 bg-[#f0ebf8] flex items-center justify-between">
                             <h3 className="font-bold text-[#3a3350] flex items-center gap-2 text-sm">
                                 <Sparkles size={15} className="text-[#6b5ca5]" />
-                                AI教材・指導方針提案
+                                AIテキスト・指導方針提案
                             </h3>
                             <button onClick={() => setIsOpen(false)} className="p-1.5 hover:bg-[#efe9ff] rounded-full transition-colors">
                                 <X size={16} className="text-[#484550]" />
@@ -77,7 +77,7 @@ export function AIProfileAnalyzer({ student }: AIProfileAnalyzerProps) {
                                     <p className="text-sm font-medium text-[#484550] animate-pulse">
                                         {student.name}さんのプロフィールを分析中…
                                     </p>
-                                    <p className="text-xs text-[#484550]/60">最適な教材と指導方針を考えています</p>
+                                    <p className="text-xs text-[#484550]/60">最適なテキストと指導方針を考えています</p>
                                 </div>
                             ) : result ? (
                                 <>
@@ -90,11 +90,11 @@ export function AIProfileAnalyzer({ student }: AIProfileAnalyzerProps) {
                                         <p className="text-sm text-[#3a3350] leading-relaxed">{result.teaching_strategy}</p>
                                     </div>
 
-                                    {/* おすすめ教材 */}
+                                    {/* おすすめテキスト */}
                                     <div>
                                         <h4 className="font-bold text-[#3a3350] flex items-center gap-2 mb-3 text-sm">
                                             <BookOpen size={15} className="text-[#6b5ca5]" />
-                                            おすすめの教材
+                                            おすすめのテキスト
                                         </h4>
                                         <div className="grid gap-3 sm:grid-cols-2">
                                             {result.recommended_textbooks.map((book, i) => (

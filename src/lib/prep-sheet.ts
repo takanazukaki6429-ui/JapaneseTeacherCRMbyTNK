@@ -2,7 +2,7 @@
  * 授業前の1枚（2026-09-17 かずき決定：自動で作る）
  *
  * ASTAが、前回の授業記録から「今日の指針・復習クイズ・導入の話題・気をつけること」を作る。
- * - 作る・保存する・読み出すをここ1か所にまとめ、生徒の1枚（帯）と授業前の準備の画面が同じ物を使う
+ * - 作る・保存する・読み出すをここ1か所にまとめ、生徒情報（帯）と授業前の準備の画面が同じ物を使う
  * - 保存はこの端末の中（localStorage）。最新の授業記録の日付ごとに分けて持つので、新しい記録が入れば作り直される
  * - ライブ授業の「授業前のメモ」は、これまでどおり prep_content_<生徒> を読むので、その名前でも保存する
  *
@@ -36,7 +36,7 @@ export type FreeTalk = {
 };
 
 export type PrepSheet = {
-    /** 生徒の1枚の帯に出す一文（今日どう進めるか） */
+    /** 生徒情報の帯に出す一文（今日どう進めるか） */
     guide?: string;
     review_quiz: PrepQuiz[];
     intro_topic: string;
@@ -124,7 +124,7 @@ export function missingFreeTalk(sheet: PrepSheet, freeTalkAllowed: boolean): boo
 
 type LessonLike = { date: string; status?: string | null };
 
-/** 記録として扱う授業（予定ではなく、今より前）を新しい順に。生徒の1枚・ホームと同じ決め方 */
+/** 記録として扱う授業（予定ではなく、今より前）を新しい順に。生徒情報・ホームと同じ決め方 */
 export function pastLessons<T extends LessonLike>(rows: T[], now: Date = new Date()): T[] {
     const t = now.getTime();
     return rows
@@ -251,7 +251,7 @@ export function buildPrepSource(student: StudentLike, lessons: LessonRowLike[], 
     };
 }
 
-/** 予定ではない、今より前の記録を新しい順に5回分読む条件（生徒の1枚・ホームと同じ決め方） */
+/** 予定ではない、今より前の記録を新しい順に5回分読む条件（生徒情報・ホームと同じ決め方） */
 export function recentLessonsQuery(supabase: SupabaseClient, studentId: string, columns: string) {
     return supabase
         .from('lessons')
@@ -277,7 +277,7 @@ export async function fetchTalks(supabase: SupabaseClient, studentId: string, si
     return talksFromFlows(data as FlowRowLike[]);
 }
 
-/** 生徒の1枚の帯から作る時に、材料をまとめて読む。読めなければ null（呼ぶ側は今までの材料で作る） */
+/** 生徒情報の帯から作る時に、材料をまとめて読む。読めなければ null（呼ぶ側は今までの材料で作る） */
 export async function loadPrepSource(
     supabase: SupabaseClient,
     studentId: string,

@@ -130,7 +130,7 @@ export default function InitialHearingPage() {
     // 保存
     const [saving, setSaving] = useState(false);
 
-    // 教材生成モーダル
+    // テキスト生成モーダル
     const [showMaterialModal, setShowMaterialModal] = useState(false);
     const [selectedMaterialType, setSelectedMaterialType] = useState<MaterialContentType>('fill_in_blank');
     const [generatingMaterial, setGeneratingMaterial] = useState(false);
@@ -390,7 +390,7 @@ ${conversationNotes}`.trim();
         }
     };
 
-    // ── 教材生成 ──
+    // ── テキスト生成 ──
     const handleGenerateMaterial = async () => {
         if (!result || !student) return;
         setGeneratingMaterial(true);
@@ -763,7 +763,7 @@ ${conversationNotes}`.trim();
             </div>
         </div>
 
-        {/* ── 教材生成モーダル ── */}
+        {/* ── テキスト生成モーダル ── */}
         {showMaterialModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
                 <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
@@ -774,7 +774,7 @@ ${conversationNotes}`.trim();
                                 <BookOpen size={16} />
                                 ロードマップ保存完了！
                             </p>
-                            <p className="text-xs text-white/80 mt-0.5">初回教材を今すぐ生成しますか？</p>
+                            <p className="text-xs text-white/80 mt-0.5">初回テキストを今すぐ生成しますか？</p>
                         </div>
                         <button
                             onClick={handleModalClose}
@@ -787,7 +787,7 @@ ${conversationNotes}`.trim();
                     <div className="p-6 space-y-5">
                         {!generatedMaterial ? (
                             <>
-                                {/* 教材タイプ選択 */}
+                                {/* テキストタイプ選択 */}
                                 <div className="space-y-2">
                                     {(Object.entries(MATERIAL_TYPES) as [MaterialContentType, typeof MATERIAL_TYPES[MaterialContentType]][]).map(([type, info]) => (
                                         <button
@@ -861,7 +861,7 @@ ${conversationNotes}`.trim();
                                 </div>
                                 {materialSaved && (
                                     <p className="text-xs text-center text-green-600 flex items-center justify-center gap-1">
-                                        <CheckCircle2 size={12} /> 教材ライブラリに保存しました
+                                        <CheckCircle2 size={12} /> テキストライブラリに保存しました
                                     </p>
                                 )}
                                 <button

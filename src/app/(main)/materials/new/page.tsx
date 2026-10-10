@@ -56,11 +56,11 @@ export default function NewMaterialPage() {
             <div className="flex items-center gap-3">
                 <Link href="/materials" className="inline-flex items-center gap-1.5 text-sm text-[#484550] hover:text-[#3a3350] transition-colors">
                     <ArrowLeft size={16} />
-                    教材一覧
+                    テキスト一覧
                 </Link>
             </div>
 
-            <h1 className="text-2xl font-bold tracking-tight text-[#3a3350]">新規教材作成</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-[#3a3350]">新規テキスト作成</h1>
 
             <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] space-y-6">
 
@@ -144,7 +144,7 @@ export default function NewMaterialPage() {
                                 {formData.is_public ? '全ユーザーに公開' : '自分のみ（非公開）'}
                             </p>
                             <p className="text-xs text-[#484550]">
-                                {formData.is_public ? 'みんなの教材ライブラリに表示されます' : '公開すると他の先生も閲覧できます'}
+                                {formData.is_public ? 'みんなのテキストライブラリに表示されます' : '公開すると他の先生も閲覧できます'}
                             </p>
                         </div>
                     </div>

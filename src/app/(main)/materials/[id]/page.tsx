@@ -13,8 +13,8 @@ import type { FeatureDecision } from '@/lib/plan-features';
 export const revalidate = 0;
 
 /**
- * ほかの先生の教材（みんなの教材）を開けるか。ライトでは自分の教材だけ（2026-10-04 かずき決定・lib/plan-features.ts）。
- * 自分の教材か（isOwner）も返す：公開の切り替えと削除は、作った本人にだけ出す（2026-10-09。前はほかの先生の教材にも出て、押しても変わらなかった）
+ * ほかの先生のテキスト（みんなのテキスト）を開けるか。ライトでは自分のテキストだけ（2026-10-04 かずき決定・lib/plan-features.ts）。
+ * 自分のテキストか（isOwner）も返す：公開の切り替えと削除は、作った本人にだけ出す（2026-10-09。前はほかの先生のテキストにも出て、押しても変わらなかった）
  */
 async function getViewerDecision(authorId: string | null | undefined): Promise<{ decision: FeatureDecision; isOwner: boolean }> {
     const supabase = await createClient();
@@ -43,9 +43,9 @@ export default async function MaterialDetailPage({ params }: Props) {
             <div className="max-w-3xl mx-auto space-y-5">
                 <Link href="/materials" className="inline-flex items-center gap-1.5 text-sm text-[#484550] hover:text-[#3a3350] transition-colors">
                     <ArrowLeft size={16} />
-                    教材一覧
+                    テキスト一覧
                 </Link>
-                <PaidLock feature="みんなの教材" needsRegular={viewer.reason === 'needs_regular'} />
+                <PaidLock feature="みんなのテキスト" needsRegular={viewer.reason === 'needs_regular'} />
             </div>
         );
     }
@@ -60,7 +60,7 @@ export default async function MaterialDetailPage({ params }: Props) {
                         className="inline-flex items-center gap-1.5 text-sm text-[#484550] hover:text-[#3a3350] transition-colors"
                     >
                         <ArrowLeft size={16} />
-                        教材一覧
+                        テキスト一覧
                     </Link>
                 </div>
                 {isOwner ? (
@@ -70,7 +70,7 @@ export default async function MaterialDetailPage({ params }: Props) {
                     </div>
                 ) : (
                     <span className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold bg-[#efe9ff] text-[#6b5ca5] rounded-full">
-                        <Globe size={12} /> ほかの先生が公開した教材
+                        <Globe size={12} /> ほかの先生が公開したテキスト
                     </span>
                 )}
             </div>

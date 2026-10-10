@@ -12,7 +12,7 @@ export type Lesson = {
     understanding_level: number | null; // 1-5
     homework: string | null;
     next_goal: string | null;
-    materials: string | null;   // 使用教材
+    materials: string | null;   // 使用テキスト
     ai_log: Database['public']['Tables']['lessons']['Row']['ai_log'];         // JSONB type for AI logs
     // Status for scheduling
     status?: 'scheduled' | 'completed' | 'cancelled';

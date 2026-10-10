@@ -49,7 +49,7 @@ export default function StudentRoadmapPage() {
         if (student) setShareLocale(roadmapLocaleForNationality(student.nationality));
     }, [student]);
 
-    // 生徒の1枚の「生徒に渡す」から来たとき（?share=1）は、渡す欄を最初から開く（2026-09-13）
+    // 生徒情報の「生徒に渡す」から来たとき（?share=1）は、渡す欄を最初から開く（2026-09-13）
     useEffect(() => {
         if (new URLSearchParams(window.location.search).get('share') === '1') setShareOpen(true);
     }, []);
@@ -453,11 +453,11 @@ export default function StudentRoadmapPage() {
                                             </p>
                                         </div>
 
-                                        {/* 教材 */}
+                                        {/* テキスト */}
                                         {milestone.textbooks && milestone.textbooks.length > 0 && (
                                             <div className="space-y-1.5 pt-2 border-t border-[#f0ebf8]">
                                                 <p className="text-xs font-bold text-[#484550] flex items-center gap-1.5">
-                                                    <BookText className="w-3.5 h-3.5 text-[#6b5ca5]" /> おすすめ教材
+                                                    <BookText className="w-3.5 h-3.5 text-[#6b5ca5]" /> おすすめテキスト
                                                 </p>
                                                 <div className="flex flex-wrap gap-1.5">
                                                     {milestone.textbooks.map((item: string, i: number) => (

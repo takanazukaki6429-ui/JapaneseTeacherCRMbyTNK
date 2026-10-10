@@ -24,7 +24,7 @@ function jaTexts(sc: TravelScene): string[] {
     ];
 }
 
-describe('旅行の教材 レベル1（2026-10-09 かずき決定の5場面）', () => {
+describe('旅行のテキスト レベル1（2026-10-09 かずき決定の5場面）', () => {
     it('5場面：空港・ホテル・レストラン・買い物・電車と道', () => {
         expect(LEVEL1.level).toBe(1);
         expect(LEVEL1.scenes.map(s => s.id)).toEqual(['airport', 'hotel', 'restaurant', 'shopping', 'train']);

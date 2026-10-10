@@ -1079,7 +1079,7 @@ export default function LiveLessonPage() {
     const RAIL = [
         { name: 'ホーム', href: '/', Icon: Home },
         { name: '生徒', href: '/students', Icon: GraduationCap },
-        { name: '教材', href: '/materials', Icon: BookOpen },
+        { name: 'テキスト', href: '/materials', Icon: BookOpen },
         { name: '設定', href: '/settings', Icon: Settings },
     ];
     // 絵は料金プランに入れない（2026-09-23 かずき決定・案B＝絵0）。環境変数 NEXT_PUBLIC_ILLUST_ENABLED=1 のときだけボタンを出す

@@ -30,6 +30,35 @@ function downloadCSV(csv: string, filename: string) {
     URL.revokeObjectURL(url);
 }
 
+/**
+ * 設定の画面の枠と行（2026-10-10：画面の外に出した）。
+ * 前は画面の中で作っていたので、文字を1つ入れる・消すたびに作り直され、入力欄から文字を入れる場所が外れていた
+ * （表示名・パスワードの欄で、1文字ずつしか操作できなかった）
+ */
+function SectionCard({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+    return (
+        <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] overflow-hidden">
+            <div className="px-5 py-3.5 bg-[#f0ebf8] flex items-center gap-2.5">
+                {icon}
+                <h2 className="font-bold text-sm text-[#3a3350]">{title}</h2>
+            </div>
+            <div className="p-6">{children}</div>
+        </div>
+    );
+}
+
+function RowItem({ label, desc, action }: { label: string; desc: string; action: React.ReactNode }) {
+    return (
+        <div className="flex items-center justify-between py-3 border-b border-[#f0ebf8] last:border-0">
+            <div>
+                <p className="text-sm font-semibold text-[#3a3350]">{label}</p>
+                <p className="text-xs text-[#484550] mt-0.5">{desc}</p>
+            </div>
+            {action}
+        </div>
+    );
+}
+
 export default function SettingsPage() {
     const supabase = createClient();
     const router = useRouter();
@@ -166,26 +195,6 @@ export default function SettingsPage() {
         );
     }
 
-    const SectionCard = ({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) => (
-        <div className="bg-white rounded-2xl shadow-[0_0_40px_rgba(107,92,165,0.06)] overflow-hidden">
-            <div className="px-5 py-3.5 bg-[#f0ebf8] flex items-center gap-2.5">
-                {icon}
-                <h2 className="font-bold text-sm text-[#3a3350]">{title}</h2>
-            </div>
-            <div className="p-6">{children}</div>
-        </div>
-    );
-
-    const RowItem = ({ label, desc, action }: { label: string; desc: string; action: React.ReactNode }) => (
-        <div className="flex items-center justify-between py-3 border-b border-[#f0ebf8] last:border-0">
-            <div>
-                <p className="text-sm font-semibold text-[#3a3350]">{label}</p>
-                <p className="text-xs text-[#484550] mt-0.5">{desc}</p>
-            </div>
-            {action}
-        </div>
-    );
-
     return (
         <div className="max-w-3xl mx-auto space-y-5 pb-12">
             <div>
@@ -299,7 +308,7 @@ export default function SettingsPage() {
             <SectionCard icon={<AlertTriangle size={16} className="text-[#ba1a1a]" />} title="危険な操作">
                 <RowItem
                     label="アカウントを削除"
-                    desc="すべての生徒情報・レッスン記録・教材データが削除されます。元に戻せません。契約中・お試し中の契約も、その場で止まります"
+                    desc="すべての生徒情報・レッスン記録・テキストデータが削除されます。元に戻せません。契約中・お試し中の契約も、その場で止まります"
                     action={
                         <button
                             onClick={() => { setDeleteOpen(true); setDeleteError(''); setDeleteConfirm(''); }}
@@ -320,7 +329,7 @@ export default function SettingsPage() {
                         <ul className="text-xs text-[#ba1a1a]/80 mb-4 list-disc pl-5 space-y-0.5">
                             <li>登録生徒のすべての情報</li>
                             <li>レッスン記録・宿題履歴</li>
-                            <li>作成した教材・AI生成データ</li>
+                            <li>作成したテキスト・AI生成データ</li>
                             <li>個人プロフィール・設定情報</li>
                         </ul>
                         <p className="text-xs text-[#ba1a1a]/80 mb-3 leading-relaxed">

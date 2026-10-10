@@ -121,7 +121,7 @@ export function GuidePanel({ collapsed = false, prepContent, lessonId, onLessonC
     const selected = lessons.find(l => l.id === lessonId);
 
     // 本文の見た目を整える：画像参照と記号を落として読める文にする。
-    // 教材の原文は生徒向けでふりがな（漢字（かんじ））が埋まっているが、
+    // テキストの原文は生徒向けでふりがな（漢字（かんじ））が埋まっているが、
     // この台本を読むのは日本人の先生なので落とす（2026-08-25 かずき指摘）。
     // 直前が漢字＋括弧内がひらがなのみ、の組だけを消すので、
     // 練習問題の選択肢（あ）（い）や英語の併記（English）は消えない

@@ -151,7 +151,7 @@ export function EditStudentForm({ student }: EditStudentFormProps) {
                         学習計画は、学習計画の画面の「目標・期間・目的を直す」で直す */}
                     <div>
                         <label htmlFor="textbook" className="block text-xs font-bold text-[#484550] uppercase tracking-wider mb-1.5">
-                            使用教材
+                            使用テキスト
                         </label>
                         <input
                             type="text"

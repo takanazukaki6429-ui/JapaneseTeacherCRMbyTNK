@@ -33,7 +33,7 @@ type Mode = 'fast' | 'quality';
 //   きれい版（gpt-image-2）は自動では作らず、先生が絵のカードのボタンで頼んだ時だけ作る
 const FAST_MODEL = 'gemini-3.1-flash-lite-image';
 
-// 教材の画像は文字が崩れると使い物にならない（誤った日本語を生徒に見せることになる）ため、
+// テキストの画像は文字が崩れると使い物にならない（誤った日本語を生徒に見せることになる）ため、
 // 指示文でも文字の正確さを最優先で要求する
 function buildPrompt(params: {
     level: string | null;

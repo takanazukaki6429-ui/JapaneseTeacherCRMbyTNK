@@ -35,14 +35,14 @@ export function StudentMaterials({ studentId, studentName }: StudentMaterialsPro
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-bold text-[#3a3350] flex items-center gap-2">
                     <BookOpen size={16} className="text-[#6b5ca5]" />
-                    {studentName}さんの教材
+                    {studentName}さんのテキスト
                 </h2>
                 {materials.length > 0 && (
                     <Link
                         href="/materials"
                         className="text-xs text-[#6b5ca5] hover:text-[#484550] transition-colors flex items-center gap-1"
                     >
-                        教材一覧へ
+                        テキスト一覧へ
                         <ArrowRight size={12} />
                     </Link>
                 )}
@@ -54,7 +54,7 @@ export function StudentMaterials({ studentId, studentName }: StudentMaterialsPro
                 </div>
             ) : materials.length === 0 ? (
                 <div className="text-center py-5">
-                    <p className="text-xs text-[#484550] mb-3">まだ専用教材がありません</p>
+                    <p className="text-xs text-[#484550] mb-3">まだ専用テキストがありません</p>
                     <Link
                         href={`/students/${studentId}/lessons/prepare`}
                         className="inline-flex items-center gap-1.5 text-xs font-bold text-[#6b5ca5] bg-[#efe9ff] px-3 py-1.5 rounded-full hover:bg-[#dff1ea] transition-colors"
@@ -88,7 +88,7 @@ export function StudentMaterials({ studentId, studentName }: StudentMaterialsPro
                         href={`/students/${studentId}/lessons/prepare`}
                         className="flex items-center justify-center gap-1.5 w-full py-2 text-xs text-[#6b5ca5] hover:text-[#484550] transition-colors border border-dashed border-[#d6cfe2]/60 rounded-xl hover:border-[#6b5ca5]/30"
                     >
-                        + 新しい教材を生成
+                        + 新しいテキストを生成
                     </Link>
                 </div>
             )}
