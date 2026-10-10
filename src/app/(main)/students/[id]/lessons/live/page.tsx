@@ -218,6 +218,8 @@ export default function LiveLessonPage() {
     const [selectedLessonId, setSelectedLessonId] = useState('');
     // 下の段の「旅行」で開く、場面を選ぶ枠（2026-10-09）
     const [travelPickerOpen, setTravelPickerOpen] = useState(false);
+    // 旅行の場面を選ぶ枠で見るレベル（2026-10-10：場面が20になったので、レベルごとに分けて出す）
+    const [travelPickerLevel, setTravelPickerLevel] = useState(1);
     const handleLessonChange = useCallback((id: string) => setSelectedLessonId(id), []);
     // イラストは案C（2026-08-16 かずき決定）：1ボタンで速い絵を先に出し、
     // 裏で丁寧な絵も作って「差し替える？」と提案する。先生はモードを選ばない。
@@ -1094,9 +1096,9 @@ export default function LiveLessonPage() {
           busy: materialBusy === 'exercises', disabled: materialBusy !== null, onClick: () => makeMaterial('exercises'), tip: improviseLocked ? NEEDS_REGULAR_MESSAGE : MATERIAL_MODES.exercises.hint, locked: improviseLocked },
         { key: 'explain', title: 'やさしく言い換え', hint: improviseLocked ? 'レギュラー以上のプラン' : MATERIAL_MODES.explain.hint, Icon: Repeat2, tile: 'bg-[#dff1ea] text-[#2a6f5a] group-hover:bg-[#2a6f5a]',
           busy: materialBusy === 'explain', disabled: materialBusy !== null, onClick: () => makeMaterial('explain'), tip: improviseLocked ? NEEDS_REGULAR_MESSAGE : MATERIAL_MODES.explain.hint, locked: improviseLocked },
-        // 旅行（2026-10-09 かずき決定・9-2）：場面を選ぶと、フレーズ・使う場面・会話・穴埋めのカードが授業の流れに入る。全員が使える
+        // 旅行（2026-10-09 かずき決定・9-2・10-10 充実）：場面を選ぶと、フレーズ・使う場面・会話・文化のひとこと・穴埋めのカードが授業の流れに入る。全員が使える
         { key: 'travel', title: '旅行', hint: '場面のフレーズ・会話・穴埋め', Icon: Plane, tile: 'bg-[#fdf6e7] text-[#8a6d1f] group-hover:bg-[#8a6d1f]',
-          busy: false, disabled: false, onClick: () => setTravelPickerOpen(o => !o), tip: '旅行の場面を選ぶと、フレーズ・使う場面・会話・穴埋めのカードが授業の流れに入ります' },
+          busy: false, disabled: false, onClick: () => setTravelPickerOpen(o => !o), tip: '旅行の場面を選ぶと、フレーズ・使う場面・会話・文化のひとこと・穴埋めのカードが授業の流れに入ります' },
     ];
 
     return (
@@ -1527,9 +1529,22 @@ export default function LiveLessonPage() {
                                             <X size={16} />
                                         </button>
                                     </div>
-                                    {TRAVEL_LEVELS.filter(l => l.scenes.length > 0).map(l => (
+                                    {/* レベルの切り替え（場面があるレベルだけ） */}
+                                    <div className="flex flex-wrap gap-1.5 mb-2">
+                                        {TRAVEL_LEVELS.filter(l => l.scenes.length > 0).map(l => (
+                                            <button
+                                                key={l.level}
+                                                onClick={() => setTravelPickerLevel(l.level)}
+                                                className={`px-3 py-1 rounded-full text-[12px] font-bold border transition-colors ${travelPickerLevel === l.level
+                                                    ? 'bg-[#8a6d1f] text-white border-[#8a6d1f]'
+                                                    : 'bg-white text-[#8a6d1f] border-[#ecd9a8] hover:bg-[#fdf6e7]'}`}
+                                            >
+                                                {l.label}<span className="ml-1 font-normal">{l.note}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {TRAVEL_LEVELS.filter(l => l.scenes.length > 0 && l.level === travelPickerLevel).map(l => (
                                         <div key={l.level} className="mb-1 last:mb-0">
-                                            <p className="text-[12px] text-[#6f6884] mb-1">{l.label}（{l.note}）</p>
                                             <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
                                                 {l.scenes.map(sc => (
                                                     <button
