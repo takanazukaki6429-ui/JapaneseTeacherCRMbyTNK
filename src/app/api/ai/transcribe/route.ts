@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { canUseApp, READ_ONLY_MESSAGE } from '@/lib/plan-access-server';
 import { notifyAdmin } from '@/lib/notify';
 import { getTranslationQuota } from '@/lib/translation-quota';
+import { buildGeminiSttPrompt, isJapaneseSpeech, parseSttLines } from '@/lib/stt-lines';
 
 // 生徒の声の日本語訳は 3.1 Flash-Lite（2026-09-22 かずき決定「一番原価を抑える組み合わせ」）。
 // Google の翻訳は $20/100万文字（月50万文字までは ASTA 全体で無料）で1文¥0.2、Lite は1文¥0.006。
@@ -18,28 +19,19 @@ const TRANSLATE_MODEL = 'gemini-3.1-flash-lite';
 //   3.1 Flash-Lite は雑音から「先生、おはようございます。」等を作った（17本中10本）ので使わない
 //   2026-07-12 に Gemini を外した理由（不明瞭な音から会話を捏造）は、この指示と 3.5 Lite の組み合わせでは再現しなかった
 // Vercel の環境変数 STT_ENGINE=google で Chirp 3＋訳に戻せる（コード変更なし）。Gemini 側が失敗した時も Chirp 3 でやり直す
+// 2026-10-11 かずき決定（原価を下げる直し）：答えを JSON から「O:」「J:」の2行の文に替えた（理由と試験の結果は lib/stt-lines.ts）
 const STT_ENGINE: 'gemini' | 'google' = process.env.STT_ENGINE === 'google' ? 'google' : 'gemini';
 const GEMINI_STT_MODEL = 'gemini-3.5-flash-lite';
 const GEMINI_STT_TIMEOUT_MS = 12000;
 
-function buildGeminiSttPrompt(studentLanguage: string, context: string): string {
-    const contextLine = context
-        ? `\nThe student's previous segment (already transcribed) was: "${context}". This audio may continue that sentence. Put ONLY this audio's words in "original", but make "japanese" the natural Japanese translation of the previous segment and this audio combined.`
-        : '';
-    return `This audio is a short segment of a language student speaking to their Japanese teacher during an online lesson. The student's native language is ${studentLanguage}; they may also speak English or Japanese.
-Transcribe EXACTLY what is said (keep the original language), then translate it into natural Japanese.${contextLine}
-Also report the language of the speech as a 2-letter code in "language" (e.g. "en", "ja", "es").
-If there is no clear human speech (silence, noise, music, unintelligible sound), output exactly: {"original":"","japanese":"","language":""}
-Never guess or invent words that are not clearly audible. If only part of a sentence is audible, transcribe only that part.
-IMPORTANT: Fabrication is the worst possible failure. Background noise, hiss, hum, wind, static, or music is NOT speech. When in doubt, output empty strings. It is always better to output nothing than to invent a sentence.
-Output ONLY JSON: {"original":"...","japanese":"...","language":".."}`;
-}
+class GeminiSttTimeout extends Error {}
 
 async function transcribeWithGemini(audioBytes: Buffer, mimeType: string, studentLanguage: string, context: string): Promise<TranscribeResult> {
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error('GEMINI_API_KEY is not set');
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), GEMINI_STT_TIMEOUT_MS);
+    let raw: string;
     try {
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_STT_MODEL}:generateContent?key=${key}`, {
             method: 'POST',
@@ -50,24 +42,34 @@ async function transcribeWithGemini(audioBytes: Buffer, mimeType: string, studen
                     { text: buildGeminiSttPrompt(studentLanguage, context) },
                     { inlineData: { mimeType, data: audioBytes.toString('base64') } },
                 ] }],
-                generationConfig: { responseMimeType: 'application/json' },
+                generationConfig: { responseMimeType: 'text/plain' },
             }),
         });
         if (!res.ok) throw new Error(`gemini stt ${res.status}`);
         const data = await res.json();
-        const raw = (data?.candidates?.[0]?.content?.parts ?? []).map((p: { text?: string }) => p.text ?? '').join('');
-        const parsed = JSON.parse(raw) as { original?: string; japanese?: string; language?: string };
-        const original = String(parsed.original ?? '').trim();
-        const language = String(parsed.language ?? '').toLowerCase();
-        if (!original) return { original: '', japanese: '', merged: false, engine: GEMINI_STT_MODEL };
-        const isJapanese = language.startsWith('ja');
-        // 生徒が日本語で話した時は原文＝訳（翻訳モードの画面側の扱いに合わせる）
-        const merged = context ? `${context} ${original}` : original;
-        const japanese = isJapanese ? (context ? tidyJapaneseSpacing(merged) : tidyJapaneseSpacing(original)) : String(parsed.japanese ?? '').trim();
-        return { original: isJapanese ? tidyJapaneseSpacing(merged) : merged, japanese: japanese || merged, merged: !!context, engine: GEMINI_STT_MODEL };
+        raw = (data?.candidates?.[0]?.content?.parts ?? []).map((p: { text?: string }) => p.text ?? '').join('');
+    } catch (err) {
+        if (controller.signal.aborted) throw new GeminiSttTimeout('gemini stt timeout');
+        throw err;
     } finally {
         clearTimeout(timer);
     }
+    const parsed = parseSttLines(raw);
+    if (!parsed) throw new Error('gemini stt: answer without the O: line');
+    const original = parsed.original;
+    // 声が無かった回も記録で数えられるよう、使った物の名前に印を付ける（雑音で送った量を測るため）
+    if (!original) return { original: '', japanese: '', merged: false, engine: `${GEMINI_STT_MODEL}:empty` };
+    const merged = context ? `${context} ${original}` : original;
+    // 生徒が日本語で話した時は原文＝訳（翻訳モードの画面側の扱いに合わせる）
+    if (isJapaneseSpeech(original)) {
+        const ja = tidyJapaneseSpacing(merged);
+        return { original: ja, japanese: ja, merged: !!context, engine: GEMINI_STT_MODEL };
+    }
+    if (parsed.japanese) return { original: merged, japanese: parsed.japanese, merged: !!context, engine: GEMINI_STT_MODEL };
+    // 訳の行が抜けた（試験では英語の声60回中1〜2回）：文字だけを 3.1 Flash-Lite で訳す（1回約¥0.006）
+    const sourceLanguage = studentLanguage === 'English' ? 'English' : `${studentLanguage} or English`;
+    const { japanese, engine } = await translateToJapanese(merged, sourceLanguage);
+    return { original: merged, japanese, merged: !!context, engine: `${GEMINI_STT_MODEL}+${engine}` };
 }
 
 async function translateToJapanese(text: string, sourceLanguage: string): Promise<{ japanese: string; engine: string }> {
@@ -327,11 +329,15 @@ export async function POST(req: NextRequest) {
 
         let result: TranscribeResult | null = null;
         if (STT_ENGINE === 'gemini') {
-            try {
-                result = await transcribeWithGemini(audioBuffer, audioBlob.type || 'audio/webm', studentLanguage, context);
-            } catch (err) {
-                // 時間切れ・形式の崩れ・上限など。翻訳モードを止めないよう Chirp 3 でやり直す
-                console.error('[transcribe] gemini stt failed, falling back to google:', err instanceof Error ? err.message : err);
+            // 形の崩れ・一時的な失敗の時は、約5倍の単価の Chirp 3 に回す前に Gemini でもう1回（2026-10-11 かずき決定）。
+            // 時間切れの時はやり直さない（もう12秒待たせるより、Chirp 3 の方が早く返る）
+            for (let attempt = 1; attempt <= 2 && !result; attempt++) {
+                try {
+                    result = await transcribeWithGemini(audioBuffer, audioBlob.type || 'audio/webm', studentLanguage, context);
+                } catch (err) {
+                    console.error(`[transcribe] gemini stt failed (attempt ${attempt}):`, err instanceof Error ? err.message : err);
+                    if (err instanceof GeminiSttTimeout) break;
+                }
             }
         }
         if (!result) result = await transcribeWithGoogle(audioBuffer, studentLanguage, context);
