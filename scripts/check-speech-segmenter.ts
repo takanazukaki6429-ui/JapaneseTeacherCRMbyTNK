@@ -2,6 +2,7 @@
 // 実行：node scripts/check-speech-segmenter.ts（Node 22.6+ の型消去で動く。テスト基盤は入れていない）
 // 音量の時系列を50msごとに流し、いつ・どう区切るかを8場面で確かめる（2026-09-06）
 
+import { readFileSync } from 'node:fs';
 import { SpeechSegmenter } from '../src/lib/speech-segmenter.ts';
 
 const TICK = 50;
@@ -69,12 +70,23 @@ function check(name: string, ok: boolean, detail: string) {
     check('話し始めは捨てない', ev.length === 1 && ev[0].action === 'send' && ev[0].t === 4500, JSON.stringify(ev));
 }
 // 8. 雑音床の追従：うるさい部屋（0.006）では、それより少し大きいだけの音は声にしない
+//    （2026-10-11：雑音床は直近20秒の一番小さい音量。始めの20秒は上げないので、25秒流して見る）
 {
     const seg = new SpeechSegmenter(0);
     let t = 0;
-    for (let k = 0; k < 100; k++) { t += TICK; seg.push(0.006, t); }
+    for (let k = 0; k < 500; k++) { t += TICK; seg.push(0.006, t); }
     const th = seg.threshold;
     check('雑音床に追従してしきい値が上がる', th > 0.02 && th < 0.03, `threshold=${th.toFixed(4)}`);
+}
+// 9. 雑音を混ぜた日本語の話（実際の音声の音量・2026-10-11 かずき指摘「一部省略される」の再現）：
+//    以前の作りは、声のすき間の音で雑音床が声の大きさまで上がり、6.7秒より後の声を捨てていた → 話している間は1回も捨てないこと
+{
+    const fx = JSON.parse(readFileSync(new URL('../src/lib/__tests__/fixtures/segmenter-noisy-speech.json', import.meta.url), 'utf8'));
+    const seg = new SpeechSegmenter(0);
+    const events: Event[] = [];
+    fx.rms.forEach((rms: number, k: number) => { const t = (k + 1) * TICK; const a = seg.push(rms, t); if (a) { events.push({ t, action: a }); seg.reset(t); } });
+    const during = events.filter(e => e.t <= fx.speechEndMs + 700);
+    check('雑音の上の声を捨てない', during.length > 0 && during.every(e => e.action === 'send'), JSON.stringify(events));
 }
 
 console.log(failed === 0 ? '\n全て合格' : `\n${failed}件 不合格`);

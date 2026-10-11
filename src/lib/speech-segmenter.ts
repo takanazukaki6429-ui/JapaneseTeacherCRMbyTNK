@@ -13,7 +13,10 @@
  *  - 声が続いても softMaxMs（8秒）を超えたら、次の小さな息継ぎ（softDipMs 0.25秒）で区切る
  *  - hardMaxMs（12秒）を超えたら無条件に区切る
  *  - 区切った区間に声が minSpeechMs（0.3秒）未満しか無ければ雑音とみなして捨てる
- *  - 「声」のしきい値は雑音床（静かな時の平均音量）に合わせて自動で追従する
+ *  - 「声」のしきい値は雑音床に合わせて自動で追従する。雑音床＝直近20秒の一番小さい音量（2026-10-11 に変更）
+ *    以前は「声でないと判定した音」の平均で雑音床を上げていたため、雑音や音楽が混ざると、
+ *    声のすき間の音で雑音床が声の大きさまで上がり続け、声を無音とみなして2.5秒ごとに捨てていた
+ *    （かずき指摘「日本語の内容が一部省略される」・雑音を混ぜた音声で再現：8秒より後の声が全部捨てられた）
  *
  * しきい値の初期値は Zoom 等のタブ音声を想定した経験値で、実機未検証（2026-09-06）。
  */
@@ -27,6 +30,7 @@ export type SegmenterConfig = {
     hardMaxMs: number;
     minThreshold: number;   // 雑音床が低くても、これ未満の音量は声とみなさない
     floorRatio: number;     // 雑音床の何倍を超えたら声とみなすか
+    floorWindowMs: number;  // 雑音床を見る長さ（この間の一番小さい音量を雑音床にする）
 };
 
 export const DEFAULT_SEGMENTER_CONFIG: SegmenterConfig = {
@@ -38,6 +42,7 @@ export const DEFAULT_SEGMENTER_CONFIG: SegmenterConfig = {
     hardMaxMs: 12000,
     minThreshold: 0.01,
     floorRatio: 4,
+    floorWindowMs: 20000,
 };
 
 /** 'send' = 区切って送る／'discard' = 区切るが捨てる／null = 続ける */
@@ -50,11 +55,15 @@ export class SpeechSegmenter {
     private speechMs = 0;
     private lastSpeechAt: number | null = null;
     private noiseFloor: number;
+    private readonly startedAt: number;
+    /** 直近の音量（雑音床を求めるため。区切っても引き継ぐ） */
+    private history: { at: number; rms: number }[] = [];
 
     constructor(now: number, cfg: Partial<SegmenterConfig> = {}) {
         this.cfg = { ...DEFAULT_SEGMENTER_CONFIG, ...cfg };
         this.segStart = now;
         this.lastAt = now;
+        this.startedAt = now;
         this.noiseFloor = this.cfg.minThreshold / this.cfg.floorRatio;
     }
 
@@ -75,14 +84,19 @@ export class SpeechSegmenter {
     push(rms: number, now: number): SegmentAction {
         const dt = Math.max(0, now - this.lastAt);
         this.lastAt = now;
+        // 雑音床＝直近 floorWindowMs（20秒）の一番小さい音量。声のすき間には雑音だけの瞬間があるので、
+        // 声が続いても雑音床は雑音の大きさに留まる（20秒すき間なく話し続けることは無い前提）。
+        // 始めの20秒は、初めの値より上げない（話し始めから声を雑音床に入れないため）
+        this.history.push({ at: now, rms });
+        while (this.history.length && this.history[0].at <= now - this.cfg.floorWindowMs) this.history.shift();
+        const windowMin = Math.min(...this.history.map(h => h.rms));
+        const initialFloor = this.cfg.minThreshold / this.cfg.floorRatio;
+        this.noiseFloor = now - this.startedAt < this.cfg.floorWindowMs ? Math.min(initialFloor, windowMin) : windowMin;
         const isSpeech = rms > this.threshold;
 
         if (isSpeech) {
             this.speechMs += dt;
             this.lastSpeechAt = now;
-        } else {
-            // 静かな瞬間だけで雑音床を更新（ゆっくり追従）。声は床に入れない
-            this.noiseFloor = this.noiseFloor * 0.95 + rms * 0.05;
         }
 
         const elapsed = now - this.segStart;

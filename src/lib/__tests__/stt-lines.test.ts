@@ -46,6 +46,7 @@ describe('翻訳モードの答えの読み取り（2026-10-11 かずき決定�
         expect(p).toContain('J: the natural Japanese translation. If the speech is Japanese, leave J empty.');
         expect(p).toContain('IMPORTANT: Fabrication is the worst possible failure.');
         expect(p).not.toContain('JSON');
+        expect(p).not.toContain('When in doubt');   // 雑音の上の声を空にしてしまうため消した（2026-10-11）
         const withContext = buildGeminiSttPrompt('English', 'On Saturday,');
         expect(withContext.startsWith(p)).toBe(true);
         expect(withContext).toContain('was: "On Saturday,"');

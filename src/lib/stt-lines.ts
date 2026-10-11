@@ -10,6 +10,9 @@
  * 「O:」「J:」の札を付けた2行の文で書かせる形にすると、記号書き0・捏造0（声なし17本×6回）・
  * 聞き取りの誤りは今と同じで、声のある音声1分あたりの費用が ¥0.78 → ¥0.40 になった。
  * 指示文を短くした版は、雑音から「Sensei, thank you.」などを作った（51回中3回）ので使わない。
+ * 2026-10-11（かずき指摘「日本語の内容が一部省略される」）：「迷ったら両方空に」の一文を消した。
+ * 雑音の上の話（12秒前後の区切り）で、この一文があると空を返した（40回中5回）。消すと0回（64回）、
+ * 声の無い音でのでっちあげは0回のまま（102回）。前の JSON の頼み方は0回だった＝今日の書き方の変更で出た悪化を戻した
  */
 
 /** 生徒の声1切れに付ける指示（試験で通った文そのまま。文脈は最後に足す） */
@@ -23,7 +26,7 @@ O: the exact transcript of what is said (keep the original language)
 J: the natural Japanese translation. If the speech is Japanese, leave J empty.
 If there is no clear human speech (silence, noise, music, unintelligible sound), answer "O:" and "J:" with nothing after them.
 Never guess or invent words that are not clearly audible. If only part of a sentence is audible, transcribe only that part.
-IMPORTANT: Fabrication is the worst possible failure. Background noise, hiss, hum, wind, static, or music is NOT speech. When in doubt, leave both empty. It is always better to output nothing than to invent a sentence.${contextLine}`;
+IMPORTANT: Fabrication is the worst possible failure. Background noise, hiss, hum, wind, static, or music is NOT speech. It is always better to output nothing than to invent a sentence.${contextLine}`;
 }
 
 /**
