@@ -1135,7 +1135,8 @@ export default function LiveLessonPage() {
 
                 {/* 上の帯 */}
                 <header className="h-16 px-6 bg-[#fbfaff] border-b border-[#e4ddf0] flex items-center justify-between gap-4 shrink-0">
-                    <div className="flex items-center gap-4 min-w-0">
+                    {/* 左の群は残りの幅に収める（2026-10-11 かずき指摘：翻訳中の印が右のボタンの下にはみ出し、「翻訳を止める」と重なっていた） */}
+                    <div className="flex-1 flex items-center gap-4 min-w-0 overflow-hidden">
                         <button onClick={() => router.back()} title="戻る" className="w-9 h-9 flex items-center justify-center rounded-lg border border-[#e4ddf0] text-[#3a3350] hover:bg-[#efe9f8] transition-colors shrink-0">
                             <ArrowLeft size={18} />
                         </button>
@@ -1163,9 +1164,12 @@ export default function LiveLessonPage() {
                             </span>
                         )}
                         {isTranslationMode && (
-                            <span className="px-2.5 py-1 rounded-md bg-[#dff1ea] text-[#2a6f5a] border border-[#bfe3d4] text-[13px] font-medium flex items-center gap-1 whitespace-nowrap shrink-0">
-                                <span className="w-1.5 h-1.5 rounded-full bg-[#2a6f5a]" />
-                                生徒の画面に翻訳を表示中
+                            <span
+                                title="生徒の画面に翻訳を表示中"
+                                className="px-2.5 py-1 rounded-md bg-[#dff1ea] text-[#2a6f5a] border border-[#bfe3d4] text-[13px] font-medium flex items-center gap-1 whitespace-nowrap min-w-0"
+                            >
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#2a6f5a] shrink-0" />
+                                <span className="truncate">生徒の画面に翻訳を表示中</span>
                             </span>
                         )}
                     </div>
